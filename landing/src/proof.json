@@ -1,11 +1,24 @@
 {
-  "generatedAt": "2026-10-25T20:55:24.735Z",
+  "generatedAt": "2026-10-25T21:43:09.246Z",
   "deployments": [
     {
       "key": "robinhood-testnet",
       "name": "Robinhood Chain testnet",
       "explorer": "https://explorer.testnet.chain.robinhood.com",
-      "deployed": false
+      "deployed": true,
+      "engine": "0xCba17Fe422220AeCa3EE06D15BE4aA5a1F06D4eE",
+      "lens": "0x57eE8461D4551cf22E1973E010C5c8b4f535C858",
+      "forwarder": "0x0b93082D9b3C7C97fAcd250082899BAcf3af3885",
+      "block": 142637623,
+      "tokens": {
+        "USDG": "0x7E955252E15c84f5768B83c41a71F9eba181802F",
+        "WETH": "0x7943e237c7F95DA44E0301572D358911207852Fa",
+        "TSLA": "0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E",
+        "AMZN": "0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02",
+        "AMD": "0x71178BAc73cBeb415514eB542a8995b82669778d",
+        "PLTR": "0x1FBE1a0e43594b3455993B5dE5Fd0A7A266298d0",
+        "NFLX": "0x3b8262A63d25f0477c4DDE23F83cfe22Cb768C93"
+      }
     }
   ],
   "runs": []
