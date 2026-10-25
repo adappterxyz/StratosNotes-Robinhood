@@ -412,12 +412,13 @@ export function createApp(deps: AppDeps) {
         ...(e.bpmnXml ? { bpmnXml: e.bpmnXml, assets: e.assets as TemplateEntry['assets'] } : {}),
         ...(e.basis ? { basis: e.basis as TemplateEntry['basis'] } : {}),
       };
-      // Notes are issued on Arbitrum only: a term sheet on Robinhood Chain (a collateral chain) or delivering a stock is refused.
+      // Notes run on Robinhood Chain only: a term sheet naming another chain, collateral held elsewhere, a token that does
+      // not exist there (e.g. physical delivery of NVDA) or a retired test token is refused.
       if (!templateOffered(entry))
         return err(
           c,
           400,
-          "This note can't be issued: notes are issued on Arbitrum Sepolia only (Robinhood Chain holds collateral), stock notes settle in cash, and no retired test token may appear.",
+          "This note can't be issued: notes run on Robinhood Chain testnet only, every token a note delivers or pledges must exist there, and no retired test token may appear.",
         );
       let id: string;
       try {

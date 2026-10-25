@@ -24,8 +24,8 @@ import {
 } from '../src';
 import { compileTemplate, EXAMPLE_PRODUCTS, type WorkflowDef } from '@sn/core';
 
-const V4 = '0x7d36da43724b09bb03ed98a4574685070073020b';
-const V3 = '0xaf8425a4b2d8994796e019d9b42cd99d40297e10';
+const V4 = '0x4444444444444444444444444444444444444444';
+const V3 = '0x3333333333333333333333333333333333333333';
 const LENS = '0x7544378876d780e69968cd67c3fef9a294c23a0b';
 const ME = '0x1111111111111111111111111111111111111111';
 const OTHER = '0x3333333333333333333333333333333333333333';
@@ -90,7 +90,7 @@ const withCash = (a: EvmAdapter) => {
 };
 
 describe('a holder claims its payouts with pushTo for itself', () => {
-  const id = noteId('arbitrum-sepolia', V4, 5n);
+  const id = noteId('robinhood-testnet', V4, 5n);
 
   it('claimPayoutsRequest is pushTo(pid, asset, [holder]) on the engine', () => {
     const r = claimPayoutsRequest(V4, 5n, 1, ME);
@@ -102,7 +102,7 @@ describe('a holder claims its payouts with pushTo for itself', () => {
       [12_500_000_000n, 0n],
       [payoutPaidLog(ME, 1_250_000n), payoutPaidLog(OTHER, 9n)],
     );
-    const a = withCash(new EvmAdapter(CHAINS['arbitrum-sepolia'], client, { engine: V4, lens: LENS }));
+    const a = withCash(new EvmAdapter(CHAINS['robinhood-testnet'], client, { engine: V4, lens: LENS }));
     const r = await a.claimPayouts(wallet, id, 1);
     expect(writes).toHaveLength(1);
     expect(writes[0].address).toBe(V4);
@@ -117,13 +117,13 @@ describe('a holder claims its payouts with pushTo for itself', () => {
   it('then withdraws other cash left on the account (not a payout), and ignores sub-base-unit dust', async () => {
     const { client, wallet, writes } = fakes([30_000_000_000n, 20_000_000_000n, 20_000_000_000n]);
     const r = await withCash(
-      new EvmAdapter(CHAINS['arbitrum-sepolia'], client, { engine: V4, lens: LENS }),
+      new EvmAdapter(CHAINS['robinhood-testnet'], client, { engine: V4, lens: LENS }),
     ).claimPayouts(wallet, id, 1);
     expect(writes.map((w) => w.functionName)).toEqual(['pushTo', 'withdraw']);
     expect(decodeFunctionData({ abi: flowEngineAbi, data: writes[1].data }).args).toEqual([5n, 1, 2_000_000n]);
     expect(r.withdrawn).toBe(2_000_000n);
     const dust = fakes([12_500_000_000n, 9_999n]);
-    await withCash(new EvmAdapter(CHAINS['arbitrum-sepolia'], dust.client, { engine: V4, lens: LENS })).claimPayouts(
+    await withCash(new EvmAdapter(CHAINS['robinhood-testnet'], dust.client, { engine: V4, lens: LENS })).claimPayouts(
       dust.wallet,
       id,
       1,
@@ -134,20 +134,20 @@ describe('a holder claims its payouts with pushTo for itself', () => {
   it('refuses when nothing is owed, without sending anything', async () => {
     const { client, wallet, writes } = fakes([0n]);
     await expect(
-      new EvmAdapter(CHAINS['arbitrum-sepolia'], client, { engine: V4, lens: LENS }).claimPayouts(wallet, id, 1),
+      new EvmAdapter(CHAINS['robinhood-testnet'], client, { engine: V4, lens: LENS }).claimPayouts(wallet, id, 1),
     ).rejects.toThrow(/Nothing to claim/);
     expect(writes).toHaveLength(0);
   });
 
   it('on a v3 note a claim is the plain withdrawal (no pushTo there)', async () => {
     const { client, wallet } = fakes([1n]);
-    const a = new EvmAdapter(CHAINS['arbitrum-sepolia'], client, { engine: V3, lens: LENS, version: 3 });
+    const a = new EvmAdapter(CHAINS['robinhood-testnet'], client, { engine: V3, lens: LENS, version: 3 });
     const called: number[] = [];
     a.withdraw = async (_w, _id, asset) => {
       called.push(asset);
       return { tx: ['0xw'] };
     };
-    const r = await a.claimPayouts(wallet, noteId('arbitrum-sepolia', V3, 2n), 1);
+    const r = await a.claimPayouts(wallet, noteId('robinhood-testnet', V3, 2n), 1);
     expect(called).toEqual([1]);
     expect(r).toEqual({ tx: ['0xw'], paid: 0n, payoutIds: [], withdrawn: 0n, deferred: false });
   });

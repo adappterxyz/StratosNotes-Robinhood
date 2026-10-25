@@ -10,15 +10,15 @@ import {
   type NoteState,
 } from '../src';
 
-const scope = { chainId: 421614, engine: '0x1111111111111111111111111111111111111111' };
+const scope = { chainId: 46630, engine: '0x1111111111111111111111111111111111111111' };
 const A = '0x2222222222222222222222222222222222222222';
 const B = '0x3333333333333333333333333333333333333333';
 
 // Vectors from `cast keccak $(cast abi-encode ...)`, i.e. Solidity's keccak256(abi.encode(...)).
-const P1 = '0xf9d727d15ca21f915cf813ffed2988e95fefaf37bacb0bdd9476637bf4e6ee78';
-const P2 = '0xca33b37d737e9801b935ba2ed41a55a2e71f5f1dce5dab9029729641b5d79dc1';
-const ROLLING = '0x594114ff3c6bdd3c248989e645115545c9a2bca8fd8e0d9c7ead0218639ec84f';
-const DIST = '0xc211999791a5ba92a36de5dbec10504231c70b0afb5b77f5139fe459b1981cf5';
+const P1 = '0x8295e2a8ef347bfcd8fa714683ace073697b7f3c2d9a879942bc71342e8e84a9';
+const P2 = '0x3f88995ea51f63aedea1c8e526e80baedefab2f14f9d998a0f763910ecdd8bd8';
+const ROLLING = '0x82ea0d33bb42a8b1df8f236a4dbda6baa53ddf8c91d534d0615a9661d4c74de9';
+const DIST = '0xa73a2f3cd32e5142bb9d406761068c08df946d8d4346f11e8ab1d5a33bd98472';
 
 describe('payout receipts', () => {
   it('payoutId, the rolling hash and the distribution hash match Solidity abi.encode', () => {

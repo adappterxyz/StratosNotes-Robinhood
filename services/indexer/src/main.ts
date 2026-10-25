@@ -3,7 +3,7 @@
  *
  *   INDEXER_CONFIG=config.json DATABASE_URL=postgres://... npx tsx src/main.ts
  *
- * config.json: { "chains": [ { "key": "arbitrum-sepolia", "family": "evm", "chainId": 421614, "rpc": "...",
+ * config.json: { "chains": [ { "key": "robinhood-testnet", "family": "evm", "chainId": 46630, "rpc": "...",
  *   "engine": "0x...", "startBlock": 123, "confirmations": 2, "maxRange": 2000, "pollMs": 2000 } ] }
  *
  * Each chain runs its own loop: catch up, then poll. Errors back off and retry; they never stop other chains.

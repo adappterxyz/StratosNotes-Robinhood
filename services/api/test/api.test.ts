@@ -190,16 +190,19 @@ describe('templates', () => {
     expect((await (await get(`/api/templates/${definition}`)).json()).product.productType).toBe('snowball');
   });
 
-  it('refuses a note on Robinhood Chain: notes are issued on Arbitrum only', async () => {
-    const rh = { ...product, chain: 'robinhood-testnet' as const };
-    const def = definitionId(compileTemplate({ product: rh }));
+  it('refuses a note on another chain: notes run on Robinhood Chain only', async () => {
+    // A term sheet naming another chain no longer compiles at all; the API refuses it before trying.
+    const rh = { ...product, chain: 'ethereum-sepolia' as never };
+    const def = definition;
     const signature = await author.signMessage({ message: templateMessage(def) });
-    const r = await post('/api/templates', { entry: { ...entry, definition: def, product: rh }, signature });
+    const r = await post('/api/templates', {
+      entry: { ...entry, name: 'Snowball elsewhere', product: rh },
+      signature,
+    });
     expect(r.status).toBe(400);
-    expect((await r.json()).error).toMatch(/issued on Arbitrum Sepolia only/);
-    expect((await (await get('/api/templates')).json()).map((t: { definition: string }) => t.definition)).not.toContain(
-      def,
-    );
+    expect((await r.json()).error).toMatch(/notes run on Robinhood Chain testnet only/);
+    const listed = (await (await get('/api/templates')).json()) as Array<{ definition: string; name: string }>;
+    expect(listed.filter((t) => t.definition === def).map((t) => t.name)).toEqual(['Snowball']);
   });
 
   it('refuses a wrong signature, a mismatched workflow, a foreign origin, and too many saves', async () => {

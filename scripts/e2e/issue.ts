@@ -4,7 +4,7 @@
  * seconds) and pledge USDC collateral at the note's ratio into escrow, mandate the paying agent, and subscribe
  * two investors (their USDC goes to the issuer). Optionally make account 9 the engine's fallback reporter.
  *
- *   RPC=http://127.0.0.1:8545 CHAIN_ID=421614 DEPLOYMENT=deployments/local/x.json USDC=0x... \
+ *   RPC=http://127.0.0.1:8545 CHAIN_ID=46630 DEPLOYMENT=deployments/local/x.json USDC=0x... \
  *   STRIKE_IN=120 OBS_EVERY=60 FALLBACK=1 OUT=/tmp/note.json npx tsx scripts/e2e/issue.ts
  */
 import { readFileSync, writeFileSync } from 'node:fs';

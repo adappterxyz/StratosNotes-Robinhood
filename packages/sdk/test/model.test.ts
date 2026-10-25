@@ -22,10 +22,10 @@ const field = (n: string) => c.def.fields.findIndex((f) => f.name === n);
 
 describe('note ids', () => {
   it('round-trip and reject junk', () => {
-    const id = noteId('arbitrum-sepolia', '0xABCDEFabcdefABCDEFabcdefABCDEFabcdefABCD', 7n);
-    expect(id).toBe('arbitrum-sepolia:0xabcdefabcdefabcdefabcdefabcdefabcdefabcd:7');
+    const id = noteId('robinhood-testnet', '0xABCDEFabcdefABCDEFabcdefABCDEFabcdefABCD', 7n);
+    expect(id).toBe('robinhood-testnet:0xabcdefabcdefabcdefabcdefabcdefabcdefabcd:7');
     expect(parseNoteId(id)).toEqual({
-      chain: 'arbitrum-sepolia',
+      chain: 'robinhood-testnet',
       engine: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
       pid: '7',
     });

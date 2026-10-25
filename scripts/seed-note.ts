@@ -5,11 +5,11 @@
  *   NOTE=crypto STRIKE_IN=900 OBS_EVERY=300 npx tsx scripts/seed-note.ts
  *   NOTE=equity npx tsx scripts/seed-note.ts
  *
- * Every note is issued on Arbitrum Sepolia (CHAIN defaults to it; Robinhood Chain testnet is refused: it is a
- * collateral chain only, see docs/CROSS-CHAIN.md). NOTE=crypto: a worst-of phoenix on ETH and BTC; NOTE=equity: on
- * TSLA and NVDA, cash-settled (Chainlink feeds on Robinhood Chain mainnet, market hours: outside them the
- * observations see the last close). CHAIN=<other key> only for a local fork named in DEPLOY_DIR.
- * Cash and collateral are Paxos's testnet USDG on both chains (notes.markets mints nothing): the deployer key
+ * Every note is issued on Robinhood Chain testnet (CHAIN=robinhood-testnet, the only one; RPC overrides its RPC, e.g.
+ * a local fork with DEPLOY_DIR naming its deployment). NOTE=crypto: a worst-of phoenix on ETH and BTC; NOTE=equity:
+ * on TSLA and NVDA, cash-settled (NVDA has no token on Robinhood Chain; Chainlink feeds on Robinhood Chain mainnet,
+ * market hours: outside them the observations see the last close).
+ * Cash and collateral are Paxos's testnet USDG on Robinhood Chain (notes.markets mints nothing): the deployer key
  * (.keys/deployer.json), issuer and paying agent, must already hold enough of it (faucet.paxos.com). It pledges USDG
  * collateral covering 100% of the notional into the note's escrow at Approve Terms. Two demo investors
  * (.keys/investor1.json, investor2.json, created if missing) get a little ETH for gas and their USDG from the
@@ -56,13 +56,9 @@ import {
 import { engineAbi, flowEngineAbi, lensAbi } from '@sn/sdk';
 
 const RPCS: Record<string, { rpc: string; id: number }> = {
-  'arbitrum-sepolia': { rpc: process.env.RPC ?? 'https://sepolia-rollup.arbitrum.io/rpc', id: 421614 },
+  'robinhood-testnet': { rpc: process.env.RPC ?? 'https://rpc.testnet.chain.robinhood.com', id: 46630 },
 };
-const chainKey = process.env.CHAIN ?? 'arbitrum-sepolia';
-if (chainKey === 'robinhood-testnet')
-  throw new Error(
-    'Notes are issued on Arbitrum Sepolia only: Robinhood Chain testnet is a collateral chain (lock stock tokens there for an Arbitrum note).',
-  );
+const chainKey = process.env.CHAIN ?? 'robinhood-testnet';
 const net = RPCS[chainKey];
 if (!net) throw new Error(`CHAIN: ${Object.keys(RPCS).join(' | ')}`);
 const DIR = process.env.DEPLOY_DIR ?? 'deployments';
@@ -72,6 +68,7 @@ const dep = JSON.parse(readFileSync(`${DIR}/${chainKey}.json`, 'utf8')) as {
   faucet: Address;
   tokens: Record<string, Address>;
 };
+if (!dep.engine) throw new Error(`${DIR}/${chainKey}.json has no engine yet: run scripts/deploy-testnets.sh first`);
 /** Paxos testnet USDG is the cash leg and the collateral (default); the deployer must already hold it (faucet.paxos.com),
  * and funds the demo investors from its own balance. CASH=tUSD: the retired test dollar, minted by the deployer. */
 const usdg = process.env.CASH !== 'tUSD';

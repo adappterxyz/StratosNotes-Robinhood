@@ -18,15 +18,14 @@
  *                stablecoin). PUSH_ONLY=1 makes it a payout keeper for every note (or PIDS) under the same
  *                policy, funding nothing: any funded account will do, since pushing is permissionless.
  *
- * Robinhood Chain testnet (legacy notes). Every note is issued on Arbitrum Sepolia; Robinhood Chain testnet is a
- * collateral chain only (the vault behind Arbitrum notes). The bot instance pointed at Robinhood Chain's FlowEngine v4
- * (0xf1a1Fa45770582d1EeBC173d9076E95f9cFA0244) keeps running only to finish the notes already issued there (fund
- * their payments, push opted-in payouts, fund deliveries) until each has matured; it never issues, and nothing new
- * is issued there. Stop it once those notes are all redeemed or defaulted. The marketplace no longer lists them.
+ * Notes run on Robinhood Chain testnet (CHAIN_ID=46630), with their collateral (USDG, WETH, Robinhood's stock tokens)
+ * pledged directly into the note there: nothing waits on another chain, and physical delivery uses the real stock
+ * tokens, which the issuer's wallet must hold (faucet.testnet.chain.robinhood.com).
  *
- * Cross-chain collateral (HomeGateway v2, docs/CROSS-CHAIN.md). Collateral stays on its own chain; Arbitrum is only
- * the anchor, so receipts never wait inside the engine: they burn and queue a release on the asset chain only when
- * they LEAVE the engine, and this bot makes them leave (RECEIPTS=0 turns both off):
+ * Cross-chain collateral (planned, HomeGateway v2, docs/CROSS-CHAIN.md): INERT today. With no gateway configured
+ * (no GATEWAY and no deployments/crosschain-testnet.json) none of the following runs. Once collateral on other chains
+ * is deployed (home = Robinhood Chain), receipts never wait inside the engine: they burn and queue a release on the
+ * asset chain only when they LEAVE the engine, and this bot makes them leave (RECEIPTS=0 turns both off):
  *   - Paid in full (or the excess after a capped default): the engine credits the released receipts to the
  *     issuer's ledger. Once the note no longer runs, the bot withdraws every receipt asset on its ledger: the
  *     receipts burn and the gateway queues a release to the issuer's own address on the asset chain.
@@ -44,13 +43,13 @@
  * when its home chain id and engine are this bot's (GATEWAY= empty: none). Its events are read from
  * GATEWAY_FROM_BLOCK (default: the config's gatewayBlock, else FROM_BLOCK), LOG_CHUNK blocks per query (50000).
  *
- *   RPC=... CHAIN_ID=421614 ENGINE=0x... LENS=0x... ISSUER_KEY_FILE=path [FROM_BLOCK=n] [GATEWAY=0x...] \
+ *   RPC=https://rpc.testnet.chain.robinhood.com CHAIN_ID=46630 ENGINE=0x... LENS=0x... ISSUER_KEY_FILE=path [FROM_BLOCK=n] [GATEWAY=0x...] \
  *   [PIDS=3,4] [MISS=4:1,7:2] [MINT=1] [TOP_UP=1] [PUSH=1|0] [PUSH_MIN=0.5] [RECEIPTS=0] [RECEIPT_BATCH=25] \
  *   [FLUSH_AFTER=180] [INTERVAL=10] npx tsx scripts/issuer-bot.ts [--once]
  *
  * PIDS: the notes to look after (default: every note whose Issuer role is this key). MISS: pid:period payments
  * to leave unfunded. MINT=1: mint tokens the wallet lacks where the key may mint (a local MockERC20, or the retired
- * tUSD older demo notes settle in, as its owner). Real tokens (USDG, WETH, Robinhood's stock tokens) must already be
+ * tUSD of a TEST_TOKENS rehearsal, as its owner). Real tokens (USDG, WETH, Robinhood's stock tokens) must already be
  * in the wallet. The key is read from a file (a
  * `cast wallet new --json` array, or a bare hex key) or ISSUER_KEY, and never printed.
  */

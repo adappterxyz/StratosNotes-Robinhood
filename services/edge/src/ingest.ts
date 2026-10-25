@@ -19,7 +19,7 @@
  *    notes, so one batch stays well inside D1's per-invocation query budget and the 100-parameter limit.
  *  - Backfill: a new chain row starts at `startBlock - 1`.
  *  - Several engines per chain: each (chain, engine) pair has its own row in `chains`, under `indexKey` (the
- *    chain key for the current engine, e.g. `arbitrum-sepolia-v3` for an earlier one), with its own cursor,
+ *    chain key for the current engine, e.g. `robinhood-testnet-v3` for an earlier one), with its own cursor,
  *    block hashes and fallback reporter. Note ids and every other table keep the real chain key, so a note's id
  *    is `<chain>:<engine>:<pid>` whichever engine runs it. `adoptFrom` moves an earlier engine's existing row
  *    (indexed under the chain key before the current engine arrived) to its own key, keeping its cursor and

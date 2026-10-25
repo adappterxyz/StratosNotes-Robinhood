@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# The whole platform on one machine, against a local fork of Arbitrum Sepolia. No real network is written to.
+# The whole platform on one machine, against a local fork of Robinhood Chain testnet. No real network is written to.
 #
-#   1. anvil forks Arbitrum Sepolia (chain id 421614, so Chainlink's MockKeystoneForwarder is there)
+#   1. anvil forks Robinhood Chain testnet (chain id 46630, so Chainlink's MockKeystoneForwarder is there)
 #   2. FlowEngine + NotesLens + a mock USDC are deployed with anvil's public test account 0
 #   3. Postgres 17 runs in Docker (throwaway, in memory)
 #   4. the indexer, the API (with a faucet for the mock USDC) and the app (dev build, with the test wallet) start
@@ -19,7 +19,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 export PATH="$HOME/.cre/bin:$HOME/.bun/bin:$HOME/.foundry/bin:$PATH"
 KEEPER="${KEEPER:-fallback}"
-FORK_RPC="${FORK_RPC:-https://sepolia-rollup.arbitrum.io/rpc}"
+FORK_RPC="${FORK_RPC:-https://rpc.testnet.chain.robinhood.com}"
 FEED_RPC="${FEED_RPC:-https://ethereum-rpc.publicnode.com}"
 WORK="$ROOT/deployments/local/dev"
 mkdir -p "$WORK"
@@ -43,18 +43,18 @@ wait_http() { for _ in $(seq 1 120); do curl -sf "$1" >/dev/null 2>&1 && return 
 APP_PORT="${APP_PORT:-$(free_port)}"
 read -r KEY0 KEY8 KEY9 ADDR0 ADDR9 KEY7 ADDR7 KEY6 < <(npx tsx -e "import { keyOf, acct } from '$ROOT/scripts/e2e/lib'; console.log(keyOf(0), keyOf(8), keyOf(9), acct(0).address, acct(9).address, keyOf(7), acct(7).address, keyOf(6))")
 
-echo "== anvil: fork of Arbitrum Sepolia"
+echo "== anvil: fork of Robinhood Chain testnet"
 ANVIL_PORT="$(free_port)"
-anvil --fork-url "$FORK_RPC" --chain-id 421614 --port "$ANVIL_PORT" --block-time 2 --slots-in-an-epoch 1 --gas-limit 30000000 \
+anvil --fork-url "$FORK_RPC" --chain-id 46630 --port "$ANVIL_PORT" --block-time 2 --slots-in-an-epoch 1 --gas-limit 30000000 \
   > "$WORK/anvil.log" 2>&1 & PIDS+=($!)
 RPC="http://127.0.0.1:$ANVIL_PORT"
 for _ in $(seq 1 60); do cast chain-id --rpc-url "$RPC" >/dev/null 2>&1 && break; sleep 1; done
 
 echo "== deploy: engine, lens, mock USDC"
-HEAD="$(cast block-number --rpc-url "$RPC")" # the chain's own block (Solidity's block.number is L1's on Arbitrum)
+HEAD="$(cast block-number --rpc-url "$RPC")" # the chain's own block (Solidity's block.number is L1's on an Orbit chain)
 # Verified emails: anvil account 7 is the local verifier (its public test key signs attestations); requireEmail on.
 printf '[{"address":"%s","private_key":"%s"}]\n' "$ADDR7" "$KEY7" > "$WORK/verifier.json"
-(cd packages/evm-engine && CHAIN=arbitrum-sepolia FORWARDER_MODE=mock OWNER="$ADDR0" OUT="$WORK/deployment.json" VERIFIER="$ADDR7" REQUIRE_EMAIL=1 \
+(cd packages/evm-engine && CHAIN=robinhood-testnet FORWARDER_MODE=mock OWNER="$ADDR0" OUT="$WORK/deployment.json" VERIFIER="$ADDR7" REQUIRE_EMAIL=1 \
   forge script script/Deploy.s.sol --rpc-url "$RPC" --private-key "$KEY0" --broadcast --slow > "$WORK/deploy.log" 2>&1)
 USDC="$(cd packages/evm-engine && forge create test/mocks/MockERC20.sol:MockERC20 --rpc-url "$RPC" --private-key "$KEY0" \
   --broadcast --constructor-args USDC 6 2>/dev/null | awk '/Deployed to:/ {print $3}')"
@@ -72,7 +72,7 @@ sleep 1
 export DATABASE_URL="postgres://postgres:$PG_PASS@127.0.0.1:$PG_PORT/stratosnotes"
 
 cat > "$WORK/indexer.json" <<JSON
-{ "chains": [ { "key": "local", "family": "evm", "chainId": 421614, "rpc": "$RPC", "engine": "$ENGINE", "lens": "$LENS",
+{ "chains": [ { "key": "local", "family": "evm", "chainId": 46630, "rpc": "$RPC", "engine": "$ENGINE", "lens": "$LENS",
   "startBlock": $BLOCK, "confirmations": 1, "maxRange": 500, "pollMs": 1000 } ] }
 JSON
 API_PORT="$(free_port)"
@@ -106,7 +106,7 @@ else
   cast send "$ENGINE" 'setFallbackReporter(address)' "$ADDR9" --rpc-url "$RPC" --private-key "$KEY0" >/dev/null
   echo "$KEY9" > "$WORK/fallback.key"; chmod 600 "$WORK/fallback.key"
   cat > "$WORK/keeper.json" <<JSON
-{ "chain": { "name": "local", "chainId": 421614, "rpc": "$RPC", "engine": "$ENGINE", "lens": "$LENS" },
+{ "chain": { "name": "local", "chainId": 46630, "rpc": "$RPC", "engine": "$ENGINE", "lens": "$LENS" },
   "feedRpcs": { "ethereum-mainnet": "$FEED_RPC" },
   "blockTag": "finalized", "finalityAllowanceSec": 1800, "maxReportsPerRun": 5, "gasLimit": "8000000", "intervalSec": 10 }
 JSON
@@ -119,7 +119,7 @@ fi
 # collateral are withdrawn from the note page.
 echo "== payout pusher"
 echo "$KEY6" > "$WORK/pusher.key"; chmod 600 "$WORK/pusher.key"
-RPC="$RPC" CHAIN_ID=421614 ENGINE="$ENGINE" LENS="$LENS" FROM_BLOCK="$BLOCK" ISSUER_KEY_FILE="$WORK/pusher.key" PUSH_ONLY=1 PUSH_ASSETS=1 INTERVAL=4 \
+RPC="$RPC" CHAIN_ID=46630 ENGINE="$ENGINE" LENS="$LENS" FROM_BLOCK="$BLOCK" ISSUER_KEY_FILE="$WORK/pusher.key" PUSH_ONLY=1 PUSH_ASSETS=1 INTERVAL=4 \
   npx tsx scripts/issuer-bot.ts > "$WORK/pusher.log" 2>&1 & PIDS+=($!)
 
 cat <<EOF
@@ -127,7 +127,7 @@ cat <<EOF
 StratosNotes is running locally:
   app      http://127.0.0.1:$APP_PORT   (dev build: "StratosNotes test wallet" in Connect; Test switches accounts)
   api      http://127.0.0.1:$API_PORT/api/health
-  chain    $RPC (fork of Arbitrum Sepolia, chain id 421614)   engine $ENGINE   USDC $USDC
+  chain    $RPC (fork of Robinhood Chain testnet, chain id 46630)   engine $ENGINE   USDC $USDC
   keeper   $KEEPER   logs in $WORK
 EOF
 

@@ -1,6 +1,6 @@
 /**
  * ChainAdapter: the one interface the app and the services use to read and act on notes, whatever chain runs
- * them. EvmAdapter (evm/adapter.ts) implements it for FlowEngine on Arbitrum Sepolia and Robinhood Chain; another
+ * them. EvmAdapter (evm/adapter.ts) implements it for FlowEngine on Robinhood Chain; another
  * chain family would implement it over its own API, with its own credential as its
  * signer.
  *

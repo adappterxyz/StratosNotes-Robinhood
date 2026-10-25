@@ -6,8 +6,8 @@ import { describe, expect, it } from 'vitest';
 import { decodeFunctionData, encodeFunctionData, toFunctionSelector, type PublicClient, type WalletClient } from 'viem';
 import { CHAINS, EvmAdapter, flowEngineAbi, flowEngineV3Abi, noteId } from '../src';
 
-const V3 = '0xaf8425a4b2d8994796e019d9b42cd99d40297e10';
-const V4 = '0x7d36da43724b09bb03ed98a4574685070073020b';
+const V3 = '0x3333333333333333333333333333333333333333';
+const V4 = '0x4444444444444444444444444444444444444444';
 const LENS = '0x7544378876d780e69968cd67c3fef9a294c23a0b';
 const ME = '0x1111111111111111111111111111111111111111';
 const TO = '0x2222222222222222222222222222222222222222';
@@ -39,20 +39,20 @@ function fakes(reads: Record<string, unknown>) {
 }
 
 const v3 = (client: PublicClient) =>
-  new EvmAdapter(CHAINS['arbitrum-sepolia'], client, { engine: V3, lens: LENS, fromBlock: 322211118n, version: 3 });
+  new EvmAdapter(CHAINS['robinhood-testnet'], client, { engine: V3, lens: LENS, fromBlock: 141588428n, version: 3 });
 
 describe('EvmAdapter on a v3 engine', () => {
-  const id = noteId('arbitrum-sepolia', V3, 2n);
+  const id = noteId('robinhood-testnet', V3, 2n);
 
   it("keeps v3 note ids exactly as they were and only runs its own engine's notes", () => {
     const { client } = fakes({});
     const a = v3(client);
-    expect(id).toBe('arbitrum-sepolia:0xaf8425a4b2d8994796e019d9b42cd99d40297e10:2');
+    expect(id).toBe('robinhood-testnet:0x3333333333333333333333333333333333333333:2');
     expect(a.legacy).toBe(true);
     expect(a.version).toBe(3);
     expect(a.runs(id)).toBe(true);
-    expect(a.runs(noteId('arbitrum-sepolia', V4, 2n))).toBe(false);
-    expect(new EvmAdapter(CHAINS['arbitrum-sepolia'], client, { engine: V4, lens: LENS }).legacy).toBe(false);
+    expect(a.runs(noteId('robinhood-testnet', V4, 2n))).toBe(false);
+    expect(new EvmAdapter(CHAINS['robinhood-testnet'], client, { engine: V4, lens: LENS }).legacy).toBe(false);
   });
 
   it('moves units with the v3 ledger transfer (fixed point, no ERC-20), after the recipient check', async () => {
@@ -109,6 +109,6 @@ describe('EvmAdapter on a v3 engine', () => {
 
   it('refuses a v4 note id', async () => {
     const { client } = fakes({ balanceOf: 0n });
-    await expect(v3(client).claimable(noteId('arbitrum-sepolia', V4, 1n), ME, 1)).rejects.toThrow(/not a note on/);
+    await expect(v3(client).claimable(noteId('robinhood-testnet', V4, 1n), ME, 1)).rejects.toThrow(/not a note on/);
   });
 });

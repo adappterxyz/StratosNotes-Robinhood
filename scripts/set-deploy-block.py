@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Record where a deployment's events start, in the chain's own block numbers.
 
-On Arbitrum chains Solidity's block.number is the L1 (Ethereum) block, so the `block` that Deploy.s.sol writes
+On Arbitrum Orbit chains such as Robinhood Chain, Solidity's block.number is the L1 (Ethereum) block, so the `block` that Deploy.s.sol writes
 is not a block of the chain itself; event scans (the indexer's start block, the SDK's history) need the chain's
 own number. The deploy scripts read the chain's head just before deploying and pass it here:
 

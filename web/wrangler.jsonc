@@ -1,5 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
+  // The Worker keeps its original name (from the Arbitrum build) so this deploy replaces the live notes.markets
+  // Worker in place: same routes, same D1. Notes now run on Robinhood Chain testnet only.
   "name": "stratosnotes-arbitrum",
   "main": "worker.ts",
   "compatibility_date": "2026-04-22",

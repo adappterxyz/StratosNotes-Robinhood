@@ -15,15 +15,17 @@ if (fs.existsSync(envFile)) {
   }
 }
 
-// The issuer's side of the demo notes (scripts/issuer-bot.ts): funds each payment as it falls due, one process per
-// deployed chain. MISS (e.g. "5:1") leaves a payment unfunded to show a default.
-const RPCS = { 'arbitrum-sepolia': ['https://sepolia-rollup.arbitrum.io/rpc', 421614], 'robinhood-testnet': ['https://rpc.testnet.chain.robinhood.com', 46630] };
+// The issuer's side of the demo notes (scripts/issuer-bot.ts) on Robinhood Chain testnet: funds each payment as it
+// falls due. MISS (e.g. "5:1") leaves a payment unfunded to show a default. Not started until the deployment file
+// names an engine (it is a placeholder before the fresh deploy).
+const RPCS = { 'robinhood-testnet': ['https://rpc.testnet.chain.robinhood.com', 46630] };
 const issuerBots = Object.entries(RPCS).flatMap(([chain, [rpc, id]]) => {
   const file = path.join(root, 'deployments', `${chain}.json`);
   if (!fs.existsSync(file)) return [];
   const dep = JSON.parse(fs.readFileSync(file, 'utf8'));
+  if (!dep.engine) return [];
   return [{
-    name: `sn-arb-issuer-${chain}`,
+    name: `sn-rh-issuer-${chain}`,
     cwd: root,
     script: 'npx',
     args: 'tsx scripts/issuer-bot.ts',
@@ -37,7 +39,7 @@ module.exports = {
     ...issuerBots,
     // The indexer and the API run in the notes.markets Worker on Cloudflare D1 (services/edge); nothing to run here.
     {
-      name: 'sn-arb-keeper',
+      name: 'sn-rh-keeper',
       cwd: root,
       script: 'scripts/keeper-loop.sh',
       interpreter: 'bash',

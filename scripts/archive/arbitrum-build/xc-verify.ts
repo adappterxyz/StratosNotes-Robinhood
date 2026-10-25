@@ -1,15 +1,16 @@
+// ARCHIVED from the earlier Arbitrum build (see e2e-xc-autorelease.sh in this folder): Arbitrum Sepolia contracts.
 /**
- * Check scripts/e2e-xc-autorelease.sh: after the notes ended, no receipt waits in the engine, every receipt that
+ * Check scripts/archive/arbitrum-build/e2e-xc-autorelease.sh: after the notes ended, no receipt waits in the engine, every receipt that
  * left it queued a release (the paid-in-full note's to the issuer, the defaulted note's to each holder, plus the
  * issuer's excess), and the bot's fallback flush sent them only after FLUSH_AFTER seconds.
  *
- *   RPC=... PAID=/tmp/a.json DEFAULTED=/tmp/b.json FLUSH_AFTER=180 [STATUS_ONLY=1] npx tsx scripts/e2e/xc-verify.ts
+ *   RPC=... PAID=/tmp/a.json DEFAULTED=/tmp/b.json FLUSH_AFTER=180 [STATUS_ONLY=1] npx tsx scripts/archive/arbitrum-build/xc-verify.ts
  */
 import { readFileSync } from 'node:fs';
 import type { Address } from 'viem';
 import { releaseEventsAbi } from '@sn/core';
 import { engineAbi } from '@sn/sdk';
-import { clients } from './lib';
+import { clients } from '../../e2e/lib';
 
 const env = (k: string) => {
   const v = process.env[k];

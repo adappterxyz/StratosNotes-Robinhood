@@ -311,16 +311,16 @@ describe('migration 0004', () => {
     try {
       const s = new Store(old.db);
       await s.run(
-        "INSERT INTO chains (chain, family, chain_id, engine, start_block, cursor) VALUES ('arbitrum-sepolia', 'evm', 421614, ?1, 1, 9)",
+        "INSERT INTO chains (chain, family, chain_id, engine, start_block, cursor) VALUES ('robinhood-testnet', 'evm', 46630, ?1, 1, 9)",
         [V3],
       );
       await s.run(
-        "INSERT INTO events (chain, block, block_hash, log_index, tx, ts, name, note_id, data) VALUES ('arbitrum-sepolia', 5, '0x01', 0, '0x02', 1, 'ProcessStarted', ?1, '{}')",
-        [noteId('arbitrum-sepolia', V3, 2n)],
+        "INSERT INTO events (chain, block, block_hash, log_index, tx, ts, name, note_id, data) VALUES ('robinhood-testnet', 5, '0x01', 0, '0x02', 1, 'ProcessStarted', ?1, '{}')",
+        [noteId('robinhood-testnet', V3, 2n)],
       );
       await applyMigrations(old.db, MIGRATIONS);
       expect(await s.all('SELECT engine, note_id FROM events')).toEqual([
-        { engine: V3, note_id: 'arbitrum-sepolia:' + V3 + ':2' },
+        { engine: V3, note_id: 'robinhood-testnet:' + V3 + ':2' },
       ]);
       expect(await s.all("SELECT name FROM d1_migrations WHERE name LIKE '0004%'")).toEqual([
         { name: '0004_engines.sql' },

@@ -4,8 +4,8 @@
  * {
  *   "allowedOrigins": ["https://notes.markets"],
  *   "trustProxy": true,                       // take the client IP from X-Forwarded-For (behind a load balancer)
- *   "chains": [{ "key": "arbitrum-sepolia", "rpc": "https://…", "engine": "0x…", "lens": "0x…", "fromBlock": 123,
- *                "stablecoin": { "symbol": "USDC", "address": "0x…", "decimals": 6 },
+ *   "chains": [{ "key": "robinhood-testnet", "rpc": "https://…", "engine": "0x…", "lens": "0x…", "fromBlock": 123,
+ *                "stablecoin": { "symbol": "USDG", "address": "0x…", "decimals": 6 },
  *                "faucet": { "token": "0x…", "amount": "2000" } }],     // dev chains only: mints a MockERC20
  *   "ai": true                                 // needs CF_ACCOUNT_ID and CF_AI_TOKEN in the environment
  * }
@@ -14,7 +14,7 @@ import { z } from 'zod';
 
 const addr = z.string().regex(/^0x[0-9a-fA-F]{40}$/);
 
-/** Cross-chain collateral (docs/CROSS-CHAIN.md), passed to the app as is. */
+/** Cross-chain collateral (planned, docs/CROSS-CHAIN.md; home = Robinhood Chain), passed to the app as is. */
 const CrossChainCfg = z.object({
   role: z.enum(['home', 'asset']),
   router: addr,
@@ -69,8 +69,8 @@ export const ChainCfg = z.object({
   /** Dev chains only: the API mints this MockERC20 to callers (the key comes from FAUCET_KEY). */
   faucet: z.object({ token: addr, amount: z.string().regex(/^\d+$/) }).optional(),
   /** The retired notes.markets TokenFaucet (optional; scripts/server-config.ts no longer writes it). `tokens`: the
-   * chain's real tokens by symbol (USDG, WETH, Robinhood's stock tokens), receipts on the home chain, and tUSD where
-   * older notes settle in it. */
+   * chain's real tokens by symbol (USDG, WETH, Robinhood's stock tokens), and receipts on the home chain once
+   * cross-chain collateral is deployed. */
   tokenFaucet: addr.optional(),
   tokens: z.record(addr).default({}),
   /**

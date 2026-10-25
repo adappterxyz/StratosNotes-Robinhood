@@ -3,7 +3,7 @@
  * it, the app renders it, and every chain adapter produces it.
  *
  * A note's id is `<chain>:<engine>:<pid>`:
- *  - chain: a chain key from CHAINS (e.g. `arbitrum-sepolia`);
+ *  - chain: a chain key from CHAINS (e.g. `robinhood-testnet`);
  *  - engine: the contract (EVM, lower-case 0x address) or package/party that runs it;
  *  - pid: the process id inside that engine.
  *
@@ -45,16 +45,6 @@ export interface ChainInfo {
 
 /** Known chains. RPCs and engine addresses come from deployment config, not from here. */
 export const CHAINS: Record<string, ChainInfo> = {
-  'arbitrum-sepolia': {
-    key: 'arbitrum-sepolia',
-    family: 'evm',
-    name: 'Arbitrum Sepolia',
-    chainId: 421614,
-    testnet: true,
-    explorer: 'https://sepolia.arbiscan.io',
-    cre: true,
-    stablecoin: { symbol: 'USDG', address: CASH_TOKENS['arbitrum-sepolia'], decimals: 6 },
-  },
   'robinhood-testnet': {
     key: 'robinhood-testnet',
     family: 'evm',
@@ -65,17 +55,7 @@ export const CHAINS: Record<string, ChainInfo> = {
     cre: true,
     stablecoin: { symbol: 'USDG', address: CASH_TOKENS['robinhood-testnet'], decimals: 6 },
   },
-  // Config only (no deployment yet): mainnet settlement in real stablecoins.
-  'arbitrum-one': {
-    key: 'arbitrum-one',
-    family: 'evm',
-    name: 'Arbitrum One',
-    chainId: 42161,
-    testnet: false,
-    explorer: 'https://arbiscan.io',
-    cre: true,
-    stablecoin: { symbol: 'USDC', address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', decimals: 6 },
-  },
+  // Config only (no deployment yet): mainnet settlement in USDG; CRE cannot write here yet (keeper-fallback).
   'robinhood-mainnet': {
     key: 'robinhood-mainnet',
     family: 'evm',
@@ -86,12 +66,12 @@ export const CHAINS: Record<string, ChainInfo> = {
     cre: false,
     stablecoin: { symbol: 'USDG', address: '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168', decimals: 6 },
   },
-  // Local anvil fork of Arbitrum Sepolia (scripts/dev-local.sh): same chain id, local RPC.
+  // Local anvil fork of Robinhood Chain testnet (scripts/dev-local.sh): same chain id, local RPC.
   local: {
     key: 'local',
     family: 'evm',
-    name: 'Local fork (Arbitrum Sepolia)',
-    chainId: 421614,
+    name: 'Local fork (Robinhood Chain testnet)',
+    chainId: 46630,
     testnet: true,
     cre: true,
     stablecoin: { symbol: 'tUSD', decimals: 6 },

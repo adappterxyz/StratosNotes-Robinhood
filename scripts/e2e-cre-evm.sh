@@ -2,12 +2,12 @@
 # End to end, without testnet gas: Chainlink CRE (simulator, --broadcast) and the fallback keeper each run a
 # note's whole life on a local fork of a real testnet, and every payout is checked against the reference payoff.
 #
-#   1. Arbitrum Sepolia fork (anvil, chain id 421614): the real MockKeystoneForwarder is there. Deploy FlowEngine +
+#   1. Robinhood Chain testnet fork (anvil, chain id 46630): the real MockKeystoneForwarder is there. Deploy FlowEngine +
 #      NotesLens + a mock USDC, issue a worst-of phoenix on ETH and BTC (strike ~2 min out, observations
 #      OBS_EVERY apart), subscribe two investors, then run `cre workflow simulate --broadcast` until it completes.
 #      Prices: Chainlink ETH/USD and BTC/USD on Ethereum mainnet, read at a finalized block. E2E_NOTE=equity: TSLA and
 #      NVDA on Robinhood Chain mainnet, read over the CRE HTTP capability (JSON-RPC eth_call; no EVM read there).
-#   2. Robinhood Chain testnet fork (chain id 46630): same note, driven by services/keeper-fallback through
+#   2. A second Robinhood Chain testnet fork: same note, driven by services/keeper-fallback through
 #      FlowEngine.fallbackReport (the path for Robinhood mainnet, where CRE cannot write yet).
 #
 # Accounts are anvil's public test accounts (scripts/e2e/lib.ts). No real key is read or used.
@@ -61,7 +61,7 @@ fork() {
 # deploy <name> <port> <CHAIN for Deploy.s.sol>: engine + lens (mock forwarder) and a mock USDC.
 deploy() {
   local rpc="http://127.0.0.1:$2" head
-  head="$(cast block-number --rpc-url "$rpc")" # the chain's own block (Solidity's block.number is L1's on Arbitrum)
+  head="$(cast block-number --rpc-url "$rpc")" # the chain's own block (Solidity's block.number is L1's on an Orbit chain)
   (cd packages/evm-engine && CHAIN="$3" FORWARDER_MODE=mock OWNER="$ADDR0" OUT="$WORK/$1.json" \
     forge script script/Deploy.s.sol --rpc-url "$rpc" --private-key "$KEY0" --broadcast --slow > "$WORK/deploy-$1.log" 2>&1)
   python3 scripts/set-deploy-block.py "$WORK/$1.json" "$head"
@@ -80,50 +80,50 @@ wait_for_completion() { # <rpc> <chain id> <note json> <driver command...>
 }
 
 if [[ " $PARTS " == *" cre "* ]]; then
-  echo "== CRE on an Arbitrum Sepolia fork"
-  PORT="$(fork arbitrum https://sepolia-rollup.arbitrum.io/rpc 421614)"
+  echo "== CRE on a Robinhood Chain testnet fork"
+  PORT="$(fork robinhood-cre https://rpc.testnet.chain.robinhood.com 46630)"
   RPC="http://127.0.0.1:$PORT"
-  FWD=0xD41263567DdfeAd91504199b8c6c87371e83ca5d  # Arbitrum Sepolia MockKeystoneForwarder
+  FWD=0x0b93082D9b3C7C97fAcd250082899BAcf3af3885  # Robinhood Chain testnet MockKeystoneForwarder
   [ "$(cast code "$FWD" --rpc-url "$RPC" | wc -c)" -gt 4 ] || { echo "MockKeystoneForwarder missing on the fork" >&2; exit 1; }
   echo "fork :$PORT, MockKeystoneForwarder $FWD has code"
-  USDC="$(deploy arbitrum-fork "$PORT" arbitrum-sepolia)"
-  echo "deployed: $(cat "$WORK/arbitrum-fork.json" | tr -d '\n')  USDC $USDC"
-  RPC="$RPC" CHAIN_ID=421614 DEPLOYMENT="$WORK/arbitrum-fork.json" USDC="$USDC" STRIKE_IN="$STRIKE_IN" OBS_EVERY="$OBS_EVERY" \
+  USDC="$(deploy robinhood-fork "$PORT" robinhood-testnet)"
+  echo "deployed: $(cat "$WORK/robinhood-fork.json" | tr -d '\n')  USDC $USDC"
+  RPC="$RPC" CHAIN_ID=46630 DEPLOYMENT="$WORK/robinhood-fork.json" USDC="$USDC" STRIKE_IN="$STRIKE_IN" OBS_EVERY="$OBS_EVERY" \
     OUT="$WORK/note-cre.json" npx tsx scripts/e2e/issue.ts > /dev/null
   echo "issued: $(cat "$WORK/note-cre.json" | tr -d '\n ')"
-  npx tsx scripts/cre-config.ts local-fork "$WORK/arbitrum-fork.json"
+  npx tsx scripts/cre-config.ts local-fork "$WORK/robinhood-fork.json"
   # The simulator's broadcaster pays gas on the fork: anvil account 8 (a public test key), in a throwaway env file.
   printf 'CRE_ETH_PRIVATE_KEY=%s\n' "${KEY8#0x}" > cre/local-fork.env
   export SN_FORK_PORT="$PORT"
-  issuer_bot_start "$RPC" 421614 "$WORK/arbitrum-fork.json"
+  issuer_bot_start "$RPC" 46630 "$WORK/robinhood-fork.json"
   simulate() {
     (cd cre && cre workflow simulate notes-keeper-evm --target local-fork --non-interactive --trigger-index 0 \
       --broadcast -e local-fork.env 2>&1 | grep -E 'USER LOG|Workflow Simulation Result|^"\{|✗|rror' || true) | tee -a "$WORK/cre.log"
   }
-  wait_for_completion "$RPC" 421614 "$WORK/note-cre.json" simulate
-  RPC="$RPC" CHAIN_ID=421614 NOTE_JSON="$WORK/note-cre.json" EXPECT_REPORTER="$FWD" MISS="${MISS:-}" npx tsx scripts/e2e/verify.ts | tee "$WORK/verify-cre.txt"
+  wait_for_completion "$RPC" 46630 "$WORK/note-cre.json" simulate
+  RPC="$RPC" CHAIN_ID=46630 NOTE_JSON="$WORK/note-cre.json" EXPECT_REPORTER="$FWD" MISS="${MISS:-}" npx tsx scripts/e2e/verify.ts | tee "$WORK/verify-cre.txt"
   issuer_bot_stop
   rm -f cre/local-fork.env
 fi
 
 if [[ " $PARTS " == *" fallback "* ]]; then
   echo "== Fallback keeper on a Robinhood Chain testnet fork"
-  PORT="$(fork robinhood https://rpc.testnet.chain.robinhood.com 46630)"
+  PORT="$(fork robinhood-fallback https://rpc.testnet.chain.robinhood.com 46630)"
   RPC="http://127.0.0.1:$PORT"
-  USDC="$(deploy robinhood-fork "$PORT" robinhood-testnet)"
-  echo "deployed: $(cat "$WORK/robinhood-fork.json" | tr -d '\n')  USDC $USDC"
-  RPC="$RPC" CHAIN_ID=46630 DEPLOYMENT="$WORK/robinhood-fork.json" USDC="$USDC" STRIKE_IN="$STRIKE_IN" OBS_EVERY="$OBS_EVERY" FALLBACK=1 \
+  USDC="$(deploy robinhood-fallback "$PORT" robinhood-testnet)"
+  echo "deployed: $(cat "$WORK/robinhood-fallback.json" | tr -d '\n')  USDC $USDC"
+  RPC="$RPC" CHAIN_ID=46630 DEPLOYMENT="$WORK/robinhood-fallback.json" USDC="$USDC" STRIKE_IN="$STRIKE_IN" OBS_EVERY="$OBS_EVERY" FALLBACK=1 \
     OUT="$WORK/note-fallback.json" npx tsx scripts/e2e/issue.ts > /dev/null
   echo "issued: $(cat "$WORK/note-fallback.json" | tr -d '\n ')"
-  ENGINE="$(python3 -c "import json;print(json.load(open('$WORK/robinhood-fork.json'))['engine'])")"
-  LENS="$(python3 -c "import json;print(json.load(open('$WORK/robinhood-fork.json'))['lens'])")"
+  ENGINE="$(python3 -c "import json;print(json.load(open('$WORK/robinhood-fallback.json'))['engine'])")"
+  LENS="$(python3 -c "import json;print(json.load(open('$WORK/robinhood-fallback.json'))['lens'])")"
   cat > "$WORK/keeper-fallback.json" <<JSON
-{ "chain": { "name": "robinhood-fork", "chainId": 46630, "rpc": "$RPC", "engine": "$ENGINE", "lens": "$LENS" },
+{ "chain": { "name": "robinhood-fallback", "chainId": 46630, "rpc": "$RPC", "engine": "$ENGINE", "lens": "$LENS" },
   "feedRpcs": { "ethereum-mainnet": "https://ethereum-rpc.publicnode.com", "robinhood-mainnet": "https://rpc.mainnet.chain.robinhood.com" },
   "blockTag": "finalized", "finalityAllowanceSec": 1800, "maxReportsPerRun": 5, "gasLimit": "8000000" }
 JSON
   echo "$KEY9" > "$WORK/fallback.key"
-  issuer_bot_start "$RPC" 46630 "$WORK/robinhood-fork.json"
+  issuer_bot_start "$RPC" 46630 "$WORK/robinhood-fallback.json"
   fallback() {
     KEEPER_CONFIG="$WORK/keeper-fallback.json" KEEPER_KEY_FILE="$WORK/fallback.key" npx tsx services/keeper-fallback/src/main.ts --once 2>&1 | tee -a "$WORK/fallback.log"
   }

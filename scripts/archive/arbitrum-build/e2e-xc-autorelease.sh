@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# ARCHIVED from the earlier Arbitrum build (home Arbitrum Sepolia, vault on Robinhood Chain): kept as evidence of the
+# auto-release mechanism (docs/CROSS-CHAIN.md). It runs against the archived v4 contracts on Arbitrum Sepolia, not
+# against anything this Robinhood-only build deploys.
 # Automatic release of cross-chain collateral, end to end on a local ANVIL FORK of Arbitrum Sepolia, against the
 # live FlowEngine v4 and HomeGateway v2 (docs/CROSS-CHAIN.md). Two notes whose only collateral is TSLA.rh (receipts
 # minted by impersonating the gateway, as a CCIP lock would): one is paid in full, the other's issuer misses payment 1
@@ -8,7 +11,7 @@
 #   - push the defaulted note's TSLA.rh to every holder                  -> ReleaseQueued per holder
 #   - flush those releases only after FLUSH_AFTER seconds (CRE is not running on the fork) -> ReleaseSent (real router)
 # Nothing touches a real network: every transaction goes to the fork. Accounts are anvil's public test accounts.
-#   bash scripts/e2e-xc-autorelease.sh        (Foundry + Node 20+; ~12 minutes)
+#   bash scripts/archive/arbitrum-build/e2e-xc-autorelease.sh        (Foundry + Node 20+; ~12 minutes)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -35,15 +38,15 @@ read -r KEY0 KEY1 KEY9 < <(npx tsx -e "import { keyOf } from '$ROOT/scripts/e2e/
 USDC="$(cd packages/evm-engine && forge create test/mocks/MockERC20.sol:MockERC20 --rpc-url "$RPC" --private-key "$KEY0" --broadcast --constructor-args USDC 6 2>/dev/null | awk '/Deployed to:/ {print $3}')"
 [ -n "$USDC" ] || { echo "mock cash deploy failed (packages/evm-engine/lib: see its README)" >&2; exit 1; }
 echo "fork :$PORT, mock cash $USDC"
-RPC="$RPC" USDC="$USDC" STRIKE_IN="$STRIKE_IN" OBS_EVERY="$OBS_EVERY" OUT="$WORK/paid.json" npx tsx scripts/e2e/xc-issue.ts > /dev/null
-RPC="$RPC" USDC="$USDC" STRIKE_IN="$STRIKE_IN" OBS_EVERY="$OBS_EVERY" OUT="$WORK/defaulted.json" npx tsx scripts/e2e/xc-issue.ts > /dev/null
+RPC="$RPC" USDC="$USDC" STRIKE_IN="$STRIKE_IN" OBS_EVERY="$OBS_EVERY" OUT="$WORK/paid.json" npx tsx scripts/archive/arbitrum-build/xc-issue.ts > /dev/null
+RPC="$RPC" USDC="$USDC" STRIKE_IN="$STRIKE_IN" OBS_EVERY="$OBS_EVERY" OUT="$WORK/defaulted.json" npx tsx scripts/archive/arbitrum-build/xc-issue.ts > /dev/null
 A="$(python3 -c "import json;print(json.load(open('$WORK/paid.json'))['pid'])")"
 B="$(python3 -c "import json;print(json.load(open('$WORK/defaulted.json'))['pid'])")"
 FROM="$(python3 -c "import json;print(json.load(open('$WORK/paid.json'))['fromBlock'])")"
 echo "issued: note $A (paid in full), note $B (misses payment 1)"
 ENGINE=0x7d36Da43724b09Bb03ED98a4574685070073020b LENS=0x7EE0F15F5DF7773C702C38d9d227466386974734
-# The bot under test: the gateway comes from deployments/crosschain-testnet.json (same chain id and engine).
-RPC="$RPC" CHAIN_ID=421614 ENGINE="$ENGINE" LENS="$LENS" FROM_BLOCK="$FROM" GATEWAY_FROM_BLOCK="$FROM" PIDS="$A,$B" \
+# The bot under test: the gateway is the archived v4 one (CROSSCHAIN_CONFIG, same chain id and engine).
+RPC="$RPC" CHAIN_ID=421614 ENGINE="$ENGINE" LENS="$LENS" FROM_BLOCK="$FROM" CROSSCHAIN_CONFIG=deployments/archive/arbitrum-build/v4/crosschain-testnet.json GATEWAY_FROM_BLOCK="$FROM" PIDS="$A,$B" \
   ISSUER_KEY="$KEY1" MINT=1 MISS="$B:1" INTERVAL=4 FLUSH_AFTER="$FLUSH_AFTER" npx tsx scripts/issuer-bot.ts > "$WORK/bot.log" 2>&1 &
 echo $! > "$WORK/bot.pid"
 cat > "$WORK/keeper.json" <<JSON
@@ -53,7 +56,7 @@ JSON
 echo "$KEY9" > "$WORK/fallback.key"
 for _ in $(seq 1 60); do
   KEEPER_CONFIG="$WORK/keeper.json" KEEPER_KEY_FILE="$WORK/fallback.key" npx tsx services/keeper-fallback/src/main.ts --once >> "$WORK/keeper.log" 2>&1 || true
-  st="$(RPC="$RPC" PAID="$WORK/paid.json" DEFAULTED="$WORK/defaulted.json" STATUS_ONLY=1 npx tsx scripts/e2e/xc-verify.ts)"
+  st="$(RPC="$RPC" PAID="$WORK/paid.json" DEFAULTED="$WORK/defaulted.json" STATUS_ONLY=1 npx tsx scripts/archive/arbitrum-build/xc-verify.ts)"
   echo "$(date -u +%T) status $st"
   [[ "$st" != *0* ]] && break
   sleep 15
@@ -61,4 +64,4 @@ done
 echo "both notes ended; waiting $((FLUSH_AFTER + 90)) s for the bot's withdraw, pushes and late fallback flush"
 sleep $((FLUSH_AFTER + 90))
 grep -E "withdrew|pushed receipt|flushed|receipt|gateway" "$WORK/bot.log" || true
-RPC="$RPC" PAID="$WORK/paid.json" DEFAULTED="$WORK/defaulted.json" FLUSH_AFTER="$FLUSH_AFTER" npx tsx scripts/e2e/xc-verify.ts
+RPC="$RPC" PAID="$WORK/paid.json" DEFAULTED="$WORK/defaulted.json" FLUSH_AFTER="$FLUSH_AFTER" npx tsx scripts/archive/arbitrum-build/xc-verify.ts

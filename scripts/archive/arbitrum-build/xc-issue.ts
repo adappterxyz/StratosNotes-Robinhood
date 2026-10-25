@@ -1,29 +1,30 @@
+// ARCHIVED from the earlier Arbitrum build (see e2e-xc-autorelease.sh in this folder): Arbitrum Sepolia contracts.
 /**
  * Issue a note whose only collateral is a HomeGateway v2 receipt (TSLA.rh) on a local ANVIL FORK of Arbitrum Sepolia,
- * against the live engine and gateway, for scripts/e2e-xc-autorelease.sh. Fork only: it impersonates the engine
+ * against the live engine and gateway, for scripts/archive/arbitrum-build/e2e-xc-autorelease.sh. Fork only: it impersonates the engine
  * owner (fallback reporter = anvil account 9, email check off) and the gateway (mints the receipts a CCIP lock would),
  * and uses a mock ERC-20 as the cash leg. Accounts are anvil's public test accounts; no real key is read.
  *
- *   RPC=http://127.0.0.1:8545 USDC=0x... STRIKE_IN=120 OBS_EVERY=120 OUT=/tmp/note.json npx tsx scripts/e2e/xc-issue.ts
+ *   RPC=http://127.0.0.1:8545 USDC=0x... STRIKE_IN=120 OBS_EVERY=120 OUT=/tmp/note.json npx tsx scripts/archive/arbitrum-build/xc-issue.ts
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { encodeFunctionData, parseAbi, parseEther, toHex, zeroAddress, type Address } from 'viem';
 import { dec, EXAMPLE_PRODUCTS, evmInput, FEEDS, type ProductParams } from '@sn/core';
 import { engineAbi, lensAbi } from '@sn/sdk';
-import { acct, approveInputs, clients, compiled } from './lib';
+import { acct, approveInputs, clients, compiled } from '../../e2e/lib';
 
 const env = (k: string, d?: string) => {
   const v = process.env[k] ?? d;
   if (v === undefined) throw new Error(`set ${k}`);
   return v;
 };
-const dep = JSON.parse(readFileSync('deployments/arbitrum-sepolia.json', 'utf8')) as {
+const dep = JSON.parse(readFileSync('deployments/archive/arbitrum-build/v4/arbitrum-sepolia.json', 'utf8')) as {
   engine: Address;
   lens: Address;
   owner: Address;
   verifier: Address;
 };
-const xc = JSON.parse(readFileSync('deployments/crosschain-testnet.json', 'utf8')) as {
+const xc = JSON.parse(readFileSync('deployments/archive/arbitrum-build/v4/crosschain-testnet.json', 'utf8')) as {
   home: { gateway: Address; engine: Address };
   remotes: Array<{ receipts: Record<string, { receipt: Address }> }>;
 };

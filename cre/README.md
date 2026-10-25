@@ -1,7 +1,7 @@
 # CRE: the calculation agent
 
 `notes-keeper-evm` is one Chainlink CRE workflow (TypeScript, `@chainlink/cre-sdk` 1.23). It is the
-calculation agent for every note on every configured EVM chain.
+calculation agent for every note on every configured EVM chain: Robinhood Chain testnet, where notes run.
 
 Each cron run does this for each chain in the config:
 
@@ -19,15 +19,19 @@ Each cron run does this for each chain in the config:
 
 | Target | Chains written | Feeds read | Forwarder |
 |---|---|---|---|
-| `local-fork` | an anvil fork of Arbitrum Sepolia (`SN_FORK_PORT`) | Ethereum mainnet (crypto), Robinhood Chain mainnet over HTTP (equities), Arbitrum One (older equity notes) | MockKeystoneForwarder (`--broadcast`) |
-| `staging-settings` | Arbitrum Sepolia, Robinhood Chain testnet | the same: the testnets have no feeds | MockKeystoneForwarder (`--broadcast`) or KeystoneForwarder once deployed |
-| `production-settings` | Arbitrum One | the same | KeystoneForwarder |
+| `local-fork` | an anvil fork of Robinhood Chain testnet (`SN_FORK_PORT`) | Ethereum mainnet (crypto), Robinhood Chain mainnet over HTTP (equities) | MockKeystoneForwarder (`--broadcast`) |
+| `staging-settings` | Robinhood Chain testnet | the same: the testnet has no feeds | MockKeystoneForwarder (`--broadcast`) or KeystoneForwarder once deployed |
+
+There is no production target: CRE cannot write to Robinhood Chain mainnet yet.
 
 Equity feeds (TSLA, AMZN, AMD, PLTR, NVDA, AAPL, SPY on Robinhood Chain mainnet) follow NYSE hours with a 24 h heartbeat; the products set
 a 4-day staleness allowance for them so a weekend doesn't block an observation. A note observed on a Monday
 morning before the open uses Friday's close.
 
-CRE has no Robinhood Chain **mainnet** support yet. Notes there are run by `services/keeper-fallback`.
+CRE has no Robinhood Chain **mainnet** write support yet. Notes there would be run by `services/keeper-fallback`.
+
+Cross-chain collateral (planned, docs/CROSS-CHAIN.md) adds optional `gateways` (flush reports) and `vaults` (backing
+checks); both are absent from the config while nothing is deployed.
 
 ### Feeds over HTTP (Robinhood Chain mainnet)
 
@@ -50,17 +54,19 @@ trust (or your own node) for production.
 
 ## Config
 
-Generate a target's config from `deployments/<chain>.json`:
+Generate a target's config from `deployments/robinhood-testnet.json`:
 
 ```bash
 npx tsx scripts/cre-config.ts staging
 ```
 
-A chain that isn't deployed gets the zero address, and the workflow refuses to start with it.
+Until the engine is deployed the deployment file is a placeholder: staging then lists no chain, and the workflow
+refuses to start (it needs at least one). A local fork without a deployment gets the zero address, which it also
+refuses.
 
 | Field | Meaning |
 |---|---|
-| `chains[].gasLimit` | Gas for one report (8M). A coupon to a full book of 62 holders measured 2.34M of execution and a default paying three escrow assets to 62 holders 5.01M (capped at what is owed, the rest to the issuer); the rest covers Arbitrum's L1 data gas. CRE allows 10M per write. |
+| `chains[].gasLimit` | Gas for one report (8M). A coupon to a full book of 62 holders measured 2.34M of execution and a default paying three escrow assets to 62 holders 5.01M (capped at what is owed, the rest to the issuer); the rest covers the L1 data gas Robinhood Chain (an Arbitrum Orbit chain) charges inside the limit. CRE allows 10M per write. |
 | `chains[].fromPid` | First process id to scan, to skip finished history. |
 | `chains[].scan` | How many process ids one lens call reads. |
 | `chains[].maxProcesses` | How many running processes one lens call returns. Up to 4 pages per run. |
@@ -79,9 +85,9 @@ cre workflow simulate notes-keeper-evm --target staging-settings --non-interacti
 ```
 
 - **Broadcasting** needs `CRE_ETH_PRIVATE_KEY`. `scripts/keeper-loop.sh` passes the keeper key
-  (`.keys/keeper.json`) in a temporary env file it deletes after each run. That key pays gas on each written
-  chain.
+  (`.keys/keeper.json`) in a temporary env file it deletes after each run. That key pays gas on Robinhood Chain
+  testnet.
 - **Deploying** (`cre workflow deploy`) needs CRE deploy access, a linked funded wallet, and engines whose
   forwarder is the KeystoneForwarder (`FORWARDER_MODE=production` in `packages/evm-engine/script/Deploy.s.sol`).
 
-The full life of a note on an Arbitrum Sepolia fork, driven by the simulator: `bash scripts/e2e-cre-evm.sh`.
+The full life of a note on a Robinhood Chain testnet fork, driven by the simulator: `bash scripts/e2e-cre-evm.sh`.

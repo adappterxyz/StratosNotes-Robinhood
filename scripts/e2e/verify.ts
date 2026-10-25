@@ -6,7 +6,7 @@
  * before it plus its pro-rata share of the collateral (simulateNote). Every report must come from the expected
  * reporter (the forwarder for CRE, or the fallback).
  *
- *   RPC=... CHAIN_ID=421614 NOTE_JSON=/tmp/note.json EXPECT_REPORTER=0x... [MISS=1:1] npx tsx scripts/e2e/verify.ts
+ *   RPC=... CHAIN_ID=46630 NOTE_JSON=/tmp/note.json EXPECT_REPORTER=0x... [MISS=1:1] npx tsx scripts/e2e/verify.ts
  *   STATUS_ONLY=1 ... prints the process status (0 running, 1 completed) and exits.
  */
 import { readFileSync } from 'node:fs';

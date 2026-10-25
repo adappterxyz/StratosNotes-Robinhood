@@ -1,5 +1,5 @@
 // StratosNotes keeper (EVM): one Chainlink CRE workflow that is the calculation agent for EVERY note on every
-// configured EVM chain (Arbitrum Sepolia, Robinhood Chain testnet; Arbitrum One by config).
+// configured EVM chain: Robinhood Chain testnet, where notes run.
 //
 // Each cron run, per chain:
 //  1. Reads every running process through the chain's NotesLens at the last FINALIZED block (one call), and
@@ -15,7 +15,7 @@
 //  4. Writes a DON-signed report to the chain's FlowEngine through the KeystoneForwarder:
 //     abi.encode(uint256 pid, uint16 step, int256[] values). The engine bounds-checks every value, runs the
 //     step and everything after it that needs nobody (coupons, autocall, redemption) in that transaction.
-//  5. Cross-chain auto-release (HomeGateway v2, docs/CROSS-CHAIN.md "CRE report spec"): reads each home chain's
+//  5. Cross-chain auto-release (planned, HomeGateway v2, docs/CROSS-CHAIN.md; off while `gateways` is empty): reads each home chain's
 //     gateway queue (one call) and, when releases wait and the fee pool pays for them, writes a flush report
 //     abi.encode(uint8 1, uint256 maxItems) to the gateway, which sends them over CCIP. Counts as a report.
 import {
@@ -66,11 +66,11 @@ const configSchema = z.object({
   chains: z
     .array(
       z.object({
-        /** CRE chain-selector name, e.g. ethereum-testnet-sepolia-arbitrum-1, robinhood-testnet. */
+        /** CRE chain-selector name, e.g. robinhood-testnet. */
         chainSelectorName: z.string(),
         engine: deployed,
         lens: deployed,
-        /** Gas for one report: a coupon to a full book (62 holders) needs ~2.3M of execution, plus Arbitrum L1 data gas. */
+        /** Gas for one report: a coupon to a full book (62 holders) needs ~2.3M of execution, plus L1 data gas (Orbit chain). */
         gasLimit: z.string().regex(/^\d+$/),
         /** First pid to scan (skip finished history) and how many pids one lens call scans / returns. */
         fromPid: z.number().int().positive(),
@@ -101,8 +101,8 @@ const configSchema = z.object({
    */
   httpFeedChains: httpFeedChainsSchema.optional(),
   /**
-   * Optional: cross-chain collateral (stage 1). For each vault on an asset chain (Robinhood) and its receipt on
-   * the home chain, check every run that the vault still backs the receipts (packages/core/src/crosschain.ts).
+   * Optional: cross-chain collateral (planned; none configured today). For each vault on a remote asset chain and
+   * its receipt on the home chain (Robinhood Chain), check every run that the vault still backs the receipts (packages/core/src/crosschain.ts).
    */
   /**
    * Optional: auto-release gateways (HomeGateway v2), one per home chain. Each run reads the release queue (one

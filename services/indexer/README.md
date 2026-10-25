@@ -13,10 +13,8 @@ npm test   # PGlite: backfill, idempotent replay, reorgs (including one that rem
 
 ```json
 { "chains": [
-  { "key": "arbitrum-sepolia", "family": "evm", "chainId": 421614, "rpc": "https://sepolia-rollup.arbitrum.io/rpc",
-    "engine": "0x…", "startBlock": 12345678, "confirmations": 2, "maxRange": 1000, "pollMs": 2000 },
   { "key": "robinhood-testnet", "family": "evm", "chainId": 46630, "rpc": "https://rpc.testnet.chain.robinhood.com",
-    "engine": "0x…", "startBlock": 456, "confirmations": 20, "maxRange": 2000 }
+    "engine": "0x…", "startBlock": 456, "confirmations": 120, "maxRange": 20000, "pollMs": 2000 }
 ] }
 ```
 
