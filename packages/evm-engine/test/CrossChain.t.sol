@@ -17,52 +17,52 @@ import {CreReceiver} from "../src/cre/CreReceiver.sol";
 import {IReceiver} from "../src/cre/IReceiver.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
-/// Stage 1 of the cross-chain lifecycle: a note runs on its home chain (Arbitrum) while its collateral stays
-/// locked on other chains (Robinhood Chain, Base), coordinated by CCIP. The note fixtures that pledge collateral
+/// Stage 1 of the (planned) cross-chain lifecycle: a note runs on its home chain (Ethereum Sepolia) while its
+/// collateral stays locked on other chains (Ethereum Sepolia, Base), coordinated by CCIP. The note fixtures that pledge collateral
 /// are replayed with that collateral locked remotely: the issuer locks it in the vault, the gateway mints receipts,
 /// the engine uses them exactly like local collateral (coverage, margin calls, release, the default rule), and at
 /// the end every receipt is redeemed for the real asset on its own chain. Every amount must equal the reference.
 contract CrossChainTest is ProductsBase {
-    uint64 constant ARB = 3478487238524512106; // Arbitrum Sepolia (home)
-    uint64 constant RH = 2032988798112970440; // Robinhood Chain testnet
+    uint64 constant HOME = 2032988798112970440; // Ethereum Sepolia testnet (home)
+    uint64 constant SEP = 16015286601757825753; // Ethereum Sepolia
     uint64 constant BASE = 10344971235874465080; // Base Sepolia
     uint256 constant FEE = 0.001 ether;
 
     MockCCIPRouter homeRouter;
-    MockCCIPRouter rhRouter;
+    MockCCIPRouter sepRouter;
     MockCCIPRouter baseRouter;
     HomeGateway gateway;
-    RemoteVault rhVault;
+    RemoteVault sepVault;
     RemoteVault baseVault;
-    FreezableERC20 rhEth; // the ETH-like collateral token on Robinhood (18 decimals, as the fixtures' WETH)
+    FreezableERC20 sepEth; // the ETH-like collateral token on Ethereum Sepolia (18 decimals, as the fixtures' WETH)
     FreezableERC20 baseUsdg; // a stablecoin on Base (6 decimals, as the fixtures' USD collateral)
     RemoteReceipt rEth;
     RemoteReceipt rUsd;
 
     function setUp() public override {
         super.setUp();
-        homeRouter = new MockCCIPRouter(ARB, FEE);
-        rhRouter = new MockCCIPRouter(RH, FEE);
+        homeRouter = new MockCCIPRouter(HOME, FEE);
+        sepRouter = new MockCCIPRouter(SEP, FEE);
         baseRouter = new MockCCIPRouter(BASE, FEE);
-        homeRouter.connect(rhRouter);
+        homeRouter.connect(sepRouter);
         homeRouter.connect(baseRouter);
-        rhRouter.connect(homeRouter);
+        sepRouter.connect(homeRouter);
         baseRouter.connect(homeRouter);
 
         gateway = new HomeGateway(address(homeRouter), admin, address(engine), forwarder);
-        rhVault = new RemoteVault(address(rhRouter), admin, ARB);
-        baseVault = new RemoteVault(address(baseRouter), admin, ARB);
-        rhEth = new FreezableERC20("ETH.rh", decimals[2]);
+        sepVault = new RemoteVault(address(sepRouter), admin, HOME);
+        baseVault = new RemoteVault(address(baseRouter), admin, HOME);
+        sepEth = new FreezableERC20("ETH.sep", decimals[2]);
         baseUsdg = new FreezableERC20("USDG.base", decimals[1]);
 
         vm.startPrank(admin);
-        rhVault.setHomeGateway(address(gateway));
+        sepVault.setHomeGateway(address(gateway));
         baseVault.setHomeGateway(address(gateway));
-        rhVault.setToken(address(rhEth), true);
+        sepVault.setToken(address(sepEth), true);
         baseVault.setToken(address(baseUsdg), true);
-        gateway.setRemote(RH, address(rhVault), 300_000);
+        gateway.setRemote(SEP, address(sepVault), 300_000);
         gateway.setRemote(BASE, address(baseVault), 300_000);
-        rEth = RemoteReceipt(gateway.registerReceipt(RH, address(rhEth), decimals[2], "ETH locked on Robinhood Chain", "ETH.rh"));
+        rEth = RemoteReceipt(gateway.registerReceipt(SEP, address(sepEth), decimals[2], "ETH locked on Ethereum Sepolia", "ETH.sep"));
         rUsd = RemoteReceipt(gateway.registerReceipt(BASE, address(baseUsdg), decimals[1], "USDG locked on Base", "USDG.base"));
         vm.stopPrank();
         gateway.fundFees{value: 1 ether}(); // the release fee pool (the issuer or the protocol funds it)
@@ -81,7 +81,7 @@ contract CrossChainTest is ProductsBase {
 
     /// Which remote receipt stands in for asset `a` (0 = keep the local token).
     function _receiptFor(Fixture memory f, uint256 a) internal view returns (RemoteReceipt) {
-        if (f.tokenOf[a] == 2) return rEth; // ETH collateral: on Robinhood
+        if (f.tokenOf[a] == 2) return rEth; // ETH collateral: on Ethereum Sepolia
         if (f.tokenOf[a] == 1 && a != CASH) return rUsd; // stablecoin collateral (not the cash leg): on Base
         return RemoteReceipt(address(0));
     }
@@ -98,7 +98,7 @@ contract CrossChainTest is ProductsBase {
     /// The issuer locks `base` of the asset behind `r` on its chain; the lock is delivered home unless `deliver` is false.
     function _lockRemote(RemoteReceipt r, address who, uint256 base, bool deliver) internal returns (uint256 msgIndex) {
         (RemoteVault vault, FreezableERC20 token, MockCCIPRouter router) =
-            r == rEth ? (rhVault, rhEth, rhRouter) : (baseVault, baseUsdg, baseRouter);
+            r == rEth ? (sepVault, sepEth, sepRouter) : (baseVault, baseUsdg, baseRouter);
         token.mint(who, base);
         vm.deal(who, who.balance + FEE);
         vm.startPrank(who);
@@ -111,7 +111,7 @@ contract CrossChainTest is ProductsBase {
 
     /// Redeem `base` receipts held by `who` for the real asset on its chain; returns what arrived there.
     function _redeem(RemoteReceipt r, address who, uint256 base) internal returns (uint256 got) {
-        FreezableERC20 token = r == rEth ? rhEth : baseUsdg;
+        FreezableERC20 token = r == rEth ? sepEth : baseUsdg;
         uint256 before = token.balanceOf(who);
         vm.deal(who, who.balance + FEE);
         vm.prank(who);
@@ -143,7 +143,7 @@ contract CrossChainTest is ProductsBase {
         vm.stopPrank();
     }
 
-    /// The fixtures name a pledge by token id: 2 = ETH (remote, Robinhood); 1 with a stablecoin collateral asset in
+    /// The fixtures name a pledge by token id: 2 = ETH (remote, Ethereum Sepolia); 1 with a stablecoin collateral asset in
     /// the note = USD collateral (remote, Base) only when the cash leg is minted separately (see _cashPledges).
     function _receiptForToken(Fixture memory f, uint8 token) internal view returns (RemoteReceipt) {
         if (token == 2) return rEth;
@@ -173,7 +173,7 @@ contract CrossChainTest is ProductsBase {
                     vm.prank(issuer);
                     vm.expectRevert(); // the receipts have not arrived yet
                     engine.executeStep(pid, a.step, NO, a.inputs);
-                    rhRouter.deliver(m); // CCIP delivers (15-20 minutes on testnet)
+                    sepRouter.deliver(m); // CCIP delivers (15-20 minutes on testnet)
                 } else {
                     tokens[a.token].mint(issuer, a.base);
                 }
@@ -217,7 +217,7 @@ contract CrossChainTest is ProductsBase {
 
     /// Anyone flushes the queue (CCIP fees from the pool); CCIP delivers; what `who` received on r's asset chain.
     function _flushAndDeliver(RemoteReceipt r, address who) internal returns (uint256 got) {
-        FreezableERC20 token = r == rEth ? rhEth : baseUsdg;
+        FreezableERC20 token = r == rEth ? sepEth : baseUsdg;
         uint256 before = token.balanceOf(who);
         vm.prank(keeper);
         gateway.flush(25);
@@ -242,7 +242,7 @@ contract CrossChainTest is ProductsBase {
         for (uint256 a = CASH + 1; a < f.tokenOf.length; a++) issuerEnd[a] = f.issuerCollateral[a];
         _cashOut(f, pid, issuer, issuerEnd, "issuer");
         // Every receipt redeemed: what the vaults still lock equals what is outstanding at home (dust only).
-        assertEq(rhVault.locked(address(rhEth)), rEth.totalSupply(), "Robinhood vault: locked = receipts outstanding");
+        assertEq(sepVault.locked(address(sepEth)), rEth.totalSupply(), "Ethereum Sepolia vault: locked = receipts outstanding");
         assertEq(baseVault.locked(address(baseUsdg)), rUsd.totalSupply(), "Base vault: locked = receipts outstanding");
     }
 
@@ -250,27 +250,27 @@ contract CrossChainTest is ProductsBase {
     // The lifecycle with remote collateral
     // ---------------------------------------------------------------------------------------------------------
 
-    /// ETH collateral locked on Robinhood: a margin call (ETH falls 40%) cured by a top-up that is itself locked
-    /// remotely and arrives late; paid in full; the collateral is released and redeemed on Robinhood.
+    /// ETH collateral locked on Ethereum Sepolia: a margin call (ETH falls 40%) cured by a top-up that is itself locked
+    /// remotely and arrives late; paid in full; the collateral is released and redeemed on Ethereum Sepolia.
     function test_remoteCollateral_marginCallCured_paidInFull_released() public {
         uint256 i = _idx("margin call cured");
         Fixture memory f = _fixture(i);
         assertFalse(f.defaulted);
         _runRemote(i);
         assertEq(rEth.totalSupply(), 0, "all ETH receipts redeemed");
-        assertEq(rhVault.locked(address(rhEth)), 0, "nothing left locked on Robinhood");
+        assertEq(sepVault.locked(address(sepEth)), 0, "nothing left locked on Ethereum Sepolia");
     }
 
     /// Not cured: default at the end of grace; the holders receive the ETH collateral (as receipts, through the
-    /// engine's default rule) and redeem it on Robinhood for real ETH, pro rata.
-    function test_remoteCollateral_marginCallNotCured_defaultPaysHoldersOnRobinhood() public {
+    /// engine's default rule) and redeem it on Ethereum Sepolia for real ETH, pro rata.
+    function test_remoteCollateral_marginCallNotCured_defaultPaysHoldersOnRemoteChain() public {
         uint256 i = _idx("margin call not cured");
         assertTrue(_fixture(i).defaulted);
         _runRemote(i);
-        assertEq(rhVault.locked(address(rhEth)), rEth.totalSupply(), "locked = outstanding");
+        assertEq(sepVault.locked(address(sepEth)), rEth.totalSupply(), "locked = outstanding");
     }
 
-    /// Collateral on TWO remote chains: stablecoin on Base and ETH on Robinhood. Coverage sums both; a missed
+    /// Collateral on TWO remote chains: stablecoin on Base and ETH on Ethereum Sepolia. Coverage sums both; a missed
     /// coupon defaults; cap-at-owed pays holders the coupon plus par (stablecoin first, then ETH) and releases the
     /// rest of the ETH to the issuer, each redeemed on its own chain.
     function test_remoteCollateral_twoChains_cappedDefault() public {
@@ -292,7 +292,7 @@ contract CrossChainTest is ProductsBase {
     function test_duplicateLockAndReleaseApplyOnce() public {
         address alice = makeAddr("alice");
         uint256 m = _lockRemote(rEth, alice, 5e9, true);
-        rhRouter.deliver(m); // CCIP retry / a manual re-execution of the same message
+        sepRouter.deliver(m); // CCIP retry / a manual re-execution of the same message
         assertEq(rEth.balanceOf(alice), 5e9, "receipts minted once");
 
         // Receipts reach alice only through the engine in real use; here the gateway path is what matters.
@@ -302,31 +302,31 @@ contract CrossChainTest is ProductsBase {
         uint256 r = homeRouter.count() - 1;
         homeRouter.deliver(r);
         homeRouter.deliver(r); // replay
-        assertEq(rhEth.balanceOf(alice), 2e9, "released once");
-        assertEq(rhVault.locked(address(rhEth)), 3e9);
+        assertEq(sepEth.balanceOf(alice), 2e9, "released once");
+        assertEq(sepVault.locked(address(sepEth)), 3e9);
         assertEq(rEth.totalSupply(), 3e9);
     }
 
     function test_forgedOrUnknownSendersAreRejected() public {
-        bytes memory lock = CrossChainMessages.encode(CrossChainMessages.LOCKED, bytes32("x"), address(this), address(rhEth), 1e9);
-        // A contract on Robinhood that is not the vault.
-        vm.expectRevert(abi.encodeWithSelector(HomeGateway.UnknownSender.selector, RH, address(0xBAD)));
-        homeRouter.execute(RH, address(0xBAD), address(gateway), lock, bytes32("m1"));
+        bytes memory lock = CrossChainMessages.encode(CrossChainMessages.LOCKED, bytes32("x"), address(this), address(sepEth), 1e9);
+        // A contract on Ethereum Sepolia that is not the vault.
+        vm.expectRevert(abi.encodeWithSelector(HomeGateway.UnknownSender.selector, SEP, address(0xBAD)));
+        homeRouter.execute(SEP, address(0xBAD), address(gateway), lock, bytes32("m1"));
         // The vault's address on a chain that is not configured.
-        vm.expectRevert(abi.encodeWithSelector(HomeGateway.UnknownSender.selector, uint64(1), address(rhVault)));
-        homeRouter.execute(1, address(rhVault), address(gateway), lock, bytes32("m2"));
+        vm.expectRevert(abi.encodeWithSelector(HomeGateway.UnknownSender.selector, uint64(1), address(sepVault)));
+        homeRouter.execute(1, address(sepVault), address(gateway), lock, bytes32("m2"));
         // Anyone but the router.
-        _callReceiveDirectly(address(gateway), RH, address(rhVault), lock);
+        _callReceiveDirectly(address(gateway), SEP, address(sepVault), lock);
 
-        bytes memory rel = CrossChainMessages.encode(CrossChainMessages.RELEASE, bytes32("y"), address(this), address(rhEth), 1);
+        bytes memory rel = CrossChainMessages.encode(CrossChainMessages.RELEASE, bytes32("y"), address(this), address(sepEth), 1);
         // RELEASE from the home chain but not from the gateway, and from the gateway's address on another chain.
-        vm.expectRevert(abi.encodeWithSelector(RemoteVault.UnknownSender.selector, ARB, address(0xBAD)));
-        rhRouter.execute(ARB, address(0xBAD), address(rhVault), rel, bytes32("m3"));
+        vm.expectRevert(abi.encodeWithSelector(RemoteVault.UnknownSender.selector, HOME, address(0xBAD)));
+        sepRouter.execute(HOME, address(0xBAD), address(sepVault), rel, bytes32("m3"));
         vm.expectRevert(abi.encodeWithSelector(RemoteVault.UnknownSender.selector, BASE, address(gateway)));
-        rhRouter.execute(BASE, address(gateway), address(rhVault), rel, bytes32("m4"));
+        sepRouter.execute(BASE, address(gateway), address(sepVault), rel, bytes32("m4"));
         // A LOCKED sent to the vault, or a RELEASE sent home, is the wrong kind.
         vm.expectRevert(RemoteVault.WrongKind.selector);
-        rhRouter.execute(ARB, address(gateway), address(rhVault), lock, bytes32("m5"));
+        sepRouter.execute(HOME, address(gateway), address(sepVault), lock, bytes32("m5"));
     }
 
     function _callReceiveDirectly(address receiver, uint64 source, address sender, bytes memory data) internal {
@@ -344,9 +344,9 @@ contract CrossChainTest is ProductsBase {
     function test_releaseCannotExceedWhatIsLocked() public {
         address alice = makeAddr("alice");
         _lockRemote(rEth, alice, 1e9, true);
-        bytes memory rel = CrossChainMessages.encode(CrossChainMessages.RELEASE, bytes32("big"), alice, address(rhEth), 2e9);
-        vm.expectRevert(abi.encodeWithSelector(RemoteVault.OverRelease.selector, address(rhEth), 2e9, 1e9));
-        rhRouter.execute(ARB, address(gateway), address(rhVault), rel, bytes32("m"));
+        bytes memory rel = CrossChainMessages.encode(CrossChainMessages.RELEASE, bytes32("big"), alice, address(sepEth), 2e9);
+        vm.expectRevert(abi.encodeWithSelector(RemoteVault.OverRelease.selector, address(sepEth), 2e9, 1e9));
+        sepRouter.execute(HOME, address(gateway), address(sepVault), rel, bytes32("m"));
     }
 
     /// Out of order: two locks delivered in reverse; both credited, each once.
@@ -354,11 +354,11 @@ contract CrossChainTest is ProductsBase {
         address alice = makeAddr("alice");
         uint256 m1 = _lockRemote(rEth, alice, 1e9, false);
         uint256 m2 = _lockRemote(rEth, alice, 2e9, false);
-        rhRouter.deliver(m2);
+        sepRouter.deliver(m2);
         assertEq(rEth.balanceOf(alice), 2e9);
-        rhRouter.deliver(m1);
+        sepRouter.deliver(m1);
         assertEq(rEth.balanceOf(alice), 3e9);
-        assertEq(rhVault.locked(address(rhEth)), 3e9);
+        assertEq(sepVault.locked(address(sepEth)), 3e9);
     }
 
     /// A lock of a token the home side does not know yet fails there and stays executable: register the receipt,
@@ -366,20 +366,20 @@ contract CrossChainTest is ProductsBase {
     function test_lockOfUnregisteredTokenIsRetryable() public {
         FreezableERC20 tsla = new FreezableERC20("TSLA", 18);
         vm.prank(admin);
-        rhVault.setToken(address(tsla), true);
+        sepVault.setToken(address(tsla), true);
         address alice = makeAddr("alice");
         tsla.mint(alice, 3e18);
         vm.deal(alice, FEE);
         vm.startPrank(alice);
-        tsla.approve(address(rhVault), 3e18);
-        rhVault.lock{value: FEE}(address(tsla), 3e18, alice);
+        tsla.approve(address(sepVault), 3e18);
+        sepVault.lock{value: FEE}(address(tsla), 3e18, alice);
         vm.stopPrank();
-        uint256 m = rhRouter.count() - 1;
-        vm.expectRevert(abi.encodeWithSelector(HomeGateway.UnknownToken.selector, RH, address(tsla)));
-        rhRouter.deliver(m);
+        uint256 m = sepRouter.count() - 1;
+        vm.expectRevert(abi.encodeWithSelector(HomeGateway.UnknownToken.selector, SEP, address(tsla)));
+        sepRouter.deliver(m);
         vm.prank(admin);
-        address rTsla = gateway.registerReceipt(RH, address(tsla), 18, "TSLA locked on Robinhood Chain", "TSLA.rh");
-        rhRouter.deliver(m); // manual execution after the fix
+        address rTsla = gateway.registerReceipt(SEP, address(tsla), 18, "TSLA locked on Ethereum Sepolia", "TSLA.sep");
+        sepRouter.deliver(m); // manual execution after the fix
         assertEq(RemoteReceipt(rTsla).balanceOf(alice), 3e18);
     }
 
@@ -426,9 +426,9 @@ contract CrossChainTest is ProductsBase {
     function test_vaultShortfallIsVisible() public {
         address alice = makeAddr("alice");
         _lockRemote(rEth, alice, 5e9, true);
-        assertEq(rhVault.surplus(address(rhEth)), 0);
-        rhEth.seize(address(rhVault), 2e9);
-        assertEq(rhVault.surplus(address(rhEth)), -2e9, "shortfall visible on the asset chain");
+        assertEq(sepVault.surplus(address(sepEth)), 0);
+        sepEth.seize(address(sepVault), 2e9);
+        assertEq(sepVault.surplus(address(sepEth)), -2e9, "shortfall visible on the asset chain");
         assertEq(rEth.totalSupply(), 5e9, "receipts outstanding at home");
     }
 
@@ -437,7 +437,7 @@ contract CrossChainTest is ProductsBase {
         address alice = makeAddr("alice");
         uint256 m = _lockRemote(rEth, alice, 1e9, false);
         uint256 g = gasleft();
-        rhRouter.deliver(m);
+        sepRouter.deliver(m);
         uint256 lockedGas = g - gasleft();
         vm.deal(alice, FEE);
         vm.prank(alice);
@@ -454,33 +454,33 @@ contract CrossChainTest is ProductsBase {
 
     function test_feesAreChargedAndExcessRefunded() public {
         address alice = makeAddr("alice");
-        rhEth.mint(alice, 1e9);
+        sepEth.mint(alice, 1e9);
         vm.deal(alice, 1 ether);
         vm.startPrank(alice);
-        rhEth.approve(address(rhVault), 1e9);
+        sepEth.approve(address(sepVault), 1e9);
         vm.expectRevert(abi.encodeWithSelector(RemoteVault.FeeTooLow.selector, FEE));
-        rhVault.lock{value: FEE - 1}(address(rhEth), 1e9, alice);
-        rhVault.lock{value: 1 ether}(address(rhEth), 1e9, alice);
+        sepVault.lock{value: FEE - 1}(address(sepEth), 1e9, alice);
+        sepVault.lock{value: 1 ether}(address(sepEth), 1e9, alice);
         vm.stopPrank();
         assertEq(alice.balance, 1 ether - FEE, "excess refunded");
     }
 
     function test_onlyOwnerConfigures() public {
         vm.expectRevert();
-        gateway.setRemote(RH, address(1), 300_000);
+        gateway.setRemote(SEP, address(1), 300_000);
         vm.expectRevert();
-        gateway.registerReceipt(RH, address(2), 18, "x", "x");
+        gateway.registerReceipt(SEP, address(2), 18, "x", "x");
         vm.expectRevert();
-        rhVault.setHomeGateway(address(3));
+        sepVault.setHomeGateway(address(3));
         vm.expectRevert();
-        rhVault.setToken(address(4), true);
+        sepVault.setToken(address(4), true);
     }
 
     function test_pausedVaultStillReleases() public {
         address alice = makeAddr("alice");
         _lockRemote(rEth, alice, 2e9, true);
         vm.prank(admin);
-        rhVault.pause();
+        sepVault.pause();
         assertEq(_redeem(rEth, alice, 2e9), 2e9, "releases pay while new locks are paused");
     }
 
@@ -526,7 +526,7 @@ contract CrossChainTest is ProductsBase {
         assertTrue(f.defaulted);
         uint8 a = 0;
         for (uint8 x = CASH + 1; x < f.tokenOf.length; x++) if (address(_receiptFor(f, x)) == address(rEth)) a = x;
-        assertGt(a, 0, "the note's ETH collateral is the Robinhood receipt");
+        assertGt(a, 0, "the note's ETH collateral is the Ethereum Sepolia receipt");
         uint256[] memory owed = new uint256[](holders.length);
         uint256 expectQueued;
         for (uint256 k = 0; k < holders.length; k++) {
@@ -545,16 +545,16 @@ contract CrossChainTest is ProductsBase {
         for (uint256 k = 0; k < holders.length; k++) {
             assertEq(rEth.balanceOf(holders[k]), 0, "no receipt rests in a wallet");
             assertLt(engine.balanceOf(pid, holders[k], a), SCALE / int256(10 ** rEth.decimals()) + 1, "paid out of the note");
-            before[k] = rhEth.balanceOf(holders[k]);
+            before[k] = sepEth.balanceOf(holders[k]);
         }
         _flushReport(25);
         homeRouter.deliverAll();
         for (uint256 k = 0; k < holders.length; k++) {
-            assertApproxEqAbs(rhEth.balanceOf(holders[k]) - before[k], owed[k], 1, "the vault paid the real asset on Robinhood");
+            assertApproxEqAbs(sepEth.balanceOf(holders[k]) - before[k], owed[k], 1, "the vault paid the real asset on Ethereum Sepolia");
         }
         (uint256 pending,,,,) = gateway.releaseQueue();
         assertEq(pending, 0, "queue empty");
-        assertEq(rhVault.locked(address(rhEth)), rEth.totalSupply(), "locked = receipts outstanding");
+        assertEq(sepVault.locked(address(sepEth)), rEth.totalSupply(), "locked = receipts outstanding");
     }
 
     /// What queueing costs inside the engine's transfer, against the 150k gas the engine gives each pushed transfer.
@@ -616,10 +616,10 @@ contract CrossChainTest is ProductsBase {
         assertTrue(ok);
         _flushReport(25);
         homeRouter.deliverAll();
-        for (uint256 k = 0; k < 3; k++) assertEq(rhEth.balanceOf(who[k]), (k + 1) * 1e9, "each paid once, in full");
+        for (uint256 k = 0; k < 3; k++) assertEq(sepEth.balanceOf(who[k]), (k + 1) * 1e9, "each paid once, in full");
         (pending,,,,) = gateway.releaseQueue();
         assertEq(pending, 0);
-        assertEq(rhVault.locked(address(rhEth)), 0);
+        assertEq(sepVault.locked(address(sepEth)), 0);
     }
 
     /// At most once end to end: a sent release is never sent again, and a replayed or duplicated RELEASE pays nothing.
@@ -631,18 +631,18 @@ contract CrossChainTest is ProductsBase {
         uint256 m = homeRouter.count() - 1;
         homeRouter.deliver(m);
         homeRouter.deliver(m); // CCIP retry / manual re-execution
-        assertEq(rhEth.balanceOf(h), 3e9, "paid once");
+        assertEq(sepEth.balanceOf(h), 3e9, "paid once");
         vm.prank(keeper);
         assertEq(gateway.flush(25), 0, "nothing to resend");
         vm.expectRevert(abi.encodeWithSelector(HomeGateway.NotQueued.selector, 1));
         gateway.sendQueued{value: FEE}(1);
-        assertTrue(rhVault.released(gateway.releaseId(1)), "the vault recorded the id");
+        assertTrue(sepVault.released(gateway.releaseId(1)), "the vault recorded the id");
         assertTrue(gateway.releaseId(1) != keccak256(abi.encode(block.chainid, address(gateway), uint256(1))), "queue ids never collide with redeem ids");
         // The same id carried by another message from the gateway (e.g. a forged duplicate) pays nothing.
         _lockRemote(rEth, makeAddr("x"), 5e9, true);
-        bytes memory rel = CrossChainMessages.encode(CrossChainMessages.RELEASE, gateway.releaseId(1), h, address(rhEth), 3e9);
-        rhRouter.execute(ARB, address(gateway), address(rhVault), rel, bytes32("dup"));
-        assertEq(rhEth.balanceOf(h), 3e9, "still paid once");
+        bytes memory rel = CrossChainMessages.encode(CrossChainMessages.RELEASE, gateway.releaseId(1), h, address(sepEth), 3e9);
+        sepRouter.execute(HOME, address(gateway), address(sepVault), rel, bytes32("dup"));
+        assertEq(sepEth.balanceOf(h), 3e9, "still paid once");
     }
 
     /// A holder need not wait for the pool or the queue order: sendQueued with its own fee; flush skips it.
@@ -657,12 +657,12 @@ contract CrossChainTest is ProductsBase {
         gateway.sendQueued{value: 1 ether}(2);
         assertEq(h2.balance, 1 ether - FEE, "excess refunded");
         homeRouter.deliverAll();
-        assertEq(rhEth.balanceOf(h2), 2e9);
+        assertEq(sepEth.balanceOf(h2), 2e9);
         gateway.fundFees{value: FEE}();
         vm.prank(keeper);
         assertEq(gateway.flush(25), 1, "only the first is left");
         homeRouter.deliverAll();
-        assertEq(rhEth.balanceOf(h1), 1e9);
+        assertEq(sepEth.balanceOf(h1), 1e9);
         assertEq(gateway.releaseHead(), 3, "the head moves past releases sent out of order");
     }
 
@@ -681,21 +681,21 @@ contract CrossChainTest is ProductsBase {
         vm.prank(keeper);
         gateway.flush(25);
         homeRouter.deliverAll();
-        assertEq(rhEth.balanceOf(h), 7e9);
+        assertEq(sepEth.balanceOf(h), 7e9);
     }
 
     /// A smart wallet that does not exist at the same address on the asset chain names where to be paid.
     function test_autoRelease_releaseAddress() public {
         address safe = makeAddr("safe");
-        address dest = makeAddr("dest on Robinhood");
+        address dest = makeAddr("dest on Ethereum Sepolia");
         vm.prank(safe);
         gateway.setReleaseAddress(dest);
         _outOfEngine(rEth, safe, 2e9);
         vm.prank(keeper);
         gateway.flush(25);
         homeRouter.deliverAll();
-        assertEq(rhEth.balanceOf(dest), 2e9);
-        assertEq(rhEth.balanceOf(safe), 0);
+        assertEq(sepEth.balanceOf(dest), 2e9);
+        assertEq(sepEth.balanceOf(safe), 0);
     }
 
     /// The CRE path: only the forwarder; a wrong kind is refused; paused, a report is a no-op (CRE does not retry).
@@ -716,7 +716,7 @@ contract CrossChainTest is ProductsBase {
         gateway.unpause();
         _flushReport(5);
         homeRouter.deliverAll();
-        assertEq(rhEth.balanceOf(h), 1e9);
+        assertEq(sepEth.balanceOf(h), 1e9);
         assertTrue(gateway.supportsInterface(type(IReceiver).interfaceId), "a CRE receiver");
         assertTrue(gateway.supportsInterface(type(IAny2EVMMessageReceiver).interfaceId), "a CCIP receiver");
     }
@@ -738,7 +738,7 @@ contract CrossChainTest is ProductsBase {
         vm.prank(keeper);
         gateway.flush(25);
         homeRouter.deliverAll();
-        assertEq(rhEth.balanceOf(h), 1e9);
+        assertEq(sepEth.balanceOf(h), 1e9);
     }
 
     function test_autoRelease_onlyReceiptsQueue_receiptsNeverToTheGateway() public {
@@ -763,14 +763,14 @@ contract CrossChainTest is ProductsBase {
         address h = makeAddr("h");
         _outOfEngine(rEth, h, 1e9);
         vm.prank(admin);
-        gateway.setRemote(RH, address(0), 0);
+        gateway.setRemote(SEP, address(0), 0);
         vm.prank(keeper);
         assertEq(gateway.flush(25), 0);
         vm.prank(admin);
-        gateway.setRemote(RH, address(rhVault), 300_000);
+        gateway.setRemote(SEP, address(sepVault), 300_000);
         vm.prank(keeper);
         assertEq(gateway.flush(25), 1);
         homeRouter.deliverAll();
-        assertEq(rhEth.balanceOf(h), 1e9);
+        assertEq(sepEth.balanceOf(h), 1e9);
     }
 }

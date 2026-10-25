@@ -12,8 +12,8 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {CrossChainMessages as M} from "./CrossChainMessages.sol";
 
 /// @title RemoteVault
-/// @notice On a chain that holds collateral (Robinhood Chain: its tokenized stocks), the asset stays here, locked,
-///         while the note that uses it runs on its home chain (Arbitrum). Nothing is bridged.
+/// @notice On a chain that holds collateral (e.g. Ethereum: its stablecoins and WETH), the asset stays here, locked,
+///         while the note that uses it runs on its home chain (Robinhood Chain). Nothing is bridged.
 ///         - `lock`: the owner of the tokens locks them and a LOCKED message tells the home gateway, which mints
 ///           the same amount of receipts to the beneficiary there (who pledges them into a note as collateral).
 ///         - RELEASE from the home gateway: a receipt was burned there; pay the locked asset to the named account

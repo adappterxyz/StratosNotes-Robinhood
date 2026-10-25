@@ -12,9 +12,9 @@ import {CrossChainMessages as M} from "./CrossChainMessages.sol";
 import {IReleaseQueue, RemoteReceipt} from "./RemoteReceipt.sol";
 
 /// @title HomeGateway (v2)
-/// @notice Sits next to the FlowEngine on a note's home chain (Arbitrum) and connects it, over Chainlink CCIP, to
-///         RemoteVaults on the chains where collateral stays locked (Robinhood Chain first; any CCIP chain is a
-///         configuration change: deploy a vault there, then `setRemote` and `registerReceipt` here).
+/// @notice Sits next to the FlowEngine on a note's home chain (Robinhood Chain) and connects it, over Chainlink CCIP,
+///         to RemoteVaults on other chains where collateral stays locked (planned; any CCIP chain is a configuration
+///         change: deploy a vault there, then `setRemote` and `registerReceipt` here).
 ///         Principle: collateral stays on its own chain; the home chain is only the anchor that decides who gets it.
 ///         - LOCKED from an allow-listed vault: mint RemoteReceipts to the locker (once per lock id).
 ///         - Auto-release (v2): receipts leaving the engine (a holder's payout after a default, the issuer's

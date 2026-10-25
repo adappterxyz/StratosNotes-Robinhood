@@ -11,10 +11,10 @@ import {TokenFaucet} from "../src/test-tokens/TokenFaucet.sol";
 /// (repo root; OUT overrides the path, e.g. for a local fork). On testnets, TEST_TOKENS=1 also deploys the test
 /// tokens (tUSD, tETH, tBTC, tSOL, tTSLA, tNVDA, tAAPL, tSPY) and a TokenFaucet that mints them.
 ///
-///   CHAIN=arbitrum-sepolia FORWARDER_MODE=mock OWNER=0x... TEST_TOKENS=1 \
+///   CHAIN=robinhood-testnet FORWARDER_MODE=mock OWNER=0x... TEST_TOKENS=1 \
 ///   forge script script/Deploy.s.sol --rpc-url $RPC --private-key $KEY --broadcast
 ///
-/// CHAIN:          arbitrum-sepolia | robinhood-testnet | arbitrum-one | robinhood-mainnet
+/// CHAIN:          robinhood-testnet (notes run there) | robinhood-mainnet
 /// FORWARDER_MODE: mock (`cre workflow simulate --broadcast` writes through the MockKeystoneForwarder) or
 ///                 production (a deployed CRE workflow writes through the KeystoneForwarder)
 /// FORWARDER:      optional override; required on robinhood-mainnet, where CRE has no forwarder yet
@@ -32,14 +32,8 @@ contract Deploy is Script {
 
     function _chain(string memory name) internal pure returns (Target memory) {
         bytes32 h = keccak256(bytes(name));
-        if (h == keccak256("arbitrum-sepolia")) {
-            return Target(421614, 0xD41263567DdfeAd91504199b8c6c87371e83ca5d, 0x76c9cf548b4179F8901cda1f8623568b58215E62, true);
-        }
         if (h == keccak256("robinhood-testnet")) {
             return Target(46630, 0x0b93082D9b3C7C97fAcd250082899BAcf3af3885, 0x8E6E6A1f2B2D4dF503bfd67951CF28F27BF3AF19, true);
-        }
-        if (h == keccak256("arbitrum-one")) {
-            return Target(42161, 0xd770499057619C9a76205fD4168161cf94Abc532, 0xF8344CFd5c43616a4366C34E3EEE75af79a74482, false);
         }
         if (h == keccak256("robinhood-mainnet")) return Target(4663, address(0), address(0), false);
         revert(string.concat("unknown CHAIN ", name));

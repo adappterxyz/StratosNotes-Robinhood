@@ -38,7 +38,7 @@ contract CrossChainLocalTest is ProductsBase {
         vault.setHomeGateway(address(gateway));
         vault.setToken(address(eth), true);
         gateway.setRemote(SIM, address(vault), 300_000);
-        rEth = RemoteReceipt(gateway.registerReceipt(SIM, address(eth), decimals[2], "ETH locked", "ETH.rh"));
+        rEth = RemoteReceipt(gateway.registerReceipt(SIM, address(eth), decimals[2], "ETH locked", "ETH.x"));
         vm.stopPrank();
         gateway.fundFees{value: 1 ether}();
     }

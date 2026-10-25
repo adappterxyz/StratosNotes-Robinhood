@@ -6,27 +6,30 @@ import {HomeGateway} from "../src/crosschain/HomeGateway.sol";
 import {RemoteVault} from "../src/crosschain/RemoteVault.sol";
 import {CreReceiver} from "../src/cre/CreReceiver.sol";
 
-/// Cross-chain collateral (docs/CROSS-CHAIN.md). Runs, in order (DEPLOYER_KEY in the env, or --private-key):
+/// Cross-chain collateral (planned; docs/CROSS-CHAIN.md): notes run on Robinhood Chain (home), collateral stays on
+/// another chain (remote) in a RemoteVault. Nothing is deployed yet. Runs, in order (DEPLOYER_KEY in the env, or
+/// --private-key):
 ///
-///  1. Home gateway, next to the engine (Arbitrum Sepolia). v2 auto-releases receipts leaving the engine and is a
-///     CRE receiver: FORWARDER defaults to the engine's own KeystoneForwarder; FEE_POOL (wei, optional) funds the
+///  1. Home gateway, next to the engine on Robinhood Chain testnet. v2 auto-releases receipts leaving the engine and
+///     is a CRE receiver: FORWARDER defaults to the engine's own KeystoneForwarder; FEE_POOL (wei, optional) funds the
 ///     release fee pool in the same run:
-///     ROLE=gateway CHAIN=arbitrum-sepolia ENGINE=0x.. OWNER=0x.. [FORWARDER=0x..] [FEE_POOL=wei] forge script script/DeployCrossChain.s.sol --rpc-url $ARB --broadcast
-///  2. Vault on the asset chain (Robinhood Chain testnet), pointed at the gateway, with its lockable tokens:
-///     ROLE=vault CHAIN=robinhood-testnet HOME=arbitrum-sepolia GATEWAY=0x.. OWNER=0x.. TOKENS=0xUSDG,0xTSLA,0xAMZN \
-///       forge script ... --rpc-url $RH --broadcast
-///     or keep the existing vault and point it at the new gateway (refuses unless nothing is locked for TOKENS, so no
+///     ROLE=gateway CHAIN=robinhood-testnet ENGINE=0x.. OWNER=0x.. [FORWARDER=0x..] [FEE_POOL=wei] forge script script/DeployCrossChain.s.sol --rpc-url $RH --broadcast
+///  2. Vault on the remote asset chain (e.g. Ethereum Sepolia), pointed at the gateway, with its lockable tokens:
+///     ROLE=vault CHAIN=ethereum-sepolia HOME=robinhood-testnet GATEWAY=0x.. OWNER=0x.. TOKENS=0xUSDC,0xWETH \
+///       forge script ... --rpc-url $REMOTE --broadcast
+///     or keep an existing vault and point it at a new gateway (refuses unless nothing is locked for TOKENS, so no
 ///     receipt of the old gateway is outstanding and no message is in flight); ALLOW adds lockable tokens:
-///     ROLE=repoint CHAIN=robinhood-testnet VAULT=0x.. GATEWAY=0x.. TOKENS=0x..,0x.. [ALLOW=0xAMD,0xPLTR] forge script ... --rpc-url $RH --broadcast
+///     ROLE=repoint CHAIN=ethereum-sepolia VAULT=0x.. GATEWAY=0x.. TOKENS=0x..,0x.. [ALLOW=0x..] forge script ... --rpc-url $REMOTE --broadcast
 ///  3. Wire the gateway to the vault and create one receipt per token (on the home chain):
-///     ROLE=wire CHAIN=arbitrum-sepolia GATEWAY=0x.. REMOTE=robinhood-testnet VAULT=0x.. TOKENS=0x..,0x.. \
-///       DECIMALS=6,18,18,18,18 SYMBOLS=USDG.rh,TSLA.rh,AMZN.rh,AMD.rh,PLTR.rh forge script ... --rpc-url $ARB --broadcast
-///  4. (any time, anyone) Top up the release fee pool: ROLE=fund CHAIN=arbitrum-sepolia GATEWAY=0x.. FEE_POOL=wei
+///     ROLE=wire CHAIN=robinhood-testnet GATEWAY=0x.. REMOTE=ethereum-sepolia VAULT=0x.. TOKENS=0x..,0x.. \
+///       DECIMALS=6,18 SYMBOLS=USDC.eth,WETH.eth forge script ... --rpc-url $RH --broadcast
+///  4. (any time, anyone) Top up the release fee pool: ROLE=fund CHAIN=robinhood-testnet GATEWAY=0x.. FEE_POOL=wei
 ///
-/// Adding another asset chain later is runs 2 and 3 again with its CHAIN/REMOTE. The OWNER must be the broadcasting
-/// key for runs 2 and 3 (they configure), or a multisig that executes the same calls.
+/// Adding another asset chain is runs 2 and 3 again with its CHAIN/REMOTE (add it to _net first). The OWNER must be
+/// the broadcasting key for runs 2 and 3 (they configure), or a multisig that executes the same calls.
 /// Routers and selectors: Chainlink's CCIP directory (docs.chain.link/ccip/directory/testnet), checked 2026-10-24,
-/// and the same values in Chainlink Local's Register.
+/// and the same values in Chainlink Local's Register. The Robinhood Chain testnet router supports the Ethereum
+/// Sepolia lane in both directions (isChainSupported, checked 2026-10-25).
 contract DeployCrossChain is Script {
     struct Net {
         uint64 selector;
@@ -35,8 +38,8 @@ contract DeployCrossChain is Script {
 
     function _net(string memory name) internal pure returns (Net memory) {
         bytes32 h = keccak256(bytes(name));
-        if (h == keccak256("arbitrum-sepolia")) return Net(3478487238524512106, 0x2a9C5afB0d0e4BAb2BCdaE109EC4b0c4Be15a165);
         if (h == keccak256("robinhood-testnet")) return Net(2032988798112970440, 0x30D197C6F5bE050D5525dD94d01760FaCdB67e7C);
+        if (h == keccak256("ethereum-sepolia")) return Net(16015286601757825753, 0x0BF3dE8c5D3e8A2B34D2BEeB17ABfCeBaf363A59);
         revert(string.concat("unknown chain: ", name));
     }
 

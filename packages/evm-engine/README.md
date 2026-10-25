@@ -1,7 +1,7 @@
 # @sn/evm-engine
 
-`FlowEngine.sol` runs compiled StratosNotes workflows (structured notes as BPMN) on EVM chains: Arbitrum Sepolia and
-Robinhood Chain testnet (Arbitrum One by config). It is a port of the hackathon's Solana engine (StratosNotes `solana/programs/flow_engine`),
+`FlowEngine.sol` runs compiled StratosNotes workflows (structured notes as BPMN) on EVM chains: notes run on
+Robinhood Chain testnet. It is a port of the hackathon's Solana engine (StratosNotes `solana/programs/flow_engine`),
 with the same semantics. Chainlink CRE is its calculation agent: oracle values arrive as DON-signed reports
 through the KeystoneForwarder (`onReport`).
 
@@ -152,7 +152,7 @@ Holders claim payouts with `pushTo(pid, asset, [self])`: 152k gas, with a receip
 `withdraw` is 106k, without one). Pushing payouts to wallets, for notes whose issuer opts in, costs about 55k gas per
 holder in batches of 100. A note-token transfer, which settles both sides, costs 176k–263k.
 
-Both target chains run Arbitrum Nitro (32M gas per transaction). The CRE workflow's write gas limit is 8M (CRE
+Robinhood Chain is an Arbitrum Orbit chain (Nitro, 32M gas per transaction). The CRE workflow's write gas limit is 8M (CRE
 allows 10M per write).
 
 The engine's runtime is 24,051 bytes (the EIP-170 limit is 24,576). `Units` (11,657 bytes: ledger, accumulator,
@@ -172,10 +172,11 @@ forge coverage --ir-minimum --no-match-contract Invariants --report summary
 ## Deploying
 
 ```bash
-CHAIN=arbitrum-sepolia FORWARDER_MODE=mock OWNER=<deployer> TEST_TOKENS=1 \
+CHAIN=robinhood-testnet FORWARDER_MODE=mock OWNER=<deployer> \
   forge script script/Deploy.s.sol --rpc-url <rpc> --private-key <key> --broadcast
 ```
 
+- **Chains:** `robinhood-testnet` (where notes run) or `robinhood-mainnet`.
 - **Output:** writes `deployments/<chain>.json` at the repo root.
 - **Forwarder:** `FORWARDER_MODE=mock` trusts the MockKeystoneForwarder, which `cre workflow simulate --broadcast` writes through. `production` trusts the KeystoneForwarder. Robinhood mainnet has no CRE forwarder yet: pass `FORWARDER`.
 - **Test tokens (retired):** notes use real tokens only (USDG, WETH, Robinhood's stock tokens). `TEST_TOKENS=1` still
@@ -200,13 +201,13 @@ CHAIN=arbitrum-sepolia FORWARDER_MODE=mock OWNER=<deployer> TEST_TOKENS=1 \
 - **Not yet ported:** CCIP. `ccip_receive`, `withdraw_remote`, the outbox and payout reports (`0xFFFE`) come in
   Phase 5.
 
-## Cross-chain collateral (stage 1)
+## Cross-chain collateral (planned)
 
-`src/crosschain/`: `HomeGateway` (next to the engine on Arbitrum), `RemoteVault` (on an asset chain such as
-Robinhood Chain) and `RemoteReceipt` (the engine-only claim on locked collateral), over Chainlink CCIP. The engine
-is unchanged. Design, message formats, trust and the deploy plan: [docs/CROSS-CHAIN.md](../../docs/CROSS-CHAIN.md).
+`src/crosschain/`: `HomeGateway` (next to the engine on Robinhood Chain, the home chain), `RemoteVault` (on another
+asset chain, e.g. Ethereum) and `RemoteReceipt` (the engine-only claim on locked collateral), over Chainlink CCIP. Not
+deployed yet; the engine is unchanged. Design, message formats, trust and the deploy plan: [docs/CROSS-CHAIN.md](../../docs/CROSS-CHAIN.md).
 
 ```bash
 forge test --match-contract CrossChainTest                    # mock routers: lifecycle, duplicates, forgeries, freezes
-CCIP_FORK=true forge test --match-contract CrossChainForkTest # real routers on forks of Arbitrum Sepolia + Robinhood
+CCIP_FORK=true forge test --match-contract CrossChainForkTest # real routers: Robinhood testnet home + Ethereum Sepolia
 ```

@@ -10,7 +10,7 @@ interface IReleaseQueue {
 
 /// @title RemoteReceipt (v2)
 /// @notice On a note's home chain, a claim on collateral that stays locked in a RemoteVault on another chain
-///         (e.g. TSLA on Robinhood Chain). One receipt contract per (remote chain, remote token).
+///         (e.g. USDC on Ethereum). One receipt contract per (remote chain, remote token).
 ///         The FlowEngine treats it as any other collateral ERC-20: pledged into escrow, valued with the
 ///         underlying's Chainlink price and haircut, released to the issuer or paid out to holders on a default,
 ///         all by the engine's own (tested) rules.
