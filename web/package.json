@@ -1,0 +1,16 @@
+{
+  "name": "@sn/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bash build.sh",
+    "deploy": "bash build.sh && CLOUDFLARE_ACCOUNT_ID=325f8b322c30ee0f5460cfdaef82ecf5 wrangler deploy",
+    "dev": "bash build.sh && wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^4.72.0",
+    "@cloudflare/workers-types": "^4.20260901.0",
+    "typescript": "5.9.3"
+  }
+}

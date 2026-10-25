@@ -1,0 +1,205 @@
+{
+  "runs": [
+    {
+      "chain": "robinhood-testnet",
+      "note": "robinhood-testnet:0x4532fca7aa4dd54fc981d62836d3852ce7bdb7b2:1",
+      "title": "Demo Worst-of Phoenix on TSLA, NVDA on Robinhood Chain testnet: autocalled at observation 2, 1.050 per unit",
+      "reporter": "cre",
+      "events": [
+        {
+          "what": "Issuer pledges collateral",
+          "detail": "2,000 tUSD locked in the note",
+          "tx": "0x9c013b8b9b1799b3ac37a933890ad8c576e5f637bb197f3275142b069e95e912"
+        },
+        {
+          "what": "Investor A subscribes",
+          "detail": "600 tUSD for 600 units",
+          "tx": "0x0e64d8d3b6cbbc032ab6c257ded9a28219450ab0e6b8c46d844b2957c6b1285c"
+        },
+        {
+          "what": "Investor B subscribes",
+          "detail": "400 tUSD for 400 units",
+          "tx": "0x1fdcd93d1177eefae4c453732a72d2219c0a7ccc414b81059f034accb518658d"
+        },
+        {
+          "what": "Chainlink CRE fixes the strike",
+          "detail": "TSLA 374.93, NVDA 212.54",
+          "tx": "0x77e678a32a097b58818f7df64fc50204fe714cb4caaac392dd267c61bdcc196d",
+          "gas": "495,894"
+        },
+        {
+          "what": "Chainlink CRE observes",
+          "detail": "TSLA 374.93, NVDA 212.54",
+          "tx": "0xf08f46e872208a7301b740facfb6038e4e371677099a86bf73bff4ae43c4a94e",
+          "gas": "482,658"
+        },
+        {
+          "what": "Issuer funds a payment",
+          "detail": "25 tUSD deposited before the payment date",
+          "tx": "0x38014481a1a150fb44470ab2d41cdf19cb0df1d59f7b36b0a10bacfbc6c44f5e"
+        },
+        {
+          "what": "Chainlink CRE pays holders",
+          "detail": "Coupon of 25 tUSD to every holder (2.5% of 1,000 units)",
+          "tx": "0x9c5fc80d68f6698b10fd5ba5cf07364dbc3e5c0c95355c77bca444d81f67bdab",
+          "gas": "393,101"
+        },
+        {
+          "what": "Chainlink CRE observes",
+          "detail": "TSLA 374.93, NVDA 212.54",
+          "tx": "0xb83049ce774fc5af87f207c943a128bbfed6d5d604ba1fd79748469738251014",
+          "gas": "462,435"
+        },
+        {
+          "what": "Issuer funds a payment",
+          "detail": "1,025 tUSD deposited before the payment date",
+          "tx": "0x22b5a7af29b452d5f38596bfe6387153cd044964ae564a65e095082db820a8fd"
+        },
+        {
+          "what": "Chainlink CRE pays holders",
+          "detail": "Redemption plus last coupon, 1,025 tUSD, to every holder; collateral released to the issuer",
+          "tx": "0x493d5939676afac1a3eedd1164cf059b99a018a01483d982ee7b8e78f1ec11c7",
+          "gas": "506,609"
+        }
+      ],
+      "paid": [
+        {
+          "holder": "Investor A (0xace9\u2026aa02)",
+          "units": "600",
+          "paid": "630 tUSD"
+        },
+        {
+          "holder": "Investor B (0x30d8\u202636d5)",
+          "units": "400",
+          "paid": "420 tUSD"
+        }
+      ]
+    },
+    {
+      "chain": "arbitrum-sepolia",
+      "note": "arbitrum-sepolia:0x83f653e5843ffd39a3ac1de856d838f651225ab4:1",
+      "title": "Demo Worst-of Phoenix on ETH, BTC on Arbitrum Sepolia: held to maturity, 1.075 per unit",
+      "reporter": "cre",
+      "events": [
+        {
+          "what": "Issuer pledges collateral",
+          "detail": "2,000 tUSD locked in the note",
+          "tx": "0x9b1fdd3f5ca48a437d31978cda60765690a66680f21bb926d96e148bd7b1c9f1"
+        },
+        {
+          "what": "Investor A subscribes",
+          "detail": "600 tUSD for 600 units",
+          "tx": "0x9ef14cd0ccb8450a967a5f78cda8f3581ec708c112f65d2d0d752dd919ec59c9"
+        },
+        {
+          "what": "Investor B subscribes",
+          "detail": "400 tUSD for 400 units",
+          "tx": "0x3c8532f65347f51b35ad384b0bfdc4a4c921eb8feedbba86954c188abd138fd5"
+        },
+        {
+          "what": "Chainlink CRE fixes the strike",
+          "detail": "ETH 2,399.09, BTC 81,603.43",
+          "tx": "0x2ccc63aea85885f3ee70e67ddfc072cbf8efd0b143a00feae5ba4117f1e9f08f",
+          "gas": "495,814"
+        },
+        {
+          "what": "Chainlink CRE observes",
+          "detail": "ETH 2,399.09, BTC 81,603.43",
+          "tx": "0xd5fb295fadded9f9631494a6205ffd101fb01b0d09c3760494af52dcdef1c392",
+          "gas": "482,578"
+        },
+        {
+          "what": "Issuer funds a payment",
+          "detail": "25 tUSD deposited before the payment date",
+          "tx": "0x9df55d4f21bdddd6ee77b0911dc52d5500e0ba02b5f25706ae94634c730ccae4"
+        },
+        {
+          "what": "Chainlink CRE pays holders",
+          "detail": "Coupon of 25 tUSD to every holder (2.5% of 1,000 units)",
+          "tx": "0x3d563e80bab2f6d7deb8f47cf478943d1c3ec3b587e171ed046a5295d7141aed",
+          "gas": "393,069"
+        },
+        {
+          "what": "Chainlink CRE observes",
+          "detail": "ETH 2,396.08, BTC 81,603.43",
+          "tx": "0xb5b790419541a07fa9237a565884c673a693398953b183147f2243a53254f06c",
+          "gas": "501,188"
+        },
+        {
+          "what": "Issuer funds a payment",
+          "detail": "25 tUSD deposited before the payment date",
+          "tx": "0x24be72fb9ddca431c14d2f5c1245f32c4e0fe5a64bc711f4f4aeb08ffad305eb"
+        },
+        {
+          "what": "Chainlink CRE pays holders",
+          "detail": "Coupon of 25 tUSD to every holder (2.5% of 1,000 units)",
+          "tx": "0x91b3b574a9bd3f620e74602817343f596feed63132c016a75f9e4cc5a918440b",
+          "gas": "318,785"
+        },
+        {
+          "what": "Chainlink CRE observes",
+          "detail": "ETH 2,396.08, BTC 81,603.43",
+          "tx": "0x07afc0049f7ab9ba81a101cead28f563f4d2dbd2031aaba3cbdc10aef5a0598f",
+          "gas": "463,321"
+        },
+        {
+          "what": "Issuer funds a payment",
+          "detail": "1,025 tUSD deposited before the payment date",
+          "tx": "0xb704c4f871b72fb357652407e36874047af220895dbdcdd8200ef7f2e3865b9d"
+        },
+        {
+          "what": "Chainlink CRE pays holders",
+          "detail": "Redemption plus last coupon, 1,025 tUSD, to every holder; collateral released to the issuer",
+          "tx": "0x74338b79bf95596f0c80e6328363adad3309a04f4500c5a6f42f4ba84d23ee0c",
+          "gas": "494,678"
+        }
+      ],
+      "paid": [
+        {
+          "holder": "Investor A (0xace9\u2026aa02)",
+          "units": "600",
+          "paid": "645 tUSD"
+        },
+        {
+          "holder": "Investor B (0x30d8\u202636d5)",
+          "units": "400",
+          "paid": "430 tUSD"
+        }
+      ]
+    }
+  ],
+  "crossChain": {
+    "network": {
+      "home": "arbitrum-sepolia",
+      "asset": "robinhood-testnet"
+    },
+    "contracts": {
+      "gateway": "0xcdee38dEbC2eE59Ae486c0829ff6a0028a5eFaEC",
+      "vault": "0xfB8b030FF7C059665daB3aF2D77F72445E341300"
+    },
+    "messages": [
+      {
+        "leg": "lock",
+        "token": "tTSLA",
+        "amount": "10",
+        "sourceTx": "0x9d40acc3bc4e1707db95d6b48535e19e7a7f84ff824bb471dc037e9e08fd2d37",
+        "messageId": "0x8111a05781382b60b8ac56118a77c4a23e0536b8ed34978abe8cb7b97b8f3248",
+        "destTx": "0xa960b6c3128d9879a62e69580cf9dee75a3c8680dbcbadcf04fb762ac882b8bc",
+        "seconds": 1292,
+        "feeWei": "67434920869490",
+        "manualExecution": false
+      },
+      {
+        "leg": "release",
+        "token": "tTSLA.rh",
+        "amount": "10",
+        "sourceTx": "0x1506ac86d61d3e5639b34e14cdeef8cb7eb682cbc67ad19a79ff228cf643efc5",
+        "messageId": "0x487558251499ae682ba78305d4355a6bd42fcae05277e4a17e0974be96fa7cd3",
+        "destTx": "0x488a6fe75a57936c7123abc49d13025c1a1efecdbaa00cedd8d2d378a64ba39a",
+        "seconds": 1047,
+        "feeWei": "50444812129237",
+        "manualExecution": false
+      }
+    ]
+  }
+}

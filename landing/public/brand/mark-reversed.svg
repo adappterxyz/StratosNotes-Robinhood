@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 108" role="img" aria-label="notes.markets">
+  <!-- Reversed mark for dark grounds: white note, ink payoff line. -->
+  <path d="M14 0H72L100 28V94a14 14 0 0 1-14 14H14A14 14 0 0 1 0 94V14A14 14 0 0 1 14 0Z" fill="#FFFFFF"/>
+  <path d="M72 0V20a8 8 0 0 0 8 8H100Z" fill="#C9CDD4"/>
+  <polyline points="17,82 37,82 55,52 80,52" fill="none" stroke="#0E1116" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,20 @@
+{
+  "name": "@sn/evm-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fixtures": "tsx scripts/fixtures.ts",
+    "build": "forge build",
+    "abi": "forge build && tsx scripts/export-abi.ts",
+    "test": "npm run fixtures && forge test"
+  },
+  "dependencies": {
+    "@sn/core": "0.1.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "5.9.3",
+    "viem": "2.57.4"
+  }
+}

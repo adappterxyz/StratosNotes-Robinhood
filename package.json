@@ -1,0 +1,40 @@
+{
+  "name": "stratosnotes-arbitrum",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Structured notes as BPMN workflows on Arbitrum Sepolia (collateral vault on Robinhood Chain testnet), observed and paid by Chainlink CRE",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "services/*",
+    "app"
+  ],
+  "scripts": {
+    "test": "npm -w packages/core run test && npm -w packages/sdk run test && npm -w services/indexer run test && npm -w services/notifier run test && npm -w services/api run test && npm -w services/edge run test && npm -w app run test",
+    "typecheck": "npm -w packages/core run typecheck && npm -w packages/sdk run typecheck && npm -w services/keeper-fallback run typecheck && npm -w services/indexer run typecheck && npm -w services/notifier run typecheck && npm -w services/api run typecheck && npm -w services/edge run typecheck && npm -w app run typecheck && (cd cre/notes-keeper-evm && npx tsc --noEmit)",
+    "test:evm": "npm -w packages/evm-engine run test",
+    "dev:local": "bash scripts/dev-local.sh",
+    "e2e:app": "E2E=1 bash scripts/dev-local.sh",
+    "e2e:cre": "bash scripts/e2e-cre-evm.sh",
+    "proof": "tsx scripts/landing-proof.ts",
+    "build:web": "npm run proof && npm --prefix web run build",
+    "deploy": "npm run proof && npm --prefix web run deploy",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.13.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.13.0",
+    "playwright": "1.48.2",
+    "prettier": "3.9.10",
+    "tsx": "^4.19.2",
+    "typescript-eslint": "8.72.0",
+    "viem": "2.57.4"
+  },
+  "overrides": {
+    "qr": "0.5.5"
+  }
+}

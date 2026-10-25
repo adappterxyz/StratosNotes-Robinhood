@@ -1,0 +1,28 @@
+# CRE workflow settings for the EVM keeper. Targets match ../project.yaml.
+
+local-fork:
+  user-workflow:
+    workflow-name: "sn-keeper-evm-local"
+    deployment-registry: "private"
+  workflow-artifacts:
+    workflow-path: "./main.ts"
+    config-path: "./config.local-fork.json"
+    secrets-path: ""
+
+staging-settings:
+  user-workflow:
+    workflow-name: "sn-keeper-evm-staging"
+    deployment-registry: "private"
+  workflow-artifacts:
+    workflow-path: "./main.ts"
+    config-path: "./config.staging.json"
+    secrets-path: ""
+
+production-settings:
+  user-workflow:
+    workflow-name: "sn-keeper-evm"
+    deployment-registry: "private"
+  workflow-artifacts:
+    workflow-path: "./main.ts"
+    config-path: "./config.production.json"
+    secrets-path: ""

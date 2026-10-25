@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 108" role="img" aria-label="notes.markets">
+  <!-- The payoff note (docs/brand/logo-guide.pdf): a note with its corner folded; the line is a payoff: floor, participation, cap. -->
+  <path d="M14 0H72L100 28V94a14 14 0 0 1-14 14H14A14 14 0 0 1 0 94V14A14 14 0 0 1 14 0Z" fill="#0E1116"/>
+  <path d="M72 0V20a8 8 0 0 0 8 8H100Z" fill="#4A5060"/>
+  <polyline points="17,82 37,82 55,52 80,52" fill="none" stroke="#12A971" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

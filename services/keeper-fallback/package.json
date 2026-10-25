@@ -1,0 +1,21 @@
+{
+  "name": "@sn/keeper-fallback",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "once": "tsx src/main.ts --once",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sn/core": "0.1.0",
+    "@sn/sdk": "0.1.0",
+    "viem": "2.57.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "5.9.3"
+  }
+}

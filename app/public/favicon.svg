@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Favicon: fold dropped, line thickened (docs/brand/logo-guide.pdf, icon sizes). -->
+  <rect width="100" height="100" rx="22" fill="#0E1116"/>
+  <polyline points="18,72 38,72 57,38 82,38" fill="none" stroke="#12A971" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

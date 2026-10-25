@@ -1,0 +1,58 @@
+{
+  "home": {
+    "chain": "arbitrum-sepolia",
+    "chainId": 421614,
+    "selector": "3478487238524512106",
+    "router": "0x2a9C5afB0d0e4BAb2BCdaE109EC4b0c4Be15a165",
+    "engine": "0x7d36Da43724b09Bb03ED98a4574685070073020b",
+    "gateway": "0x4C393Ed28Cc1825CfBA5A4d6F2223589249C3a89",
+    "gatewayBlock": 322391199,
+    "deployTx": "0xb611d75daf600c3cdbe244090266a547ff50a83a4d2d697736f5eaedd3d50599",
+    "version": 2,
+    "feePoolWei": "3000000000000000"
+  },
+  "remotes": [
+    {
+      "chain": "robinhood-testnet",
+      "chainId": 46630,
+      "selector": "2032988798112970440",
+      "router": "0x30D197C6F5bE050D5525dD94d01760FaCdB67e7C",
+      "vault": "0x6a11Ff8DD08d63Dc2a7C7AB6116d1F40Bf20d1C2",
+      "gasLimit": 300000,
+      "receipts": {
+        "USDG.rh": {
+          "receipt": "0x36a4a88AEdC8873e239fDE4A0276b58c36841b6d",
+          "token": "0x7E955252E15c84f5768B83c41a71F9eba181802F",
+          "decimals": 6,
+          "valuedAs": "USD"
+        },
+        "TSLA.rh": {
+          "receipt": "0x3667d1534FA175c1A388fC8E2C8F8d7ebBBcD9d6",
+          "token": "0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E",
+          "decimals": 18,
+          "valuedAs": "TSLA"
+        },
+        "AMZN.rh": {
+          "receipt": "0xC1C192e7eDE3f2966e9A9B1bBEd88FC4383E7da8",
+          "token": "0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02",
+          "decimals": 18,
+          "valuedAs": "AMZN"
+        },
+        "AMD.rh": {
+          "receipt": "0xfECA1a85Bd521CA8aBf8ADEA0FA92CD85BC19627",
+          "token": "0x71178BAc73cBeb415514eB542a8995b82669778d",
+          "decimals": 18,
+          "valuedAs": "AMD"
+        },
+        "PLTR.rh": {
+          "receipt": "0x25343e61bc52757E01bAB8fc55f03529045C5382",
+          "token": "0x1FBE1a0e43594b3455993B5dE5Fd0A7A266298d0",
+          "decimals": 18,
+          "valuedAs": "PLTR"
+        }
+      }
+    }
+  ],
+  "owner": "0x298afB9424188C7eA7c01556D8CAE6ff4768de0a",
+  "checkedAt": "2026-10-24"
+}

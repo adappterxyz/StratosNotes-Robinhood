@@ -1,0 +1,28 @@
+node_modules/
+dist/
+.env
+.env.*
+*.log
+.wrangler/
+# Keys: never commit. Deployer and demo keys live in .keys/ (local only).
+.keys/
+# Foundry
+packages/evm-engine/out/
+packages/evm-engine/cache/
+packages/evm-engine/broadcast/
+packages/evm-engine/lib/
+# Canton build output
+.daml/
+*.dar
+
+# Local end-to-end runs (scripts/e2e-cre-evm.sh)
+deployments/local/
+.tmp/
+log/
+# CRE CLI build scratch
+.cre_build_tmp.js
+
+# Site build output (web/build.sh)
+web/dist/
+landing/dist/
+landing/tsconfig.tsbuildinfo

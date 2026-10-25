@@ -1,0 +1,102 @@
+{
+  "home": {
+    "chain": "arbitrum-sepolia",
+    "chainId": 421614,
+    "selector": "3478487238524512106",
+    "router": "0x2a9C5afB0d0e4BAb2BCdaE109EC4b0c4Be15a165",
+    "engine": "0x7d36Da43724b09Bb03ED98a4574685070073020b",
+    "gateway": "0x355196434760Ce382315E2cDADaa5bA76b06372A",
+    "gatewayBlock": 322331377,
+    "deployTx": "0x58eb1a286d72a2312aca322a4dd16e2d95fe27b04334276b89428864d39a1d40"
+  },
+  "remotes": [
+    {
+      "chain": "robinhood-testnet",
+      "chainId": 46630,
+      "selector": "2032988798112970440",
+      "router": "0x30D197C6F5bE050D5525dD94d01760FaCdB67e7C",
+      "vault": "0xE7a70743263554eb4D7A5599F4bAd05d2A7E8846",
+      "gasLimit": 300000,
+      "receipts": {
+        "USDG.rh": {
+          "receipt": "0xd3Bc0e5736A51Db86f32073F7c7F5a6965FE4daA",
+          "token": "0x7E955252E15c84f5768B83c41a71F9eba181802F",
+          "decimals": 6,
+          "valuedAs": "USD"
+        },
+        "TSLA.rh": {
+          "receipt": "0xd8E7c3E8667B9e1B478658353C19f2141f536764",
+          "token": "0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E",
+          "decimals": 18,
+          "valuedAs": "TSLA"
+        },
+        "AMZN.rh": {
+          "receipt": "0x2fF0D6c555b824d1b4c2fE0D4B14b3BBE73d8734",
+          "token": "0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02",
+          "decimals": 18,
+          "valuedAs": "AMZN"
+        },
+        "NFLX.rh": {
+          "receipt": "0x5e0Bd96cad2981E1d783e2A4bFfAa75856fe08C3",
+          "token": "0x3b8262A63d25f0477c4DDE23F83cfe22Cb768C93",
+          "decimals": 18,
+          "valuedAs": null,
+          "note": "no CRE-readable NFLX feed: not usable as collateral"
+        }
+      },
+      "retiredReceipts": {
+        "tTSLA.rh": {
+          "receipt": "0xBF98A8Bd62fB5d5A92b5A12844388feD9f1Ad89D",
+          "token": "0xA540f040Dc767d9F683a660e9b1fF004E8F82225",
+          "decimals": 9,
+          "valuedAs": "TSLA",
+          "note": "retired notes.markets test token: disabled in the vault (setToken false) on 2026-10-24; not served (it carried the live CCIP proof)"
+        },
+        "tETH.rh": {
+          "receipt": "0x23F5b683FE8B864BCD3ad5a759aca66664d6558e",
+          "token": "0x9713Df733560aa5b7d3F4f13BaBc6Cd7f7F47787",
+          "decimals": 9,
+          "valuedAs": "ETH",
+          "note": "retired notes.markets test token: disabled in the vault (setToken false) on 2026-10-24; not served"
+        },
+        "tBTC.rh": {
+          "receipt": "0x14E46B0478F8F6C878812cfD816705305C3dAFec",
+          "token": "0xC6a42d2E0EB1Df749916Caebf64b231695D5eD1d",
+          "decimals": 8,
+          "valuedAs": "BTC",
+          "note": "retired notes.markets test token: disabled in the vault (setToken false) on 2026-10-24; not served"
+        },
+        "tSOL.rh": {
+          "receipt": "0x852068FD481C2341b18DF76542E9A29778695bb9",
+          "token": "0xFC0Ae02839ec2736c9799985CF270e4B111D314a",
+          "decimals": 9,
+          "valuedAs": "SOL",
+          "note": "retired notes.markets test token: disabled in the vault (setToken false) on 2026-10-24; not served"
+        },
+        "tNVDA.rh": {
+          "receipt": "0x9425E6b7Df28b6dde9005636A41aA879c4DC96cE",
+          "token": "0xbd162AeFA4Cd5763c41257636084d93F36DECFf5",
+          "decimals": 9,
+          "valuedAs": "NVDA",
+          "note": "retired notes.markets test token: disabled in the vault (setToken false) on 2026-10-24; not served"
+        },
+        "tAAPL.rh": {
+          "receipt": "0x9b8f323a3FD7f031491031A2c734e686Bd7DE6F2",
+          "token": "0x40153C9fA6BEB2aa4E4A8B40385CDa896008F2b2",
+          "decimals": 9,
+          "valuedAs": "AAPL",
+          "note": "retired notes.markets test token: disabled in the vault (setToken false) on 2026-10-24; not served"
+        },
+        "tSPY.rh": {
+          "receipt": "0xD236EC642bAF8DAc4Ae28E98540B3BA36BBaF3Cc",
+          "token": "0xBD16a9DD8EEb9948b64A15b334D16e1f65a8C582",
+          "decimals": 9,
+          "valuedAs": "SPY",
+          "note": "retired notes.markets test token: disabled in the vault (setToken false) on 2026-10-24; not served"
+        }
+      }
+    }
+  ],
+  "owner": "0x298afB9424188C7eA7c01556D8CAE6ff4768de0a",
+  "checkedAt": "2026-10-24"
+}

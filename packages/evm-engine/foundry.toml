@@ -1,0 +1,33 @@
+[profile.default]
+src = "src"
+test = "test"
+script = "script"
+out = "out"
+libs = ["lib"]
+solc_version = "0.8.24"
+# Paris: no PUSH0/MCOPY, so the same bytecode runs on every target chain without
+# depending on each one's hardfork schedule (HyperEVM, Robinhood Chain).
+evm_version = "paris"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+fs_permissions = [{ access = "read", path = "./test/fixtures" }, { access = "read-write", path = "../../deployments" }]
+remappings = [
+  "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+  "forge-std/=lib/forge-std/src/",
+  # Cross-chain (src/crosschain): CCIP client contracts, and Chainlink Local for tests. Pinned clones in lib/
+  # (gitignored); fetch with the commands in packages/evm-engine/README.md.
+  "@chainlink/contracts-ccip/=lib/chainlink-ccip/chains/evm/",
+  "@chainlink/contracts/=lib/chainlink-evm/contracts/",
+  "@chainlink/local/src/=lib/chainlink-local/src/",
+  "@openzeppelin/contracts@4.8.3/=lib/openzeppelin-contracts-4.8.3/contracts/",
+  "@openzeppelin/contracts@5.3.0/=lib/openzeppelin-contracts-5.3.0/contracts/",
+]
+
+[profile.default.fuzz]
+runs = 256
+
+[profile.default.invariant]
+runs = 64
+depth = 64
+fail_on_revert = false

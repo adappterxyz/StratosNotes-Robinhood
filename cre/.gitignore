@@ -1,0 +1,6 @@
+*.env
+.env*
+notes-keeper-evm/node_modules/
+notes-keeper-evm/config.local-fork.json
+notes-keeper-evm/.cre_build_tmp.js
+.keeper-env.*

@@ -1,0 +1,46 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "stratosnotes-arbitrum",
+  "main": "worker.ts",
+  "compatibility_date": "2026-04-22",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // dist/ = the landing page at /, the app under /app/ (npm run build).
+    "not_found_handling": "none",
+    "run_worker_first": true
+  },
+  "routes": [
+    { "pattern": "notes.markets", "custom_domain": true },
+    { "pattern": "www.notes.markets", "custom_domain": true },
+    // The earlier domain: redirected to notes.markets (worker.ts) so shared links keep working.
+    { "pattern": "notes.stratoslab.app", "custom_domain": true }
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+  // The whole backend runs here (services/edge): the API on D1, and the indexer and the notifier on a one-minute
+  // cron. The AI assistant runs on Workers AI.
+  "ai": { "binding": "AI" },
+  // Cloudflare Email Service (beta, Workers Paid): alert emails from alerts@notes.markets, sent by the notifier in
+  // scheduled(). notes.markets is onboarded under Compute > Email Service > Email Sending (docs/NOTIFICATIONS.md).
+  "send_email": [{ "name": "EMAIL", "remote": true }],
+  "ratelimits": [
+    { "name": "AI_LIMIT", "namespace_id": "4601", "simple": { "limit": 20, "period": 60 } },
+    { "name": "READ_LIMIT", "namespace_id": "4602", "simple": { "limit": 300, "period": 60 } }
+  ],
+  "d1_databases": [
+    // All internal data: the read model, templates, email subscriptions (salted), codes, preferences, outbox.
+    { "binding": "DB", "database_name": "notes-markets", "database_id": "33c7e4bc-596c-458e-8d67-ff0903d1978a", "migrations_dir": "migrations" }
+  ],
+  "triggers": { "crons": ["* * * * *"] },
+  "vars": {
+    // "edge" serves /api/* from D1. "proxy" forwards it to API_ORIGIN (only used during a cutover).
+    "API_MODE": "edge",
+    "API_ORIGIN": "",
+    // "on" sends alert emails through the EMAIL binding; "off" keeps them in the outbox.
+    "EMAIL_SENDING": "on",
+    "EMAIL_FROM": "alerts@notes.markets"
+  }
+  // Secrets: VERIFIER_KEY (signs the email attestations: the key in .keys/verifier.json), SN_PROXY_SECRET.
+}

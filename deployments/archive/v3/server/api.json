@@ -1,0 +1,123 @@
+{
+  "allowedOrigins": [
+    "https://notes.markets"
+  ],
+  "trustProxy": true,
+  "ai": false,
+  "chains": [
+    {
+      "key": "arbitrum-sepolia",
+      "rpc": "https://sepolia-rollup.arbitrum.io/rpc",
+      "engine": "0xAF8425A4b2d8994796e019D9b42Cd99D40297e10",
+      "lens": "0x7544378876D780E69968CD67c3FEf9a294C23A0B",
+      "fromBlock": 322211118,
+      "stablecoin": {
+        "symbol": "USDG",
+        "address": "0xFFC95faa3d63Cde504a05B567C600B78C0b41892",
+        "decimals": 6
+      },
+      "tokenFaucet": "0x02BA09FB3409d310C1C8d145144c84e5bC5D09EE",
+      "tokens": {
+        "tAAPL": "0xBD16a9DD8EEb9948b64A15b334D16e1f65a8C582",
+        "tBTC": "0xFC0Ae02839ec2736c9799985CF270e4B111D314a",
+        "tETH": "0xC6a42d2E0EB1Df749916Caebf64b231695D5eD1d",
+        "tNVDA": "0x40153C9fA6BEB2aa4E4A8B40385CDa896008F2b2",
+        "tSOL": "0xA540f040Dc767d9F683a660e9b1fF004E8F82225",
+        "tSPY": "0x5383F9857E0E1702Da773ac91E12c69245868fF2",
+        "tTSLA": "0xbd162AeFA4Cd5763c41257636084d93F36DECFf5",
+        "tUSD": "0x9713Df733560aa5b7d3F4f13BaBc6Cd7f7F47787",
+        "USDG": "0xFFC95faa3d63Cde504a05B567C600B78C0b41892",
+        "USDG.rh": "0x62f28cF2EAF65eddA7FB57321f9809042e4f1B67",
+        "TSLA.rh": "0xcDb6f71FeEEB73F3c001681A390EE7940575AAc2",
+        "AMZN.rh": "0x67c475C9CbB9fa695dEeBae62A57291376a9FDD9",
+        "NFLX.rh": "0xD07f12Fa6a657f4A0F6DdA6095a5FA10667248e9",
+        "tTSLA.rh": "0x4A20107535C9d82310A3EfD7e4f9993Edeaade9B"
+      },
+      "crossChain": {
+        "role": "home",
+        "gateway": "0xcdee38dEbC2eE59Ae486c0829ff6a0028a5eFaEC",
+        "router": "0x2a9C5afB0d0e4BAb2BCdaE109EC4b0c4Be15a165",
+        "selector": "3478487238524512106",
+        "remotes": [
+          {
+            "chain": "robinhood-testnet",
+            "selector": "2032988798112970440",
+            "vault": "0xfB8b030FF7C059665daB3aF2D77F72445E341300",
+            "receipts": {
+              "USDG.rh": {
+                "receipt": "0x62f28cF2EAF65eddA7FB57321f9809042e4f1B67",
+                "token": "0x7E955252E15c84f5768B83c41a71F9eba181802F",
+                "decimals": 6,
+                "valuedAs": "USD"
+              },
+              "TSLA.rh": {
+                "receipt": "0xcDb6f71FeEEB73F3c001681A390EE7940575AAc2",
+                "token": "0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E",
+                "decimals": 18,
+                "valuedAs": "TSLA"
+              },
+              "AMZN.rh": {
+                "receipt": "0x67c475C9CbB9fa695dEeBae62A57291376a9FDD9",
+                "token": "0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02",
+                "decimals": 18,
+                "valuedAs": "AMZN"
+              },
+              "NFLX.rh": {
+                "receipt": "0xD07f12Fa6a657f4A0F6DdA6095a5FA10667248e9",
+                "token": "0x3b8262A63d25f0477c4DDE23F83cfe22Cb768C93",
+                "decimals": 18,
+                "valuedAs": null,
+                "note": "no CRE-readable NFLX feed: not usable as collateral"
+              },
+              "tTSLA.rh": {
+                "receipt": "0x4A20107535C9d82310A3EfD7e4f9993Edeaade9B",
+                "token": "0xA540f040Dc767d9F683a660e9b1fF004E8F82225",
+                "decimals": 9,
+                "valuedAs": "TSLA",
+                "note": "our test token; used for the live CCIP proof"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "key": "robinhood-testnet",
+      "rpc": "https://rpc.testnet.chain.robinhood.com",
+      "engine": "0xCbF6eeC598b8f3b4a4082f5583Db6bD6f488b22D",
+      "lens": "0x0969cCc3e714A3Ac5a49b1cD8e07989B8C7CaA41",
+      "fromBlock": 141588428,
+      "stablecoin": {
+        "symbol": "USDG",
+        "address": "0x7E955252E15c84f5768B83c41a71F9eba181802F",
+        "decimals": 6
+      },
+      "tokenFaucet": "0xAF8425A4b2d8994796e019D9b42Cd99D40297e10",
+      "tokens": {
+        "tAAPL": "0x40153C9fA6BEB2aa4E4A8B40385CDa896008F2b2",
+        "tBTC": "0xC6a42d2E0EB1Df749916Caebf64b231695D5eD1d",
+        "tETH": "0x9713Df733560aa5b7d3F4f13BaBc6Cd7f7F47787",
+        "tNVDA": "0xbd162AeFA4Cd5763c41257636084d93F36DECFf5",
+        "tSOL": "0xFC0Ae02839ec2736c9799985CF270e4B111D314a",
+        "tSPY": "0xBD16a9DD8EEb9948b64A15b334D16e1f65a8C582",
+        "tTSLA": "0xA540f040Dc767d9F683a660e9b1fF004E8F82225",
+        "tUSD": "0x1D91004a9DA8D385196017727046cBA8CBbff397",
+        "USDG": "0x7E955252E15c84f5768B83c41a71F9eba181802F",
+        "TSLA": "0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E",
+        "AMZN": "0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02",
+        "NFLX": "0x3b8262A63d25f0477c4DDE23F83cfe22Cb768C93"
+      },
+      "crossChain": {
+        "role": "asset",
+        "vault": "0xfB8b030FF7C059665daB3aF2D77F72445E341300",
+        "router": "0x30D197C6F5bE050D5525dD94d01760FaCdB67e7C",
+        "selector": "2032988798112970440",
+        "home": {
+          "chain": "arbitrum-sepolia",
+          "gateway": "0xcdee38dEbC2eE59Ae486c0829ff6a0028a5eFaEC",
+          "selector": "3478487238524512106"
+        }
+      }
+    }
+  ]
+}

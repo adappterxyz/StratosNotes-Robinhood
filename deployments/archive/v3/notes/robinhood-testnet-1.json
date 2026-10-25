@@ -1,0 +1,28 @@
+{
+  "chain": "robinhood-testnet",
+  "pid": "1",
+  "name": "Demo Worst-of Phoenix on TSLA, NVDA",
+  "definition": "0xc64634d3b7d863921c97ffbb3dd1229b88c8154978fb941384e717e3d6d519e0",
+  "engine": "0xCbF6eeC598b8f3b4a4082f5583Db6bD6f488b22D",
+  "fromBlock": "141589246",
+  "strikeAt": 1793015712,
+  "obsAt": [
+    1793102112,
+    1793188512,
+    1793274912
+  ],
+  "lag": 21600,
+  "grace": 28800,
+  "pledge": 2000,
+  "investors": [
+    {
+      "address": "0xAce907325A6331D1f996D6f8CfA23D353213aA02",
+      "units": 600
+    },
+    {
+      "address": "0x30D8527aa8024fe8C7E74B56425C1a214dBD36d5",
+      "units": 400
+    }
+  ],
+  "unsold": 1000
+}

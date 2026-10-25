@@ -1,0 +1,40 @@
+{
+  "chains": [
+    {
+      "key": "arbitrum-sepolia",
+      "family": "evm",
+      "chainId": 421614,
+      "rpc": "https://sepolia-rollup.arbitrum.io/rpc",
+      "engine": "0x7d36Da43724b09Bb03ED98a4574685070073020b",
+      "startBlock": 322330366,
+      "confirmations": 3,
+      "maxRange": 2000,
+      "pollMs": 2000,
+      "legacyEngines": [
+        {
+          "engine": "0xAF8425A4b2d8994796e019D9b42Cd99D40297e10",
+          "startBlock": 322211118,
+          "version": 3
+        }
+      ]
+    },
+    {
+      "key": "robinhood-testnet",
+      "family": "evm",
+      "chainId": 46630,
+      "rpc": "https://rpc.testnet.chain.robinhood.com",
+      "engine": "0xf1a1Fa45770582d1EeBC173d9076E95f9cFA0244",
+      "startBlock": 141825174,
+      "confirmations": 120,
+      "maxRange": 20000,
+      "pollMs": 2000,
+      "legacyEngines": [
+        {
+          "engine": "0xCbF6eeC598b8f3b4a4082f5583Db6bD6f488b22D",
+          "startBlock": 141588428,
+          "version": 3
+        }
+      ]
+    }
+  ]
+}

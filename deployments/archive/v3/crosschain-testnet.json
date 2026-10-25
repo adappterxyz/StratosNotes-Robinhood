@@ -1,0 +1,58 @@
+{
+  "home": {
+    "chain": "arbitrum-sepolia",
+    "chainId": 421614,
+    "selector": "3478487238524512106",
+    "router": "0x2a9C5afB0d0e4BAb2BCdaE109EC4b0c4Be15a165",
+    "engine": "0xAF8425A4b2d8994796e019D9b42Cd99D40297e10",
+    "gateway": "0xcdee38dEbC2eE59Ae486c0829ff6a0028a5eFaEC",
+    "gatewayBlock": 322236840,
+    "deployTx": "0x7540437a26bc798c17032d425567d3f30b364e2158e6918ac128edbe4899e59c"
+  },
+  "remotes": [
+    {
+      "chain": "robinhood-testnet",
+      "chainId": 46630,
+      "selector": "2032988798112970440",
+      "router": "0x30D197C6F5bE050D5525dD94d01760FaCdB67e7C",
+      "vault": "0xfB8b030FF7C059665daB3aF2D77F72445E341300",
+      "gasLimit": 300000,
+      "receipts": {
+        "USDG.rh": {
+          "receipt": "0x62f28cF2EAF65eddA7FB57321f9809042e4f1B67",
+          "token": "0x7E955252E15c84f5768B83c41a71F9eba181802F",
+          "decimals": 6,
+          "valuedAs": "USD"
+        },
+        "TSLA.rh": {
+          "receipt": "0xcDb6f71FeEEB73F3c001681A390EE7940575AAc2",
+          "token": "0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E",
+          "decimals": 18,
+          "valuedAs": "TSLA"
+        },
+        "AMZN.rh": {
+          "receipt": "0x67c475C9CbB9fa695dEeBae62A57291376a9FDD9",
+          "token": "0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02",
+          "decimals": 18,
+          "valuedAs": "AMZN"
+        },
+        "NFLX.rh": {
+          "receipt": "0xD07f12Fa6a657f4A0F6DdA6095a5FA10667248e9",
+          "token": "0x3b8262A63d25f0477c4DDE23F83cfe22Cb768C93",
+          "decimals": 18,
+          "valuedAs": null,
+          "note": "no CRE-readable NFLX feed: not usable as collateral"
+        },
+        "tTSLA.rh": {
+          "receipt": "0x4A20107535C9d82310A3EfD7e4f9993Edeaade9B",
+          "token": "0xA540f040Dc767d9F683a660e9b1fF004E8F82225",
+          "decimals": 9,
+          "valuedAs": "TSLA",
+          "note": "our test token; used for the live CCIP proof"
+        }
+      }
+    }
+  ],
+  "owner": "0x298afB9424188C7eA7c01556D8CAE6ff4768de0a",
+  "checkedAt": "2026-10-24"
+}
