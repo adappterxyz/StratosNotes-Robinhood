@@ -1,7 +1,9 @@
 /**
- * Cross-chain collateral (stage 1): a note runs on its home chain (Arbitrum) while collateral stays locked in a
- * RemoteVault on another chain (Robinhood Chain first). The home side holds RemoteReceipts, which the engine
- * treats as ordinary collateral. The keeper (CRE) checks every run that each vault still backs its receipts:
+ * Cross-chain collateral (planned, docs/CROSS-CHAIN.md): a note runs on its home chain (Robinhood Chain) while
+ * collateral stays locked in a RemoteVault on another chain. The home side holds RemoteReceipts, which the engine
+ * treats as ordinary collateral. Nothing is deployed yet: the keeper's `gateways` and `vaults` are empty, so none of
+ * this runs. The mechanism was proven live in the earlier Arbitrum build (home Arbitrum Sepolia, vault on Robinhood
+ * Chain); the gas figures below were measured there. The keeper (CRE) checks every run that each vault still backs its receipts:
  *
  *   vault backing   = token.balanceOf(vault) - unclaimedTotal(token)   (what the vault can still pay)
  *   vault liability = locked(token)                                     (receipts outstanding + releases in flight)
@@ -23,7 +25,7 @@ export interface VaultWatch {
   assetChain: string;
   vault: string;
   token: string;
-  /** Label for logs, e.g. "TSLA on Robinhood". */
+  /** Label for logs, e.g. "USDC on Ethereum". */
   label?: string;
 }
 

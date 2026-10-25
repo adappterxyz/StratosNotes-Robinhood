@@ -191,9 +191,9 @@ describe('term sheet economics', () => {
         { symbol: 'TSLA', haircutPct: 60 },
       ],
     };
-    // A legacy Robinhood Chain term sheet: its terms hold together (it still rebuilds for display) but it can't be issued.
+    // On Robinhood Chain: every deliverable and collateral token is real there, and the basket fits the engine.
     expect(validateTermSheet(basket)).toEqual([]);
-    expect(validateProductParams(basket).join(' ')).toMatch(/issued on Arbitrum Sepolia only/);
+    expect(validateProductParams(basket)).toEqual([]);
   });
   it('checks the terms on-chain: grace above 7 days or a deadline after the next observation is refused', () => {
     const { ir } = compiled(EXAMPLE_PRODUCTS.fcn);

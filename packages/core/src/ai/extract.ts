@@ -132,7 +132,7 @@ const SCHEMA = {
 };
 
 function system(today: string): string {
-  return `You extract structured-note term sheets into JSON for StratosNotes (notes issued on Arbitrum only, observed by Chainlink; each note is secured by collateral the issuer pledges; stock collateral such as TSLA is locked on Robinhood Chain). Today is ${today}.
+  return `You extract structured-note term sheets into JSON for StratosNotes (notes run on Robinhood Chain, observed by Chainlink; each note is secured by collateral the issuer pledges on Robinhood Chain: USDG, WETH, or Robinhood's stock tokens TSLA, AMZN, AMD, PLTR). Today is ${today}.
 Products: ${Object.entries(PRODUCT_LABELS)
     .map(([k, v]) => `${k} = ${v}`)
     .join('; ')}.
@@ -145,9 +145,6 @@ Rules:
 - Collateral: the assets the issuer pledges ("secured by USDG" or "USDC" -> ["USD"]; "ETH collateral" -> ["ETH"]) and the share of the notional it must cover; haircuts, settlement lag and grace period only if stated.
 - Name: short, e.g. "12M Phoenix on ETH".`;
 }
-
-/** Collateral that exists only on Robinhood Chain: locked in its vault for an Arbitrum note. */
-const STOCK_COLLATERAL: readonly CollateralSymbol[] = ['TSLA', 'AMZN', 'AMD', 'PLTR'];
 
 const ANNUAL = /\bp\.?\s?a\b|per\s+annum|(?<!semi-?\s?)annual|a\s+year|per\s+year|yearly/i;
 export const SUPPORTED_UNDERLYINGS = Object.keys(FEEDS);
@@ -216,18 +213,6 @@ function toParams(d: Draft, prompt: string, notes: string[]): { params: ProductP
       return { symbol, haircutPct: stated ?? DEFAULT_HAIRCUT[symbol] };
     });
   }
-  // Every note is issued on Arbitrum (chain left at its default, never Robinhood Chain); stocks are only on Robinhood
-  // Chain, so stock collateral is locked there (with any stablecoin alongside it) and the note settles in cash.
-  if (params.collateral?.some((c) => STOCK_COLLATERAL.includes(c.symbol))) {
-    if (params.collateral.some((c) => c.symbol === 'ETH')) {
-      params.collateral = params.collateral.filter((c) => c.symbol !== 'ETH');
-      notes.push('ETH collateral dropped: what is locked on Robinhood Chain is USDG or stock tokens.');
-    }
-    params.collateralChain = 'robinhood';
-    notes.push(
-      'Stock collateral is locked in the vault on Robinhood Chain; the note itself is issued and paid on Arbitrum.',
-    );
-  }
   if (d.collateralRatioPct !== null) params.collateralRatioPct = d.collateralRatioPct;
   params.settlementLagDays = dflt(
     d.settlementLagDays,
@@ -266,7 +251,7 @@ export async function extractProduct(
       };
     const notes: string[] = [];
     const { params, schedule } = toParams(draft, prompt, notes);
-    delete params.chain; // never anything but the issuance chain (Arbitrum)
+    delete params.chain; // never anything but the note chain (Robinhood Chain)
     errors = validateProductParams(params);
     if (!errors.length) return { params, schedule, notes };
     messages.push({ role: 'assistant', content: JSON.stringify(draft) });

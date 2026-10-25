@@ -1,12 +1,10 @@
 /**
  * The seed template library: four equity notes, four crypto products and two custom workflows. Every note is
- * issued on Arbitrum Sepolia, where its whole lifecycle runs. Robinhood Chain testnet is a collateral chain only:
- * the stock notes settle in cash (no stock token exists on Arbitrum to deliver) and, where they take stock as
- * collateral, the issuer locks Robinhood's TSLA in the vault on Robinhood Chain and pledges its CCIP receipt
- * (TSLA.rh) on Arbitrum (collateralChain 'robinhood'). Every token they deliver or pledge is a real one (USDG,
- * WETH, or a Robinhood receipt); the rest settle in cash
- * (product workflows edited through the draft format the AI edits, then
- * checked by the validator). scripts/seed-templates.ts publishes them;
+ * issued on Robinhood Chain testnet, where its whole lifecycle runs and its collateral is pledged. Stock notes on
+ * Robinhood's own stock tokens (TSLA, AMZN) deliver the token below the knock-in barrier and take TSLA itself as
+ * collateral; stocks with no token there (NVDA, AAPL) and the crypto notes settle in cash. Every token they deliver
+ * or pledge is a real one on Robinhood Chain (USDG, Robinhood's TSLA and AMZN). Custom ones are product workflows
+ * edited through the draft format the AI edits, then checked by the validator. scripts/seed-templates.ts publishes them;
  * test/products.e2e.test.ts runs the custom ones on a local validator.
  */
 import { check } from '../validate';
@@ -55,10 +53,9 @@ const solPpn: ProductParams = {
   participationPct: 100,
 };
 const ethPhoenix: ProductParams = { ...EXAMPLE_PRODUCTS.phoenix, name: '12M Step-down Phoenix on ETH' };
-// Equity notes: prices from Robinhood Chain's Chainlink stock feeds (market hours); issued and settled on Arbitrum,
-// in cash. Stock collateral is TSLA locked on Robinhood Chain (its receipt TSLA.rh pledged into the note).
-const TSLA_LOCKED = {
-  collateralChain: 'robinhood' as const,
+// Equity notes: prices from Robinhood Chain mainnet's Chainlink stock feeds (market hours); issued, settled and
+// collateralised on Robinhood Chain testnet. Stock collateral is Robinhood's TSLA token, pledged into the note.
+const TSLA_PLEDGED = {
   collateral: [
     { symbol: 'TSLA' as const, haircutPct: 60 },
     { symbol: 'USD' as const, haircutPct: 100 },
@@ -69,9 +66,9 @@ const equityPhoenix: ProductParams = {
   name: '12M Worst-of Phoenix on TSLA, NVDA',
   underlyings: [FEEDS.TSLA, FEEDS.NVDA],
   couponRatePct: 3,
-  ...TSLA_LOCKED,
+  ...TSLA_PLEDGED,
 };
-// No Apple token exists on either chain: this one settles in cash.
+// No Apple token exists on Robinhood Chain: this one settles in cash.
 const aaplRc: ProductParams = {
   ...EXAMPLE_PRODUCTS['reverse-convertible'],
   name: '12M Reverse Convertible on AAPL',
@@ -84,7 +81,8 @@ const tslaAmznPhoenix: ProductParams = {
   name: '12M Worst-of Phoenix on TSLA, AMZN',
   underlyings: [FEEDS.TSLA, FEEDS.AMZN],
   couponRatePct: 3,
-  ...TSLA_LOCKED,
+  settlement: 'physical',
+  ...TSLA_PLEDGED,
 };
 const tslaRc: ProductParams = {
   ...EXAMPLE_PRODUCTS['reverse-convertible'],
@@ -92,8 +90,8 @@ const tslaRc: ProductParams = {
   underlyings: [FEEDS.TSLA],
   couponRatePct: 2.5,
   knockInBarrierPct: 70,
-  settlement: 'cash',
-  ...TSLA_LOCKED,
+  settlement: 'physical',
+  ...TSLA_PLEDGED,
 };
 const btcPhoenix: ProductParams = {
   ...EXAMPLE_PRODUCTS.phoenix,
@@ -106,19 +104,19 @@ export const SEED_TEMPLATES: Array<{ name: string; description: string; source: 
   {
     name: '12M Worst-of Phoenix on TSLA, AMZN',
     description:
-      '3% quarterly while the worst of Tesla and Amazon holds 70% of strike, with memory; autocalls at 100% from Q2; 60% knock-in, repaid final ÷ strike in USDG. Runs on Arbitrum, secured by TSLA (60% haircut) and USDG locked on Robinhood Chain. Prices: Chainlink on Robinhood Chain.',
+      '3% quarterly while the worst of Tesla and Amazon holds 70% of strike, with memory; autocalls at 100% from Q2; below the 60% knock-in, holders receive the worst performer\'s token (Robinhood\'s TSLA or AMZN). Secured by TSLA (60% haircut) and USDG pledged on Robinhood Chain. Prices: Chainlink on Robinhood Chain.',
     source: { product: tslaAmznPhoenix },
   },
   {
     name: '12M Reverse Convertible on TSLA',
     description:
-      '2.5% quarterly coupon; if Tesla ends below 70% of its strike, holders are repaid final ÷ strike in USDG. Issued and paid on Arbitrum; secured by TSLA (60% haircut) and USDG locked on Robinhood Chain. Prices: Chainlink TSLA/USD on Robinhood Chain.',
+      '2.5% quarterly coupon; if Tesla ends below 70% of its strike, holders receive Robinhood\'s TSLA token (1 ÷ strike per unit) instead of par. Secured by TSLA (60% haircut) and USDG pledged on Robinhood Chain. Prices: Chainlink TSLA/USD on Robinhood Chain.',
     source: { product: tslaRc },
   },
   {
     name: '12M Worst-of Phoenix on TSLA, NVDA',
     description:
-      '3% quarterly while the worst of Tesla and NVIDIA holds 70% of strike, with memory; autocalls at 100% from Q2; 60% knock-in, cash-settled in USDG. Runs on Arbitrum, secured by TSLA (60% haircut) and USDG locked on Robinhood Chain. Prices: Chainlink on Robinhood Chain.',
+      '3% quarterly while the worst of Tesla and NVIDIA holds 70% of strike, with memory; autocalls at 100% from Q2; 60% knock-in, cash-settled in USDG (no NVIDIA token on Robinhood Chain). Secured by TSLA (60% haircut) and USDG pledged on Robinhood Chain. Prices: Chainlink on Robinhood Chain.',
     source: { product: equityPhoenix },
   },
   {

@@ -1,6 +1,6 @@
 /**
  * Note templates: a workflow an issuer saved from the studio so that anyone
- * can issue it again. The workflow itself is a sealed definition on Solana
+ * can issue it again. The workflow itself is a sealed definition on Robinhood Chain
  * (content-addressed); the registry (the app Worker) keeps what is needed to
  * reopen it on the canvas and label it: the term sheet of a stock product, or
  * the BPMN of a custom one. The registry recompiles every entry and accepts it
@@ -10,12 +10,12 @@ import { parseBpmn } from './bpmn';
 import { compile, type Compiled } from './compile';
 import { instantiateProduct } from './products/instantiate';
 import {
-  CHAIN_TOKENS,
   deliverableToken,
   isLegacyChainTerms,
   isRetiredTestToken,
   normalizeParams,
   PRODUCT_LABELS,
+  REMOTE_COLLATERAL,
   underlyingLabel,
   validateProductParams,
   type ProductParams,
@@ -72,20 +72,17 @@ export const templateMessage = (definition: string) => `StratosNotes: publish te
 
 /**
  * Whether the library still offers a saved template: not when its workflow names one of notes.markets' retired test
- * tokens (tETH, tAAPL…), nor when its term sheet can't be issued now: it names Robinhood Chain as the note's chain
- * (notes are issued on Arbitrum only; Robinhood Chain holds collateral), delivers a stock physically (no stock token
- * exists on Arbitrum: stock notes are cash-settled), or otherwise no longer validates. A custom workflow is judged by
- * the term sheet it was edited from.
+ * tokens (tETH, tAAPL…) or a receipt of collateral held on another chain that is not deployed (e.g. TSLA.rh from the
+ * earlier Arbitrum build), nor when its term sheet can't be issued now: it names a chain notes do not run on, delivers
+ * an underlying with no token on Robinhood Chain, or otherwise no longer validates. A custom workflow is judged by the
+ * term sheet it was edited from.
  */
 export function templateOffered(t: TemplateSource): boolean {
   if (t.assets?.some((a) => !!a.token && isRetiredTestToken(a.token))) return false;
-  // A workflow that moves a Robinhood Chain stock token itself (not its .rh receipt) runs on Robinhood Chain.
-  if (
-    t.assets?.some(
-      (a) => !!a.token && !!CHAIN_TOKENS['robinhood-testnet'][a.token] && !CHAIN_TOKENS['arbitrum-sepolia'][a.token],
-    )
-  )
-    return false;
+  const receipts = new Set(
+    Object.values(REMOTE_COLLATERAL).flatMap((m) => Object.values(m).map((x) => x?.token)),
+  );
+  if (t.assets?.some((a) => !!a.token && a.token.includes('.') && !receipts.has(a.token))) return false;
   const p = t.product ?? t.basis;
   if (p) {
     let q: ProductParams;

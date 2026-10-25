@@ -121,8 +121,8 @@ describe('keeper: prices', () => {
     expect(routeFeed(f, undefined)).toBe(f);
     expect(
       routeFeed(f, {
-        '0xabc0000000000000000000000000000000000001': { feed: '0x02', feedChain: 'ethereum-mainnet-arbitrum-1' },
+        '0xabc0000000000000000000000000000000000001': { feed: '0x02', feedChain: 'robinhood-mainnet' },
       }),
-    ).toEqual({ field: 'obs1_ETH', feed: '0x02', feedChain: 'ethereum-mainnet-arbitrum-1', staleness: 3600 });
+    ).toEqual({ field: 'obs1_ETH', feed: '0x02', feedChain: 'robinhood-mainnet', staleness: 3600 });
   });
 });

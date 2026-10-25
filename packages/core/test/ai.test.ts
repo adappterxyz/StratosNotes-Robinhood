@@ -207,7 +207,7 @@ describe('AI pipeline (scripted models)', () => {
     });
     expect(r.notes.join(' ')).toMatch(/ETH collateral haircut not stated: 70%/);
   });
-  it('puts a stock note on Arbitrum, cash-settled, with its stock collateral locked on Robinhood Chain', async () => {
+  it('puts a stock note on Robinhood Chain, with its stock collateral pledged into the note there', async () => {
     const prompt =
       'Reverse convertible on TSLA, 2.5% a quarter, knock-in 70%, one year, secured by TSLA and USDG at 100%, on Robinhood Chain';
     const ai = fake(
@@ -245,13 +245,9 @@ describe('AI pipeline (scripted models)', () => {
     expect(r.kind).toBe('product');
     if (r.kind !== 'product') return;
     expect(r.params.chain).toBeUndefined();
-    expect(r.params.settlement ?? 'cash').toBe('cash');
-    expect(r.params.collateralChain).toBe('robinhood');
-    expect(r.params.collateral?.map((c) => c.symbol)).toEqual(['TSLA', 'USD']);
+    expect(r.params.collateralChain).toBeUndefined();
+    expect(r.params.collateral?.map((c) => c.symbol)).toEqual(['TSLA', 'USD', 'ETH']);
     expect(validateProductParams(r.params)).toEqual([]);
-    expect(r.notes.join(' ')).toMatch(
-      /locked in the vault on Robinhood Chain; the note itself is issued and paid on Arbitrum/,
-    );
   });
   it('refuses an underlying with no Chainlink feed here', async () => {
     const ai = fake({ intent: { choice: 'product', confidence: 0.9 }, product: { choice: 'fcn', confidence: 0.9 } }, [

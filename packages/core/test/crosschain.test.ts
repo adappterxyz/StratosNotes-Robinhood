@@ -17,12 +17,12 @@ import {
 } from '../src/crosschain';
 
 const watch: VaultWatch = {
-  homeChain: 'ethereum-testnet-sepolia-arbitrum-1',
+  homeChain: 'robinhood-testnet',
   receipt: '0xr',
-  assetChain: 'robinhood-testnet',
+  assetChain: 'ethereum-testnet-sepolia',
   vault: '0xv',
   token: '0xt',
-  label: 'TSLA on Robinhood',
+  label: 'USDC on Ethereum Sepolia',
 };
 const reading = (
   o: Partial<{ locked: bigint; unclaimedTotal: bigint; vaultBalance: bigint; receiptsOutstanding: bigint }>,
@@ -95,21 +95,21 @@ describe('auto-release queue (HomeGateway v2)', () => {
   });
   it('logs one line per gateway, with why no report was written', () => {
     const flushing = q({ pending: 2n, queued: 2n });
-    expect(describeFlush('arb', flushing, planFlush(flushing))).toMatch(
-      /^arb gateway flush: 2 release\(s\) waiting .* -> flush up to 2 \(gas 750000\)$/,
+    expect(describeFlush('rh', flushing, planFlush(flushing))).toMatch(
+      /^rh gateway flush: 2 release\(s\) waiting .* -> flush up to 2 \(gas 750000\)$/,
     );
-    expect(describeFlush('arb', q({}), planFlush(q({})))).toMatch(/no report \(nothing to send\)$/);
+    expect(describeFlush('rh', q({}), planFlush(q({})))).toMatch(/no report \(nothing to send\)$/);
     const short = q({ pending: 1n, pool: 1n });
-    expect(describeFlush('arb', short, planFlush(short))).toMatch(/no report \(pool-short/);
+    expect(describeFlush('rh', short, planFlush(short))).toMatch(/no report \(pool-short/);
     const noVault = q({ pending: 1n, nextFee: 0n });
-    expect(describeFlush('arb', noVault, planFlush(noVault))).toMatch(/no report \(no-vault/);
+    expect(describeFlush('rh', noVault, planFlush(noVault))).toMatch(/no report \(no-vault/);
   });
   it('the keeper config gets the gateway only for an auto-release (v2) gateway', () => {
-    const names = { 'arbitrum-sepolia': 'ethereum-testnet-sepolia-arbitrum-1' };
-    const home = { chain: 'arbitrum-sepolia', gateway: '0x4C393Ed28Cc1825CfBA5A4d6F2223589249C3a89' };
+    const names = { 'robinhood-testnet': 'robinhood-testnet' };
+    const home = { chain: 'robinhood-testnet', gateway: '0x4C393Ed28Cc1825CfBA5A4d6F2223589249C3a89' };
     expect(keeperGateways({ home: { ...home, version: 2 } }, names, { stateBlock: 'latest' })).toEqual([
       {
-        chainSelectorName: 'ethereum-testnet-sepolia-arbitrum-1',
+        chainSelectorName: 'robinhood-testnet',
         gateway: home.gateway,
         maxItems: 10,
         baseGas: '250000',
