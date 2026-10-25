@@ -1,11 +1,15 @@
 /**
- * Write the server configs from deployments/<chain>.json (the current engines) and deployments/archive/v<N>/ (earlier
- * engines whose notes stay on them, e.g. FlowEngine v3 next to v4: indexed and served as each chain's
- * `legacyEngines`, with their own cross-chain pair from archive/v<N>/crosschain-testnet.json):
- *   deployments/server/indexer.json   services/indexer (INDEXER_CONFIG)
- *   deployments/server/api.json       services/api (API_CONFIG)
+ * Write the server configs from deployments/robinhood-testnet.json (the current engine on Robinhood Chain testnet, the
+ * only note chain):
+ *   deployments/server/indexer.json   services/indexer (INDEXER_CONFIG) and the Worker's cron
+ *   deployments/server/api.json       services/api (API_CONFIG) and the Worker's /api
  *
  *   npx tsx scripts/server-config.ts            # SITE=https://notes.markets by default
+ *
+ * Generic, unused today: deployments/archive/v<N>/<chain>.json would name earlier engines whose notes stay on them
+ * (served as `legacyEngines`), and deployments/crosschain-testnet.json a cross-chain gateway (planned:
+ * docs/CROSS-CHAIN.md). Neither exists, so the chain has one engine and no cross-chain config. A deployment file
+ * without an `engine` (the placeholder before a fresh deploy) is skipped: the configs then list no chain.
  *
  * No secrets: DATABASE_URL, SN_PROXY_SECRET and the rest come from the environment (docs/DEPLOY.md).
  */
@@ -20,11 +24,6 @@ import {
 const SITE = process.env.SITE ?? 'https://notes.markets';
 const CHAINS = [
   {
-    key: 'arbitrum-sepolia',
-    chainId: 421614,
-    rpc: process.env.RPC_ARBITRUM_SEPOLIA ?? 'https://sepolia-rollup.arbitrum.io/rpc',
-  },
-  {
     key: 'robinhood-testnet',
     chainId: 46630,
     rpc: process.env.RPC_ROBINHOOD_TESTNET ?? 'https://rpc.testnet.chain.robinhood.com',
@@ -32,11 +31,11 @@ const CHAINS = [
 ];
 type Deployment = { engine: string; lens: string; block: number; faucet?: string; tokens?: Record<string, string> };
 const read = <T>(path: string): T => JSON.parse(readFileSync(path, 'utf8')) as T;
-const deployed = CHAINS.filter((c) => existsSync(`deployments/${c.key}.json`)).map((c) => ({
-  ...c,
-  d: read<Deployment>(`deployments/${c.key}.json`),
-}));
-if (!deployed.length) throw new Error('no deployments/<chain>.json yet: run scripts/deploy-testnets.sh');
+const deployed = CHAINS.filter((c) => existsSync(`deployments/${c.key}.json`))
+  .map((c) => ({ ...c, d: read<Partial<Deployment>>(`deployments/${c.key}.json`) }))
+  .filter((c): c is typeof c & { d: Deployment } => !!c.d.engine && !!c.d.lens);
+if (!deployed.length)
+  console.warn('no deployed engine yet (deployments/robinhood-testnet.json is a placeholder): writing configs with no chain');
 
 /** Earlier engines: deployments/archive/v<N>/<chain>.json, oldest first (the flat v1/v2 files predate the read model). */
 const ARCHIVE = 'deployments/archive';
@@ -65,11 +64,11 @@ const indexer = {
     rpc: c.rpc,
     engine: c.d.engine,
     startBlock: c.d.block,
-    // Arbitrum chains: read 'finalized' would lag ~L1 finality; a few confirmations is the demo-friendly depth.
-    // Robinhood Chain testnet makes several blocks a second with few logs: 20,000-block ranges (its RPC answers them
-    // in well under a second) keep the indexer at the head; 2,000 fell ~170,000 blocks behind.
-    confirmations: c.key === 'robinhood-testnet' ? 120 : 3,
-    maxRange: c.key === 'robinhood-testnet' ? 20000 : 2000,
+    // Robinhood Chain testnet (an Arbitrum Orbit chain) makes several blocks a second with few logs: 'finalized'
+    // would lag ~L1 finality, so 120 confirmations; 20,000-block ranges (its RPC answers them in well under a second)
+    // keep the indexer at the head (2,000 fell ~170,000 blocks behind).
+    confirmations: 120,
+    maxRange: 20000,
     pollMs: 2000,
     legacyEngines: legacyOf(c.key, c.d.engine).map((l) => ({
       engine: l.d.engine,
@@ -78,18 +77,18 @@ const indexer = {
     })),
   })),
 };
-/** Each chain's real tokens (packages/core CHAIN_TOKENS: USDG, WETH, Robinhood's stock tokens), verified on-chain. */
+/** The chain's real tokens (packages/core CHAIN_TOKENS: USDG, WETH, Robinhood's stock tokens), verified on-chain. */
 const REAL = (key: string): Record<string, string> =>
   Object.fromEntries(Object.values(CHAIN_TOKENS[key as NoteChain] ?? {}).map((t) => [t.token, t.address]));
-/** Of the deployment's own test tokens, only tUSD stays: notes issued before USDG settle in it. The others (tETH,
+/** Of the deployment's own test tokens (TEST_TOKENS=1 rehearsals only), only tUSD is served. The others (tETH,
  * tTSLA…) are retired and never served. */
 const legacyCash = (tokens: Record<string, string> | undefined) =>
   tokens?.[TEST_CASH_TOKEN.token] ? { [TEST_CASH_TOKEN.token]: tokens[TEST_CASH_TOKEN.token] } : {};
 /** Receipts of retired test tokens (tTSLA.rh…) are disabled in the vault: dropped from what is served. */
 const liveReceipts = (r: CrossChain['remotes'][number]['receipts']) =>
   Object.fromEntries(Object.entries(r).filter(([sym]) => !isRetiredTestToken(sym)));
-/** Cross-chain collateral (deployments/crosschain-testnet.json): receipts are tokens on the home chain; both
- * sides get the addresses the app needs to lock, follow and redeem. */
+/** Cross-chain collateral (planned; deployments/crosschain-testnet.json once deployed, home = Robinhood Chain):
+ * receipts are tokens on the home chain; both sides get the addresses the app needs to lock, follow and redeem. */
 type CrossChain = {
   home: { chain: string; selector: string; router: string; gateway: string };
   remotes: Array<{
@@ -151,7 +150,7 @@ const api = {
     engine: c.d.engine,
     lens: c.d.lens,
     fromBlock: c.d.block,
-    // Cash is Paxos's testnet USDG (docs.paxos.com/guides/stablecoin/usdg/testnet); tUSD stays for older notes.
+    // Cash is Paxos's testnet USDG on Robinhood Chain (docs.paxos.com/guides/stablecoin/usdg/testnet).
     // The TokenFaucet (test tokens) is retired: not served.
     stablecoin: { symbol: 'USDG', address: REAL(c.key).USDG, decimals: 6 },
     tokens: { ...legacyCash(c.d.tokens), ...REAL(c.key), ...receiptsOn(c.key) },

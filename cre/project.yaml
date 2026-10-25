@@ -1,37 +1,27 @@
 # CRE project settings: cre workflow simulate|deploy <workflow> --target <name>
 #
-# Every target needs the chains the keeper reads Chainlink price feeds from (the testnets have no feeds):
-#   ethereum-mainnet             crypto (ETH/USD, BTC/USD, SOL/USD)
-#   ethereum-mainnet-arbitrum-1  equities (TSLA, NVDA, AAPL, SPY on Arbitrum One)
+# Notes run on Robinhood Chain testnet (CRE chain robinhood-testnet); the keeper writes there. Every target also needs
+# the chains it reads Chainlink price feeds from (the testnet has no feeds):
+#   ethereum-mainnet   crypto (ETH/USD, BTC/USD, SOL/USD)
+#   equities (TSLA, AMZN, AMD, PLTR, NVDA…) come from Robinhood Chain mainnet's feeds over the HTTP capability
+#   (config httpFeedChains), not an EVM read: no RPC entry needed here.
 # RPC URLs may use ${VAR} from the shell or the env file given with -e.
+#
+# There is no production target: CRE cannot write to Robinhood Chain mainnet yet (services/keeper-fallback).
 
-# Local end-to-end run against an anvil fork of Arbitrum Sepolia (scripts/e2e-cre-evm.sh), which keeps the
+# Local end-to-end run against an anvil fork of Robinhood Chain testnet (scripts/e2e-cre-evm.sh), which keeps the
 # real MockKeystoneForwarder. SN_FORK_PORT is the fork's port.
 local-fork:
   rpcs:
-    - chain-name: ethereum-testnet-sepolia-arbitrum-1
+    - chain-name: robinhood-testnet
       url: "http://127.0.0.1:${SN_FORK_PORT}"
     - chain-name: ethereum-mainnet
       url: https://ethereum-rpc.publicnode.com
-    - chain-name: ethereum-mainnet-arbitrum-1
-      url: https://arb1.arbitrum.io/rpc
 
-# Testnets: `cre workflow simulate --broadcast` writes through each chain's MockKeystoneForwarder.
+# Testnet: `cre workflow simulate --broadcast` writes through Robinhood Chain testnet's MockKeystoneForwarder.
 staging-settings:
   rpcs:
-    - chain-name: ethereum-testnet-sepolia-arbitrum-1
-      url: https://sepolia-rollup.arbitrum.io/rpc
     - chain-name: robinhood-testnet
       url: https://rpc.testnet.chain.robinhood.com
-    - chain-name: ethereum-mainnet
-      url: https://ethereum-rpc.publicnode.com
-    - chain-name: ethereum-mainnet-arbitrum-1
-      url: https://arb1.arbitrum.io/rpc
-
-# Mainnet: Arbitrum One. CRE cannot write to Robinhood Chain mainnet yet (services/keeper-fallback).
-production-settings:
-  rpcs:
-    - chain-name: ethereum-mainnet-arbitrum-1
-      url: https://arb1.arbitrum.io/rpc
     - chain-name: ethereum-mainnet
       url: https://ethereum-rpc.publicnode.com
