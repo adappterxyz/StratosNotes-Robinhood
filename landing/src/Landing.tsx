@@ -10,7 +10,7 @@ import { DEFAULT_START, type ExplorerStart } from './explorer/start';
 const APP_URL = '/app/';
 const ISSUE_URL = '/app/issue';
 const STRATOS_URL = 'https://stratoslab.xyz';
-const REPO_URL = 'https://github.com/adappterxyz/StratosNotes-Arbitrum';
+const REPO_URL = 'https://github.com/adappterxyz/StratosNotes-Robinhood';
 
 /** The wordmark: lowercase, with the dot as the one blue mark. */
 export function Wordmark({ size = 'md', dark = false }: { size?: 'md' | 'lg'; dark?: boolean }) {
@@ -202,33 +202,38 @@ export default function Landing() {
 
         <HowItWorks />
 
-        <section id="arbitrum">
+        <section id="robinhood">
           <div className="wrap">
             <div className="section-head" data-reveal>
-              <span className="eyebrow">Why Arbitrum</span>
-              <h2>Notes run on Arbitrum. The stocks stay on Robinhood Chain.</h2>
+              <span className="eyebrow">Why Robinhood Chain</span>
+              <h2>Notes run where the stocks live.</h2>
               <p>
-                Every note is issued and paid on Arbitrum. Stock collateral stays locked on Robinhood Chain, where the
-                stocks live, coordinated by Chainlink CCIP and CRE: live on testnet, with each lock or release delivered
-                in about 20 minutes.
+                Every note is issued, collateralised and paid on Robinhood Chain, next to Robinhood&apos;s tokenized
+                stocks. TSLA and AMZN can back a note and be delivered at maturity in the same chain, with no bridge and
+                no wait. Chainlink prices every observation and pays every payment.
               </p>
             </div>
             <div className="cards3">
               <div className="card" data-reveal>
                 <div className="card-logo">
-                  <img src="/logos/arbitrum.svg" alt="" height={26} />
-                  Arbitrum Sepolia
+                  <img src="/logos/robinhood-chain-dark.svg" alt="" height={24} />
+                  Robinhood Chain
                 </div>
-                <span className="tag">Where notes run · testnet 421614</span>
-                <p>Issue, subscribe, observe and pay: every note's lifecycle, on stocks or crypto.</p>
+                <span className="tag">Where notes run · testnet 46630</span>
+                <p>
+                  Issue, subscribe, observe and pay: every note&apos;s lifecycle, on stocks or crypto, settled in USDG.
+                </p>
               </div>
               <div className="card" data-reveal>
                 <div className="card-logo">
                   <img src="/logos/robinhood-chain-dark.svg" alt="" height={24} />
-                  Robinhood Chain
+                  Stock tokens
                 </div>
-                <span className="tag">Asset chain · testnet 46630</span>
-                <p>Where the stock tokens live: TSLA and AMZN pledged as collateral or delivered at maturity.</p>
+                <span className="tag">Collateral and delivery</span>
+                <p>
+                  Robinhood&apos;s TSLA, AMZN, AMD and PLTR, plus USDG and WETH: pledged as collateral into the note, or
+                  delivered to holders below the barrier.
+                </p>
               </div>
               <div className="card" data-reveal>
                 <div className="card-logo">
@@ -236,8 +241,8 @@ export default function Landing() {
                 </div>
                 <span className="tag">Prices and automation</span>
                 <p>
-                  Prices for ETH, BTC, SOL, TSLA, NVDA, AAPL, AMZN and SPY, checked on-chain. CCIP links the two chains
-                  (live on testnet).
+                  Prices for ETH, BTC, SOL, TSLA, NVDA, AAPL, AMZN and SPY, checked on-chain. Chainlink CRE observes and
+                  pays on schedule.
                 </p>
               </div>
             </div>
@@ -282,7 +287,7 @@ export default function Landing() {
           </div>
           <small className="by">
             <img src="/logos/stratos-mark.png" alt="" width={16} height={16} />
-            notes.markets by StratosLab · Built on Arbitrum, Robinhood Chain and Chainlink
+            notes.markets by StratosLab · Built on Robinhood Chain and Chainlink
           </small>
           <small className="disclaimer">
             Structured notes carry risk, including loss of principal. Nothing on this site is an offer or investment

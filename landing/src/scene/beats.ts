@@ -6,7 +6,7 @@ export const BEATS = [
   { from: 0.37, to: 0.55 }, // observe: Chainlink checks each date
   { from: 0.55, to: 0.68 }, // pay: coupons in USDG to every holder
   { from: 0.68, to: 0.84 }, // ending A: price holds, principal back in USDG, collateral released
-  { from: 0.84, to: 1.0 }, // ending B: knocked in, holders repaid final ÷ strike in USDG (stock notes are cash-settled)
+  { from: 0.84, to: 1.0 }, // ending B: knocked in, holders repaid final ÷ strike in USDG (the cash-settled form; a physical note delivers TSLA)
 ] as const;
 
 /** The story before the endings ran on 0..0.8 of the original scene timeline; endings use their own clock. */

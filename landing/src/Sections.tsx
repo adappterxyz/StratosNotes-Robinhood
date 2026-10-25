@@ -339,8 +339,8 @@ export function Shelf() {
         <p className="underlyings" data-reveal>
           <span className="built-label">Underlyings</span>BTC · ETH · SOL (Chainlink on Ethereum) · US stocks TSLA,
           AMZN, AMD, PLTR, NVDA, AAPL, SPY, META, MSFT, GOOGL and COIN (Chainlink on Robinhood Chain) · Robinhood
-          Chain's own TSLA, AMZN, AMD and PLTR tokens as collateral, locked there (stock notes settle in cash; WETH is
-          delivered on Arbitrum)
+          Chain's own TSLA, AMZN, AMD and PLTR tokens and WETH, pledged as collateral or delivered at maturity, on the
+          same chain
         </p>
       </div>
     </section>
@@ -355,7 +355,7 @@ export function HowItWorks() {
     ],
     [
       'Subscribe',
-      'Investors subscribe with USDG on Arbitrum. Collateral can stay on Robinhood Chain, credited through Chainlink CCIP.',
+      'Investors subscribe with USDG on Robinhood Chain, where the note, its collateral and its payments all live.',
     ],
     [
       'Fix and observe',
@@ -400,7 +400,7 @@ export function ForIssuers() {
     ['Zero back office', 'Chainlink is your calculation agent and paying agent, on every note.'],
     [
       'Onchain distribution',
-      'Any wallet with a verified email can subscribe on Arbitrum, while your collateral can stay on Robinhood Chain.',
+      'Any wallet with a verified email can subscribe on Robinhood Chain, next to the stock tokens your note pays or pledges.',
     ],
   ];
   return (

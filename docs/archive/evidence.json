@@ -1,4 +1,5 @@
 {
+  "_note": "Archived: testnet runs from the earlier Arbitrum/Founder House build (Arbitrum Sepolia and the old Robinhood engine). Not read by scripts/landing-proof.ts.",
   "runs": [
     {
       "chain": "robinhood-testnet",

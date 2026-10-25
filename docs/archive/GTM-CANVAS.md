@@ -1,5 +1,7 @@
 # notes.markets: Product and GTM canvas
 
+> Archived: from the earlier Arbitrum / Founder House build (notes on Arbitrum Sepolia, collateral vault on Robinhood Chain). notes.markets now runs on Robinhood Chain only; see [../OVERVIEW.md](../OVERVIEW.md).
+
 Produced during Arbitrum Founder House (October 2026). One page first, details below. Facts are what is live on
 testnet on 2026-10-24. Nothing here claims users or revenue we don't have yet.
 

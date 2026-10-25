@@ -1,6 +1,6 @@
 /**
- * The term sheet of a real note from /api/notes, shown only when it is a fair example to verify: issued on Arbitrum
- * (the anchor network), settled in USDG, and on a real schedule (not a compressed demo of minutes or days). An open
+ * The term sheet of a real note from /api/notes, shown only when it is a fair example to verify: issued on Robinhood
+ * Chain testnet, settled in USDG, and on a real schedule (not a compressed demo of minutes or days). An open
  * book first, then a running note. Without one (or while the API is down) it shows the same rows as an illustrative
  * sheet with no numbers in it. The coupon is annualised the way
  * the app does it (app/src/lib/listing.ts): coupon per period times the periods in a year, where a compressed demo
@@ -35,8 +35,8 @@ type NoteView = {
   economics?: { ratio?: number; collateral?: Array<{ symbol: string; amount: number }> };
   cashToken?: string;
 };
-/** Paxos USDG on Arbitrum Sepolia: the only cash a showcased note may settle in. */
-const USDG_ARBITRUM = '0xffc95faa3d63cde504a05b567c600b78c0b41892';
+/** Paxos USDG on Robinhood Chain testnet: the only cash a showcased note may settle in. */
+const USDG_ROBINHOOD = '0x7e955252e15c84f5768b83c41a71f9eba181802f';
 type Chain = { key: string; explorer?: string; engine?: string };
 
 const STATUS: Record<string, string> = {
@@ -108,10 +108,10 @@ function rowsOf(v: NoteView, now: number): { rows: Row[]; next: string | null } 
   return { rows, next: nxt ? fmtDate(nxt) : null };
 }
 
-/** A note worth showing: on Arbitrum, in USDG, on a real schedule (at least a month to maturity). */
+/** A note worth showing: on Robinhood Chain, in USDG, on a real schedule (at least a month to maturity). */
 const showcase = (n: NoteView) =>
-  n.chain === 'arbitrum-sepolia' &&
-  n.cashToken?.toLowerCase() === USDG_ARBITRUM &&
+  n.chain === 'robinhood-testnet' &&
+  n.cashToken?.toLowerCase() === USDG_ROBINHOOD &&
   !schedule(n).demo &&
   !!n.strikeDate &&
   !!n.obsDates?.length;

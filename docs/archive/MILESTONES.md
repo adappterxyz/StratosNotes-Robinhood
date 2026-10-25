@@ -1,5 +1,7 @@
 # notes.markets: milestone plan
 
+> Archived: from the earlier Arbitrum / Founder House build (notes on Arbitrum Sepolia, collateral vault on Robinhood Chain). notes.markets now runs on Robinhood Chain only; see [../OVERVIEW.md](../OVERVIEW.md).
+
 Prizes pay 50% upfront and 50% on milestones. This plan covers about six months from Founder House (late October
 2026). Targets in `[[…]]` are for the team to set.
 
@@ -11,10 +13,10 @@ Prizes pay 50% upfront and 50% on milestones. This plan covers about six months 
 - Two notes ran start to finish on testnet, with every strike, observation and payment written by Chainlink CRE:
   TSLA/NVDA (on an early engine on Robinhood, now retired) paid 630 and 420 tUSD; ETH/BTC on Arbitrum Sepolia paid
   645 and 430 tUSD. Since then 3 TSLA locked on Robinhood Chain backed an Arbitrum note start to finish
-  ([CROSS-CHAIN.md](CROSS-CHAIN.md), "Live v2 proof")
-  ([SUBMISSION.md](SUBMISSION.md#evidence)).
+  ([CROSS-CHAIN.md](../CROSS-CHAIN.md), "Live v2 proof")
+  ([SUBMISSION.md](../OVERVIEW.md)).
 - Engine v3: collateral escrow, per-period funding with a grace period, default to holders, a verified email
-  bound on-chain as a salted hash, and the fixes from the security pass ([SECURITY.md](SECURITY.md)).
+  bound on-chain as a salted hash, and the fixes from the security pass ([SECURITY.md](../SECURITY.md)).
 - 128 unit tests and 26 contract tests passing.
 
 ## M1: Audit and hardening, on testnet (month 1–2)

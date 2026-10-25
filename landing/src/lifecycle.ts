@@ -34,7 +34,7 @@ export const STEPS: LifecycleStep[] = [
     actor: 'Issuer',
     desc: "Size, dates, settlement lag, grace period (0-7 days) and the collateral ratio are set per issuance. The issuer pledges collateral in the same step: it is locked in the note's escrow, which no key controls.",
     code: {
-      evm: `${c('// The Issuer runs its user task on FlowEngine (Arbitrum Sepolia)')}
+      evm: `${c('// The Issuer runs its user task on FlowEngine (Robinhood Chain testnet)')}
 engine.${f('executeStep')}(pid, Task_ApproveTerms, ${q('0')}, [
   isin, notional, strikeDate, obsDate1, obsDate2, obsDate3, obsDate4,
   lag, grace, collateralRatio, haircut_USD, pledge_USD,

@@ -534,7 +534,7 @@ export class NoteScene {
       g2.font = '700 38px "Geist Mono", ui-monospace, Menlo, monospace';
       g2.textAlign = 'center';
       g2.textBaseline = 'middle';
-      g2.fillText('USDG', 64, 66); // cash-settled: stock notes repay final ÷ strike in USDG
+      g2.fillText('USDG', 64, 66); // the cash-settled form: final ÷ strike in USDG (a physical note delivers the stock token)
       const tex = new CanvasTexture(cv);
       tex.colorSpace = SRGBColorSpace;
       this.tsla = new InstancedMesh(new BoxGeometry(0.95, 0.95, 0.95), new MeshBasicMaterial({ map: tex }), n);

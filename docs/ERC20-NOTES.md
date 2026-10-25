@@ -57,7 +57,7 @@ also runs on a withdrawal, on a workflow debit or credit of the account, and whe
   back, never needs cash for its own book.
 - **Defaults.** Both rules work unchanged on top of this. `cap-at-owed` distributes each escrow asset at
   `take_a / sold` and transfers the remainder to the issuer. `all-to-holders` distributes `balance(ESCROW, a) / sold`.
-  Collateral held as cross-chain receipts (`RemoteReceipt`) is an ordinary cash asset here: holders withdraw the
+  Collateral held as cross-chain receipts (`RemoteReceipt`; planned, docs/CROSS-CHAIN.md) is an ordinary cash asset here: holders withdraw the
   receipts and redeem them on the asset chain (`test/CrossChain.t.sol`, every remote-collateral run).
 - **Physical delivery** distributes the delivered token per unit through the same accumulator. Tested with an
   18-decimal deliverable.
@@ -249,51 +249,30 @@ each holder's storage cold, as it is in a real batch.)
   engine. New issuance goes to v4.
 - **Old read-model rows are unaffected.** A v3 note never emits the new events.
 
-## 9. v4 redeploy (done on both testnets, 2026-10-24)
+## 9. v4 deployment on Robinhood Chain testnet
 
-Deployed: engines Arbitrum Sepolia `0x7d36Da43724b09Bb03ED98a4574685070073020b` and Robinhood Chain testnet
-`0xf1a1Fa45770582d1EeBC173d9076E95f9cFA0244` (test tokens and faucet kept); a fresh HomeGateway
-`0x355196434760Ce382315E2cDADaa5bA76b06372A` and RemoteVault `0xE7a70743263554eb4D7A5599F4bAd05d2A7E8846`. v3 files
-are in `deployments/archive/v3/`; the keeper and the v3 issuer bots keep running v3 notes to maturity, and the
-indexer reads both engines per chain (`<chain>-v3` rows). The plan as it was run:
+This build deploys v4 fresh on Robinhood Chain testnet, the only note chain (docs/DEPLOY.md): no earlier engine is
+kept running next to it, so the legacy-engine path above has no entries today. (The earlier build ran v4 next to v3 on
+two testnets; its records are in `deployments/archive/arbitrum-build/`.)
 
-Balances on 2026-10-24: the deployer holds ~0.021 ETH on Arbitrum Sepolia and ~0.0022 ETH on Robinhood Chain
-testnet, plus 90 USDG on Arbitrum Sepolia.
-
-| Chain | Gas | At today's price |
+| Chain | Gas | At ~0.01 gwei |
 |---|---|---|
-| Arbitrum Sepolia (0.02 gwei) | Units 2.62M + FlowEngine 6.62M (with the NoteToken implementation) + NotesLens 1.67M + setEmailPolicy ≈ **11.0M** | ≈ 0.00022 ETH |
-| Robinhood Chain testnet (0.01 gwei) | the same ≈ 11.0M | ≈ 0.00011 ETH |
+| Robinhood Chain testnet | Units 2.62M + FlowEngine 6.62M (with the NoteToken implementation) + NotesLens 1.67M + setEmailPolicy ≈ **11.0M** | ≈ 0.00011 ETH |
 
-DefCheck and EmailAttest are already deployed at their deterministic addresses and are reused. Gas was measured by
-the local fork deployment of `scripts/dev-local-d1.sh`. The deployer has enough on both chains for the contracts.
-The seeded demo notes and the investors' gas (0.001 ETH each) need about 0.004 ETH more on Robinhood Chain testnet:
-top up from https://faucet.testnet.chain.robinhood.com first.
+DefCheck and EmailAttest are reused at their deterministic addresses when already deployed. Gas was measured by the
+local fork deployment of `scripts/dev-local-d1.sh`.
 
-1. **Rehearse.** `REHEARSAL=1 SEED=1 bash scripts/deploy-testnets.sh` against local forks of both chains.
-2. **Deploy.** `bash scripts/deploy-testnets.sh` deploys the engine and lens on both testnets with the same
+1. **Rehearse.** `REHEARSAL=1 SEED=1 CHAINS=robinhood-testnet bash scripts/deploy-testnets.sh` against a local fork.
+2. **Deploy.** `CHAINS=robinhood-testnet bash scripts/deploy-testnets.sh` deploys the engine and lens with the
    verifier and `requireEmail`, the MockKeystoneForwarder, and the fallback reporter off. It writes
-   `deployments/<chain>.json` and the CRE and server configs. Move the v3 files to `deployments/archive/v3/`.
-3. **Cross-chain.** Deploy a fresh pair for v4 with `script/DeployCrossChain.s.sol`: a gateway and receipts on
-   Arbitrum Sepolia (`ENGINE` = v4) and a RemoteVault on Robinhood Chain testnet. The cost is about 2M gas more per
-   chain. The v3 gateway–vault pair stays as it is, so collateral locked for v3 notes is still released through its
-   own gateway.
-4. **Read model.** Each chain lists its earlier engines (`legacyEngines`, from `deployments/archive/v<N>/`, written
-   by `scripts/server-config.ts` into `deployments/server/{indexer,api}.json`). The D1 indexer keeps one `chains`
-   row per (chain, engine): the current engine under the chain key, v3 under `<chain>-v3`. On its first cron the
-   Worker moves the v3 row (indexed under the chain key until now) to `<chain>-v3` with its cursor and block
-   hashes, so nothing is re-indexed and v3 note ids (`<chain>:<v3 engine>:<pid>`) stay the same; then v4 indexes
-   from its deployment block under the chain key. Apply `web/migrations/0003_payouts.sql` and
-   `0004_engines.sql` (events get their engine, so a reorg on one engine never undoes the other's) first.
-   The app serves v3 notes with the v3 engine, lens and cross-chain pair (`packages/sdk/src/evm/abi-v3.ts` for
-   the ledger transfer): they show as "Earlier engine", take no new subscriptions, and holders withdraw and
-   settle there.
-5. **Workers and bots.** Deploy the Worker (`npm run deploy`, from a clean worktree of origin/main). Restart the CRE
-   keeper config. Restart `sn-arb-issuer-<chain>`: it pushes nothing by default (claim), only notes whose terms opt
-   in to push (or set `PUSH=1` with `PIDS` to push chosen notes). Add a `PUSH_ONLY=1` payout keeper only if an
-   opted-in note's issuer bot isn't running.
-6. **Seed and verify.** Seed a note per chain (`scripts/seed.sh`), subscribe two investors, let a coupon run, then
-   check:
+   `deployments/robinhood-testnet.json` and the CRE and server configs.
+3. **Read model.** Reset the D1 read model (`web/reset/0000_robinhood_reset.sql`), so the indexer starts from the new
+   engine's deployment block under the chain key `robinhood-testnet`.
+4. **Workers and bots.** Deploy the Worker (`npm run deploy`). Start the CRE keeper and the issuer bot
+   (`ops/ecosystem.config.cjs`): it pushes nothing by default (claim), only notes whose terms opt in to push (or set
+   `PUSH=1` with `PIDS` to push chosen notes). Add a `PUSH_ONLY=1` payout keeper only if an opted-in note's issuer
+   bot isn't running.
+5. **Seed and verify.** Seed notes (`scripts/seed.sh`), subscribe two investors, let a coupon run, then check:
    - each investor claims it from the portfolio and the wallet receives it (`PayoutPaid`, one per claim);
    - `verifyPayouts` passes on the note's history;
    - the portfolio shows "Paid to your wallet";

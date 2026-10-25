@@ -1,72 +1,78 @@
-# Cross-chain collateral (stage 1, auto-release v2)
+# Planned: collateral on other chains (home = Robinhood Chain)
 
-Notes run on **Arbitrum** (Arbitrum Sepolia today): the FlowEngine there holds the note's state, schedule,
-holders, payments and default rule. **Collateral stays on the chain where it lives**: Robinhood Chain's tokenized
-stocks (TSLA, AMZN, NFLX) and Paxos USDG are locked in place in a vault on Robinhood Chain. Chainlink **CCIP**
-carries the two value commands between the chains, and Chainlink **CRE** checks every run that each vault still
-backs what the note counts. Nothing is bridged and no wrapped token can be traded.
+**Status: planned, not deployed.** Notes run on **Robinhood Chain testnet**, and today every collateral asset is a
+token on Robinhood Chain pledged straight into the note (USDG, WETH, TSLA, AMZN, AMD, PLTR). This document is the
+design for the next step: **collateral that stays on another chain** (an "asset chain", e.g. USDC or WETH on Ethereum
+or another L2) while the note runs on Robinhood Chain, the **home chain**. Chainlink **CCIP** would carry the two
+value commands between the chains and Chainlink **CRE** would check every run that each vault still backs what the
+note counts. Nothing is bridged and no wrapped token can be traded.
 
-**Principle: collateral stays on its own chain; Arbitrum is only the anchor.** The note's single home (FlowEngine
-v4 on Arbitrum Sepolia) decides who gets the collateral; the collateral itself never leaves its chain. Since the
-v2 gateway this holds end to end: when a note pays collateral out (to holders on a default, back to the issuer
-at maturity), the receipts are burned on Arbitrum in that same transaction and the release is sent automatically
-over CCIP; the vault pays the real token on Robinhood Chain to the same address. Nobody holds a receipt after a
-note, and nobody has to redeem one.
+What exists today:
+- The contracts and their tests: `HomeGateway`, `RemoteReceipt` (home side) and `RemoteVault` (asset side) in
+  `packages/evm-engine/src/crosschain/`, `script/DeployCrossChain.s.sol`, and the Foundry suites `CrossChain*.t.sol`
+  (Chainlink Local, mock routers, and fork tests).
+- The off-chain decisions (pure, unit-tested) in `packages/core/src/crosschain.ts`, the keeper's flush and vault
+  checks in `cre/notes-keeper-evm`, and the app's cross-chain panels.
+- **Nothing is wired:** there is no `deployments/crosschain-testnet.json`, so the served config has no `crossChain`
+  entry, the app hides every cross-chain panel (lock, redeem, release tracking), the keeper's `gateways` and `vaults`
+  lists are empty, and core's `REMOTE_COLLATERAL` is empty (a term sheet naming a remote collateral chain is refused).
 
-Receipts in use: USDG.rh, TSLA.rh and AMZN.rh (NFLX.rh exists but has no feed). The receipts of our retired test
-tokens (tTSLA.rh, tETH.rh, tBTC.rh, tSOL.rh, tNVDA.rh, tAAPL.rh, tSPY.rh) are disabled in the vault and no longer
-served (deployments/crosschain-testnet.json lists them under `retiredReceipts`); no other token is carried over.
-Each receipt is valued by its stock's Chainlink feed on Robinhood Chain.
+The mechanism is proven: the earlier Arbitrum build ran it live, the other way round (home Arbitrum Sepolia, vault on
+Robinhood Chain), with one lock and one release delivered by Chainlink CCIP and a TSLA-backed note run start to finish
+([Evidence](#evidence-from-the-earlier-arbitrum-build-home-arbitrum-sepolia-vault-on-robinhood-chain-2026-10-24)).
 
-Status: **live on testnet** (2026-10-24): HomeGateway on Arbitrum Sepolia, RemoteVault on Robinhood Chain testnet,
-wired and verified on-chain, with one lock and one release delivered by Chainlink CCIP (below). Built and tested
-locally (Chainlink Local, mock routers) and on forks of both testnets with the real routers first.
+**Principle: collateral stays on its own chain; Robinhood Chain is the anchor.** The note's single home (FlowEngine on
+Robinhood Chain) decides who gets the collateral; the collateral itself never leaves its chain. When a note pays
+collateral out (to holders on a default, back to the issuer at maturity), the receipts are burned on Robinhood Chain in
+that same transaction and the release is sent automatically over CCIP; the vault pays the real token on the asset
+chain to the same address. Nobody holds a receipt after a note, and nobody has to redeem one.
 
 ## How it works
 
 ```
-        Robinhood Chain (asset chain)                          Arbitrum (home chain)
+          Asset chain (e.g. Ethereum)                          Robinhood Chain (home chain)
  ┌────────────────────────────────────────┐         ┌──────────────────────────────────────────────────┐
- │ RemoteVault                            │  LOCKED │ HomeGateway ──mints──► RemoteReceipt (TSLA.rh)    │
- │  lock(TSLA, 3, issuer) ───────────────────CCIP──►│                          │  pledged as collateral │
- │  locked[TSLA] += 3                     │         │                          ▼                        │
+ │ RemoteVault                            │  LOCKED │ HomeGateway ──mints──► RemoteReceipt (USDC.eth)   │
+ │  lock(USDC, 1000, issuer) ────────────────CCIP──►│                          │  pledged as collateral │
+ │  locked[USDC] += 1000                  │         │                          ▼                        │
  │                                        │         │ FlowEngine: escrow, coverage (price x haircut,     │
  │                                        │         │   summed over local + remote collateral), margin, │
  │                                        │         │   release at maturity, default (cap-at-owed)      │
- │  pay TSLA to issuer / holder ◄──────────CCIP────│ receipts leave the engine → burned, queued        │
- │  locked[TSLA] -= amount        RELEASE │         │ flush (CRE report / anyone; fee pool) ──► RELEASE │
+ │  pay USDC to issuer / holder ◄──────────CCIP────│ receipts leave the engine → burned, queued        │
+ │  locked[USDC] -= amount        RELEASE │         │ flush (CRE report / anyone; fee pool) ──► RELEASE │
  └────────────────────────────────────────┘         └──────────────────────────────────────────────────┘
           ▲                                                       ▲
           └──────── Chainlink CRE reads both every run ───────────┘
                     (vault balance vs locked vs receipts outstanding)
 ```
 
-1. **Lock.** The issuer locks real TSLA in the vault on Robinhood (`lock(token, amount, beneficiary)`, CCIP fee
-   in native ETH). The vault sends **LOCKED**; the gateway on Arbitrum mints the same amount of `TSLA.rh` receipts
-   to the beneficiary.
+1. **Lock.** The issuer locks the real token in the vault on the asset chain (`lock(token, amount, beneficiary)`,
+   CCIP fee in native gas). The vault sends **LOCKED**; the gateway on Robinhood Chain mints the same amount of
+   receipts (e.g. `USDC.eth`) to the beneficiary.
 2. **Pledge.** The issuer pledges the receipts into the note at Approve Terms (or a margin top-up), exactly like a
-   local collateral token. The note values them with TSLA's Chainlink price and the haircut the issuer set, and
-   coverage sums every collateral asset, local or remote, on any number of asset chains.
+   local collateral token. The note values them with the token's Chainlink price and the haircut the issuer set, and
+   coverage sums every collateral asset, local (TSLA, USDG on Robinhood Chain) or remote, on any number of asset
+   chains.
 3. **Run.** Observations, coupons, margin calls, the grace period and the default rule are the engine's
    unchanged, reference-tested paths.
 4. **Paid in full.** The engine credits the receipts to the issuer's ledger in the note. When they leave the
    engine (the issuer's withdraw), the receipt burns them and the gateway **queues a RELEASE** to the issuer's
-   address on Robinhood. The issuer bot does that withdraw automatically once the note has ended (below).
+   address on the asset chain. The issuer bot does that withdraw automatically once the note has ended (below).
 5. **Default.** The engine pays the receipts to the holders as a payout (cap-at-owed: what they are owed, the
    excess to the issuer's ledger). Each holder's share leaves the engine on a `pushTo`: burned and queued the same
-   way, to the holder's address on Robinhood. The issuer bot pushes every holder's receipts automatically; a
+   way, to the holder's address on the asset chain. The issuer bot pushes every holder's receipts automatically; a
    holder's own claim does the same.
-6. **Flush.** Chainlink CRE writes a report to the gateway (`onReport` through the KeystoneForwarder) that sends
-   the queued RELEASEs, paying each CCIP fee from the gateway's ETH **fee pool**; anyone can call `flush` too (the
-   issuer bot does, as a late fallback), and anyone can send one queued release with their own fee
-   (`sendQueued`). The vault pays the real token; the app shows "Released to your wallet on Robinhood Chain" with
-   the CCIP message.
+6. **Flush.** Chainlink CRE writes a report to the gateway (`onReport` through the KeystoneForwarder on Robinhood
+   Chain) that sends the queued RELEASEs, paying each CCIP fee from the gateway's ETH **fee pool**; anyone can call
+   `flush` too (the issuer bot does, as a late fallback), and anyone can send one queued release with their own fee
+   (`sendQueued`). The vault pays the real token; the app shows "Released to your wallet on <asset chain>" with the
+   CCIP message.
 
 ### Automation: receipts never wait inside the engine
 
 The engine is unchanged, so a receipt only burns and queues when something moves it OUT of the engine. Left alone,
 a paid-in-full note's collateral would sit on the issuer's ledger and a default's on the holders' accounts (the
-live proof, pid 2 on engine v4, needed a manual withdraw). The issuer bot (`scripts/issuer-bot.ts`) closes that
+live proof in the earlier build needed a manual withdraw). The issuer bot (`scripts/issuer-bot.ts`) closes that
 gap, with the decisions in pure, unit-tested functions in packages/core/src/crosschain.ts:
 
 | Case | What the bot does | Decision |
@@ -86,19 +92,19 @@ gap, with the decisions in pure, unit-tested functions in packages/core/src/cros
   release's first `ReleaseQueued` event (scanned from `GATEWAY_FROM_BLOCK`, default the config's `gatewayBlock`, in
   `LOG_CHUNK` blocks) and skips releases already sent (`ReleaseSent`). A release whose event it cannot find counts
   from when the bot first saw it: never flushed ahead of CRE on a guess.
-- **Gateway.** `GATEWAY`, or `home.gateway` of `CROSSCHAIN_CONFIG` (default deployments/crosschain-testnet.json)
-  when its chain id and engine are the bot's (`GATEWAY=` empty: none).
+- **Gateway.** `GATEWAY`, or `home.gateway` of `CROSSCHAIN_CONFIG` (default deployments/crosschain-testnet.json, absent
+  today) when its chain id and engine are the bot's (`GATEWAY=` empty or no file: none).
 - **Other automation.** The CRE keeper (cre/notes-keeper-evm) flushes; it does not withdraw or push (it writes
-  reports only). services/keeper-fallback stands in for CRE's engine reports on Robinhood Chain mainnet, where no
-  home gateway runs; if a home gateway is ever deployed on a chain without CRE, it needs the flush (planFlush, no
-  delay) and the same receipt pushes.
-- **End to end on a fork:** `bash scripts/e2e-xc-autorelease.sh` (anvil fork of Arbitrum Sepolia, the live engine v4
-  and gateway v2, receipts minted by impersonating the gateway): a note paid in full -> the bot withdraws ->
+  reports only). services/keeper-fallback stands in for CRE's engine reports where CRE cannot write (Robinhood Chain
+  mainnet today); a home gateway there would need the flush (planFlush, no delay) and the same receipt pushes from
+  it.
+- **End to end on a fork** (earlier build): `bash scripts/e2e-xc-autorelease.sh` ran on an anvil fork of the then
+  live home chain (engine v4 and gateway v2, receipts minted by impersonating the gateway): a note paid in full -> the bot withdraws ->
   `ReleaseQueued` to the issuer; a note that defaults -> the bot pushes the holders -> `ReleaseQueued` per holder;
   both flushed by the bot only after `FLUSH_AFTER` (the real router on the fork emits `ReleaseSent`).
 
 Receipts a locker holds and never pledged are ordinary: pledge them into a note, or `redeem` them at the gateway
-(burn + RELEASE, the caller pays the fee) to unlock the tokens on Robinhood.
+(burn + RELEASE, the caller pays the fee) to unlock the tokens on the asset chain.
 
 ### Design decisions
 
@@ -107,7 +113,7 @@ Receipts a locker holds and never pledged are ordinary: pledge them into a note,
   default rules run on code that every product test already checks against the reference payoff. The engine
   (23,384 / 24,576 bytes) stays as deployed and audited-in-progress.
 - **Receipts are not a bridge.** `RemoteReceipt` moves only into the engine (pledge in); out of it, it is burned.
-  It cannot be sent between people, so there is no tradable wrapped TSLA. It is minted only for a CCIP-verified
+  It cannot be sent between people, so there is no tradable wrapped token. It is minted only for a CCIP-verified
   lock and burned only on redemption or on leaving the engine.
 - **Auto-release in the receipt, not in the engine (v2).** The burn-and-queue is the receipt's own transfer hook
   (`_update`: from the engine to anyone → burn, `gateway.queueRelease(to, amount)`), so the engine stays unchanged
@@ -184,10 +190,10 @@ through its CCIP router; the vault accepts RELEASE only from the home chain sele
   receipt queues only for what it just burned leaving the engine. The CRE report is accepted only from the
   configured KeystoneForwarder (the engine's own; optionally pinned to a workflow id/owner, as on the engine); it
   can only trigger a flush, which can only send what is queued, to whom it is queued for.
-- **Latency.** A CCIP message executes after its source chain is final. For Arbitrum-family chains (Arbitrum
-  Sepolia, Robinhood Chain testnet) that is the L1 (Ethereum) finality of the batch that includes the
-  transaction: roughly 15–25 minutes per message (Chainlink's execution-latency guidance; not yet measured on
-  these lanes; we will record it on the first testnet run). Earlier, on the Solana build, we measured 35–40 min
+- **Latency.** A CCIP message executes after its source chain is final. Robinhood Chain is an Arbitrum Orbit chain,
+  so a message from it waits for the L1 (Ethereum) finality of its batch, and a message to it waits for the asset
+  chain's own finality: roughly 15–25 minutes per message on these lanes. Measured in the earlier build: 21.5 min
+  Robinhood Chain testnet → Arbitrum Sepolia and 17.5 min back (see Evidence); on the Solana build, 35–40 min
   Sepolia → Solana and about 1 min Solana → Sepolia. So: lock collateral well before the strike; size the
   grace period of a note with remote collateral at a few hours, not minutes; a margin top-up from a remote
   chain arrives ~20 minutes after it is sent (the test suite replays exactly this: the top-up fails until the
@@ -207,16 +213,16 @@ through its CCIP router; the vault accepts RELEASE only from the home chain sele
 
 ## Fees and gas
 
-- CCIP fees are paid in the native token (ETH on both chains; LINK also accepted by the routers). The caller of
+- CCIP fees are paid in the native token (ETH on Robinhood Chain; LINK also accepted by the routers). The caller of
   `lock`, `redeem` or `sendQueued` pays; `quoteLock` / `quoteRedeem` return the fee, excess is refunded.
-  Auto-releases are paid from the gateway's fee pool: about one RELEASE fee (≈ 0.00005 ETH on Arbitrum Sepolia)
+  Auto-releases are paid from the gateway's fee pool: about one RELEASE fee (≈ 0.00005 ETH measured on Arbitrum Sepolia in the earlier build)
   per holder paid collateral plus one for the issuer, so an issuer funding ~0.005 ETH at pledge covers a full
   book with room to spare. `releaseQueue()` returns the pool and the next fee.
 - Destination gas limits: 200,000 for LOCKED (measured ~118k: decode, check, mint) and 300,000 for RELEASE
   (measured ~82k: decode, check, transfer; headroom for tokens with transfer hooks). Both configurable.
-- Fees quoted by the real routers on forks (2026-10-24): lock on Robinhood ≈ 0.000067 ETH, redeem or a queued
-  release on Arbitrum Sepolia ≈ 0.000051 ETH per message.
-- Auto-release gas (measured, `forge test --match-path "test/CrossChain*"`):
+- Fees quoted by the real routers on forks in the earlier build (2026-10-24): lock on Robinhood Chain testnet ≈
+  0.000067 ETH, redeem or a queued release on Arbitrum Sepolia ≈ 0.000051 ETH per message.
+- Auto-release gas (measured, `forge test --match-path "test/CrossChain*"`; the fork rows in the earlier build):
 
   | What | Gas | Bound |
   |---|---|---|
@@ -235,7 +241,7 @@ through its CCIP router; the vault accepts RELEASE only from the home chain sele
 
 The gateway is a CRE receiver exactly like the engine (`CreReceiver`: only the configured KeystoneForwarder may
 call `onReport`; optional workflow id / owner / name checks, off by default). The keeper needs one read and, when
-it says so, one write per run, on the home chain:
+it says so, one write per run, on the home chain (Robinhood Chain):
 
 - **Read** (at `latest` is fine: the gateway re-checks everything) `HomeGateway.releaseQueue()` →
   `(uint256 pending, uint256 head, uint256 queued, uint256 pool, uint256 nextFee)`: releases waiting, the index
@@ -256,26 +262,93 @@ it says so, one write per run, on the home chain:
   `home.gateway`) and its gas settings. The issuer bot's fallback flush only sends releases that have waited more
   than `FLUSH_AFTER` (180 s), so CRE sends them first; a race is harmless anyway: whoever is second finds less (or
   nothing) to send.
-- **Wired** (cre/notes-keeper-evm/main.ts): config `gateways: [{ chainSelectorName, gateway, maxItems, baseGas,
-  gasPerItem, stateBlock }]`, emitted by `scripts/cre-config.ts staging` from `home.gateway` when `home.version >= 2`
-  (`keeperGateways`; base gas 250k: one release through the forwarder measured ~395k). Each run, after the engine
-  reports: one read per gateway (skipped when the run's 15 reads are spent), one log line (`<chain> gateway flush:
-  N release(s) waiting … -> flush up to n (gas g)` or `-> no report (empty | pool-short | no-vault)`), and the
-  report, which counts against `maxReportsPerRun` (deferred to the next run when the engine reports used it up).
-  The run's result lists it under `flushed`. Verified on an Arbitrum Sepolia fork against the live gateway:
-  releases queued by receipts leaving the engine (impersonated, fork only), then the simulator's flush report
-  emitted `ReleaseSent` with CCIP message ids from the real router (`GATEWAY=<gateway> npx tsx
-  scripts/cre-config.ts local-fork deployments/arbitrum-sepolia.json` adds the gateway to the fork config).
+- **Wired, empty today** (cre/notes-keeper-evm/main.ts): config `gateways: [{ chainSelectorName, gateway, maxItems,
+  baseGas, gasPerItem, stateBlock }]`, emitted by `scripts/cre-config.ts staging` from `home.gateway` when
+  `home.version >= 2` (`keeperGateways`; base gas 250k: one release through the forwarder measured ~395k). Each run,
+  after the engine reports: one read per gateway (skipped when the run's 15 reads are spent), one log line (`<chain>
+  gateway flush: N release(s) waiting … -> flush up to n (gas g)` or `-> no report (empty | pool-short | no-vault)`),
+  and the report, which counts against `maxReportsPerRun`. The run's result lists it under `flushed`. With no
+  deployments/crosschain-testnet.json, `gateways` and `vaults` are left out and the keeper does none of this. Verified
+  in the earlier build on a fork of its home chain against the live gateway: the simulator's flush report emitted
+  `ReleaseSent` with CCIP message ids from the real router.
 
-## Stage 2 (next)
+## Turning it on (home = Robinhood Chain)
 
-- Subscriptions from the asset chain: an investor pays USDG on Robinhood, the vault sends SUBSCRIBE, the gateway
-  subscribes for them at home (units held for the same address).
-- Payments to the asset chain: coupons and redemptions funded by the issuer on Robinhood and paid to holders
-  there, with the engine as the ledger of who is owed what.
+1. Pick the asset chain and its tokens (a token there with a Chainlink feed CRE can read; a CCIP lane to Robinhood
+   Chain testnet in both directions).
+2. Robinhood Chain testnet: `ROLE=gateway CHAIN=robinhood-testnet ENGINE=<engine> OWNER=… FEE_POOL=…` → HomeGateway
+   (the CCIP router for Robinhood Chain testnet, CRE forwarder = the engine's).
+3. Asset chain: `ROLE=vault` → RemoteVault (home selector = Robinhood Chain testnet's), allow the tokens.
+4. Robinhood Chain testnet: `ROLE=wire` → `setRemote(<asset selector>, vault)`, receipts per token (e.g. `USDC.eth`).
+5. Record them in `deployments/crosschain-testnet.json` (`home.chain: robinhood-testnet`, `home.gateway`,
+   `home.version: 2`, `remotes[]` with receipts); add the receipts to core's `REMOTE_COLLATERAL` under the
+   collateral-chain key the app offers; regenerate the server config (`scripts/server-config.ts`: `crossChain` on the
+   chain, receipts as tokens) and the CRE config (`scripts/cre-config.ts staging`: `gateways` and `vaults`, plus a
+   CRE chain name for the asset chain in `CRE_NAMES`); run the issuer bot with the gateway as the flush fallback.
+
+Later stages:
+- Subscriptions from the asset chain: an investor pays a stablecoin there, the vault sends SUBSCRIBE, the gateway
+  subscribes for them on Robinhood Chain (units held for the same address).
+- Payments to the asset chain: coupons and redemptions funded by the issuer there and paid to holders there, with the
+  engine as the ledger of who is owed what.
 - Shortfall enforcement: CRE writes the vault backing into the note, so a seized vault opens a margin call.
 
-## v2 deploy plan (auto-release; run 2026-10-24 with a fresh vault, see below)
+## Evidence from the earlier Arbitrum build (home Arbitrum Sepolia, vault on Robinhood Chain, 2026-10-24)
+
+History, kept as evidence that the mechanism works. In the earlier build notes ran on **Arbitrum Sepolia** (the home
+chain, HomeGateway) and stock collateral stayed in a **RemoteVault on Robinhood Chain testnet**, credited as `.rh`
+receipts. Those contracts are not used by this build; their records are in `deployments/archive/arbitrum-build/`
+(`v4/crosschain-testnet.json`, `xc-1/`, `v3/`). The texts below are as written then.
+
+### Testnet deployment (live)
+
+| Contract | Network | Address |
+|---|---|---|
+| HomeGateway | Arbitrum Sepolia | `0xcdee38dEbC2eE59Ae486c0829ff6a0028a5eFaEC` (deploy tx `0x7540437a…899e59c`, block 322236840) |
+| RemoteVault | Robinhood Chain testnet | `0xfB8b030FF7C059665daB3aF2D77F72445E341300` |
+| USDG.rh / TSLA.rh / AMZN.rh / NFLX.rh | Arbitrum Sepolia | `0x62f28cF2…1B67` / `0xcDb6f71F…AAc2` / `0x67c475C9…FDD9` / `0xD07f12Fa…48e9` |
+| tTSLA.rh (our test token, for the live proof) | Arbitrum Sepolia | `0x4A201075…de9B` |
+
+Full record: `deployments/crosschain-testnet.json`. Checked on-chain: code present (gateway 10,678 B, vault 6,734 B),
+owner is the deployer, the vault's home selector and gateway and the gateway's remote vault (gas limit 300k) match,
+the five tokens are allowed in the vault, and each receipt has the right decimals, gateway and remote token. Routers
+match Chainlink's CCIP API (`/api/ccip/v1/chains`).
+
+#### Live CCIP proof
+
+The deployer acted as a temporary demo issuer and used our own test token (tTSLA, 9 decimals) on Robinhood, since
+the faucet-only tokens need a browser.
+
+| Leg | Source tx | CCIP message | Delivered | Time |
+|---|---|---|---|---|
+| LOCK 10 tTSLA, Robinhood → Arbitrum | `0x9d40acc3bc4e1707db95d6b48535e19e7a7f84ff824bb471dc037e9e08fd2d37` (block 141642720) | [`0x8111a057…3248`](https://ccip.chain.link/msg/0x8111a05781382b60b8ac56118a77c4a23e0536b8ed34978abe8cb7b97b8f3248) | `0xa960b6c3128d9879a62e69580cf9dee75a3c8680dbcbadcf04fb762ac882b8bc`: 10 tTSLA.rh minted | **1,292 s (21 min 32 s)**, executed automatically by the CCIP network |
+| RELEASE 10 tTSLA.rh, Arbitrum → Robinhood | `0x1506ac86d61d3e5639b34e14cdeef8cb7eb682cbc67ad19a79ff228cf643efc5` (block 322242530) | [`0x48755825…a7cd3`](https://ccip.chain.link/msg/0x487558251499ae682ba78305d4355a6bd42fcae05277e4a17e0974be96fa7cd3) | `0x488a6fe75a57936c7123abc49d13025c1a1efecdbaa00cedd8d2d378a64ba39a`: vault released 10 tTSLA to the sender | **1,047 s (17 min 27 s)**, executed automatically |
+
+Times are source-block to destination-block timestamps. Neither message needed manual execution. Fees paid in native ETH: lock 0.0000674 ETH (Robinhood), release 0.0000504 ETH (Arbitrum Sepolia).
+
+#### Live v2 proof: TSLA locked on Robinhood backs an Arbitrum note, then comes home (2026-10-24)
+
+Gateway v2 `0x4C393Ed28Cc1825CfBA5A4d6F2223589249C3a89` (Arbitrum Sepolia), vault `0x6a11Ff8DD08d63Dc2a7C7AB6116d1F40Bf20d1C2`
+(Robinhood Chain testnet). The earlier pair (`0x3551…372A` / `0xE7a7…8846`) still holds 100 USDG for receipts already in a
+wallet, so it was left in place (deployments/archive/xc-1) rather than re-pointed.
+
+| Step (UTC) | Chain | Transaction |
+|---|---|---|
+| 14:56 lock 3 TSLA (Robinhood's own token) in the vault | Robinhood | `0xf4c7638f209771458a1899f63bea18d6a7d1f23f3b0f22b42e716c1661af90a4`, CCIP `0x5748e6f558f8c7c329c28891b8e18dd2d8772c4eb5fb5aa5172c065c7c33712a` |
+| 15:17 3 TSLA.rh credited by CCIP (about 21 min) | Arbitrum | — |
+| 15:18 note pid 2 issued, its only collateral the 3 TSLA.rh (60% haircut) | Arbitrum | `0x56ac84f32956e1934539c0dd30bed9d948222bc9517b149c428d278fd81beb99` |
+| 15:23 strike: CRE reads TSLA 372.07 from Robinhood Chain mainnet's Chainlink feed (HTTP) | Arbitrum | `0xe184aa4cd6b5531e47d69706c26c5a4c7f8f07f84c7f42eac641f000480a4f5b` |
+| 15:28 / 15:33 observations by CRE | Arbitrum | `0xfc82d555760e061e84565a7ac8b89bd68de92c13323eb5ae06d8e80783efd309`, `0xf1bdd91324ceb560562baeb72b128cba9026b07cf4aa32720e0bfacec19a34fe` |
+| ~15:35 coupon and redemption funded by the issuer bot; note redeemed | Arbitrum | — |
+| 15:38 issuer withdraws the collateral: TSLA.rh burned, release queued | Arbitrum | `0x48a13e1cf311c9c87ea7d24ed3a3ac5015576070326a2e711f3fc99460a5f11f` |
+| 15:38 release sent over CCIP from the fee pool (by the issuer bot's fallback flush) | Arbitrum | `0x924d033572f5a6561c8e674ffa27a53c52e217ec19c271264111a32fdd193a29`, CCIP `0xc42011d623aebeda428e368e605ac4480ee6cc32b6dca65decc2e18bc7f30b99` |
+| 15:56 vault pays the 3 TSLA back to the issuer (about 18 min) | Robinhood | `0x9f7f323d9b8f4dd76c7eda3e2c135a62ba81715ad795c3969ce0171eeba92496` |
+
+Found on the way (fixed in the bots): the issuer's released collateral had to be withdrawn by hand, and the bot's
+fallback flush beat CRE to the release. The bots now withdraw released receipts for the issuer, push receipt payouts
+to holders on a default, and leave flushing to CRE for the first few minutes.
+
+### v2 deploy plan (auto-release; run 2026-10-24 with a fresh vault, see below)
 
 The vault is kept: `setHomeGateway` is owner-settable at any time, and the vault itself does not change (the
 RELEASE format and its id check are the same). Switching it is only safe when nothing is locked under the old
@@ -321,55 +394,7 @@ gateway for the flush report), and run the issuer bot with `GATEWAY=$GATEWAY` as
 forwarder on Arbitrum Sepolia is currently the CRE simulation forwarder (`0xD412…ca5d`); if the keeper moves to
 the production KeystoneForwarder (`0x76c9…5E62`), call `setForwarderAddress` on the engine and the gateway.
 
-## Testnet deployment (live)
-
-| Contract | Network | Address |
-|---|---|---|
-| HomeGateway | Arbitrum Sepolia | `0xcdee38dEbC2eE59Ae486c0829ff6a0028a5eFaEC` (deploy tx `0x7540437a…899e59c`, block 322236840) |
-| RemoteVault | Robinhood Chain testnet | `0xfB8b030FF7C059665daB3aF2D77F72445E341300` |
-| USDG.rh / TSLA.rh / AMZN.rh / NFLX.rh | Arbitrum Sepolia | `0x62f28cF2…1B67` / `0xcDb6f71F…AAc2` / `0x67c475C9…FDD9` / `0xD07f12Fa…48e9` |
-| tTSLA.rh (our test token, for the live proof) | Arbitrum Sepolia | `0x4A201075…de9B` |
-
-Full record: `deployments/crosschain-testnet.json`. Checked on-chain: code present (gateway 10,678 B, vault 6,734 B),
-owner is the deployer, the vault's home selector and gateway and the gateway's remote vault (gas limit 300k) match,
-the five tokens are allowed in the vault, and each receipt has the right decimals, gateway and remote token. Routers
-match Chainlink's CCIP API (`/api/ccip/v1/chains`).
-
-### Live CCIP proof
-
-The deployer acted as a temporary demo issuer and used our own test token (tTSLA, 9 decimals) on Robinhood, since
-the faucet-only tokens need a browser.
-
-| Leg | Source tx | CCIP message | Delivered | Time |
-|---|---|---|---|---|
-| LOCK 10 tTSLA, Robinhood → Arbitrum | `0x9d40acc3bc4e1707db95d6b48535e19e7a7f84ff824bb471dc037e9e08fd2d37` (block 141642720) | [`0x8111a057…3248`](https://ccip.chain.link/msg/0x8111a05781382b60b8ac56118a77c4a23e0536b8ed34978abe8cb7b97b8f3248) | `0xa960b6c3128d9879a62e69580cf9dee75a3c8680dbcbadcf04fb762ac882b8bc`: 10 tTSLA.rh minted | **1,292 s (21 min 32 s)**, executed automatically by the CCIP network |
-| RELEASE 10 tTSLA.rh, Arbitrum → Robinhood | `0x1506ac86d61d3e5639b34e14cdeef8cb7eb682cbc67ad19a79ff228cf643efc5` (block 322242530) | [`0x48755825…a7cd3`](https://ccip.chain.link/msg/0x487558251499ae682ba78305d4355a6bd42fcae05277e4a17e0974be96fa7cd3) | `0x488a6fe75a57936c7123abc49d13025c1a1efecdbaa00cedd8d2d378a64ba39a`: vault released 10 tTSLA to the sender | **1,047 s (17 min 27 s)**, executed automatically |
-
-Times are source-block to destination-block timestamps. Neither message needed manual execution. Fees paid in native ETH: lock 0.0000674 ETH (Robinhood), release 0.0000504 ETH (Arbitrum Sepolia).
-
-### Live v2 proof: TSLA locked on Robinhood backs an Arbitrum note, then comes home (2026-10-24)
-
-Gateway v2 `0x4C393Ed28Cc1825CfBA5A4d6F2223589249C3a89` (Arbitrum Sepolia), vault `0x6a11Ff8DD08d63Dc2a7C7AB6116d1F40Bf20d1C2`
-(Robinhood Chain testnet). The earlier pair (`0x3551…372A` / `0xE7a7…8846`) still holds 100 USDG for receipts already in a
-wallet, so it was left in place (deployments/archive/xc-1) rather than re-pointed.
-
-| Step (UTC) | Chain | Transaction |
-|---|---|---|
-| 14:56 lock 3 TSLA (Robinhood's own token) in the vault | Robinhood | `0xf4c7638f209771458a1899f63bea18d6a7d1f23f3b0f22b42e716c1661af90a4`, CCIP `0x5748e6f558f8c7c329c28891b8e18dd2d8772c4eb5fb5aa5172c065c7c33712a` |
-| 15:17 3 TSLA.rh credited by CCIP (about 21 min) | Arbitrum | — |
-| 15:18 note pid 2 issued, its only collateral the 3 TSLA.rh (60% haircut) | Arbitrum | `0x56ac84f32956e1934539c0dd30bed9d948222bc9517b149c428d278fd81beb99` |
-| 15:23 strike: CRE reads TSLA 372.07 from Robinhood Chain mainnet's Chainlink feed (HTTP) | Arbitrum | `0xe184aa4cd6b5531e47d69706c26c5a4c7f8f07f84c7f42eac641f000480a4f5b` |
-| 15:28 / 15:33 observations by CRE | Arbitrum | `0xfc82d555760e061e84565a7ac8b89bd68de92c13323eb5ae06d8e80783efd309`, `0xf1bdd91324ceb560562baeb72b128cba9026b07cf4aa32720e0bfacec19a34fe` |
-| ~15:35 coupon and redemption funded by the issuer bot; note redeemed | Arbitrum | — |
-| 15:38 issuer withdraws the collateral: TSLA.rh burned, release queued | Arbitrum | `0x48a13e1cf311c9c87ea7d24ed3a3ac5015576070326a2e711f3fc99460a5f11f` |
-| 15:38 release sent over CCIP from the fee pool (by the issuer bot's fallback flush) | Arbitrum | `0x924d033572f5a6561c8e674ffa27a53c52e217ec19c271264111a32fdd193a29`, CCIP `0xc42011d623aebeda428e368e605ac4480ee6cc32b6dca65decc2e18bc7f30b99` |
-| 15:56 vault pays the 3 TSLA back to the issuer (about 18 min) | Robinhood | `0x9f7f323d9b8f4dd76c7eda3e2c135a62ba81715ad795c3969ce0171eeba92496` |
-
-Found on the way (fixed in the bots): the issuer's released collateral had to be withdrawn by hand, and the bot's
-fallback flush beat CRE to the release. The bots now withdraw released receipts for the issuer, push receipt payouts
-to holders on a default, and leave flushing to CRE for the first few minutes.
-
-## Testnet deploy plan (as approved and run)
+### Testnet deploy plan (as approved and run)
 
 Order (script: `packages/evm-engine/script/DeployCrossChain.s.sol`):
 

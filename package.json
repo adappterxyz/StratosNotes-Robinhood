@@ -1,8 +1,8 @@
 {
-  "name": "stratosnotes-arbitrum",
+  "name": "stratosnotes-robinhood",
   "private": true,
   "version": "0.1.0",
-  "description": "Structured notes as BPMN workflows on Arbitrum Sepolia (collateral vault on Robinhood Chain testnet), observed and paid by Chainlink CRE",
+  "description": "Structured notes as BPMN workflows on Robinhood Chain testnet, observed and paid by Chainlink CRE",
   "type": "module",
   "workspaces": [
     "packages/*",

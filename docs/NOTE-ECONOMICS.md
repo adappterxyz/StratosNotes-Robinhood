@@ -105,7 +105,7 @@ The money then waits in the note until each holder claims it (about 152k gas, pa
 one claim at maturity collects everything). An issuer who opts a note in to push pays about 55k gas per holder per
 payment instead (docs/ERC20-NOTES.md, "Why claim by default"). The v3 engine (a loop over at most 62 holders) cost 2.34M for the coupon and 5.01M for the default.
 
-Both chains run Arbitrum Nitro, which caps a single transaction at 32M gas. The CRE workflow writes reports with
+Robinhood Chain is an Arbitrum Orbit (Nitro) chain, which caps a single transaction at 32M gas. The CRE workflow writes reports with
 an 8M limit, under CRE's 10M per write. Anyone can also move a note past a deadline with `poke(pid)`.
 
 ## In the BPMN

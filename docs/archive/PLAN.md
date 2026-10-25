@@ -1,5 +1,7 @@
 # StratosNotes on Arbitrum: plan
 
+> Archived: from the earlier Arbitrum / Founder House build (notes on Arbitrum Sepolia, collateral vault on Robinhood Chain). notes.markets now runs on Robinhood Chain only; see [../OVERVIEW.md](../OVERVIEW.md).
+
 The Arbitrum Hackerhouse build: the StratosNotes EVM platform (engine, CRE keeper, indexer, API, app) on
 **Arbitrum Sepolia** (where every note is issued) and **Robinhood Chain testnet** (the collateral chain), served at notes.markets.
 
@@ -24,6 +26,6 @@ NYSE hours), which CRE reads as `ethereum-mainnet-arbitrum-1`. Ethereum mainnet 
 | Retarget to Arbitrum Sepolia + Robinhood testnet; equity feeds; test tokens + faucet; physical delivery in the app | Done |
 | Site Worker (landing at /, app at /app/, AI, API proxy); landing reframed for Arbitrum | Done, not deployed |
 | CRE e2e on an Arbitrum Sepolia fork, crypto and equity notes | Done (payouts match the reference) |
-| Note economics: subscriptions to the issuer, collateral in an engine-held escrow, per-period funding calls, margin calls, grace, default to holders, release ([NOTE-ECONOMICS.md](NOTE-ECONOMICS.md)) | Done: drawn in every product and template, refused by the validator when unfunded, 19 engine timelines green |
+| Note economics: subscriptions to the issuer, collateral in an engine-held escrow, per-period funding calls, margin calls, grace, default to holders, release ([NOTE-ECONOMICS.md](../NOTE-ECONOMICS.md)) | Done: drawn in every product and template, refused by the validator when unfunded, 19 engine timelines green |
 | Testnet deployment, hosting, keeper, issuer bots, seed data | Waiting for funding and approval (docs/DEPLOY.md) |
 | Demo video, evidence tables | After deployment |

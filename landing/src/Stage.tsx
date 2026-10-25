@@ -12,7 +12,7 @@ const ISSUE_URL = '/app/issue';
 
 export const BEAT_COPY: ReadonlyArray<{ k: string; t: string; n?: string }> = [
   { k: 'Issue', t: 'The issuer pledges collateral into the note.' },
-  { k: 'Subscribe', t: 'USDG in, note units out, in one transaction on Arbitrum.' },
+  { k: 'Subscribe', t: 'USDG in, note units out, in one transaction on Robinhood Chain.' },
   { k: 'Fix and observe', t: 'Chainlink fixes the strike, then prices every observation date.' },
   { k: 'Pay', t: 'Coupons paid in USDG on the payment date, ready to claim.' },
   {
@@ -23,7 +23,7 @@ export const BEAT_COPY: ReadonlyArray<{ k: string; t: string; n?: string }> = [
   {
     k: 'Barrier breached',
     t: 'Below the knock-in, holders are repaid final ÷ strike in USDG: the loss follows TSLA.',
-    n: 'Missed payment: CRE triggers the default and the collateral goes to holders; TSLA locked on Robinhood Chain is released to them there.',
+    n: 'Missed payment: CRE triggers the default and the collateral in the note, TSLA included, goes to the holders.',
   },
 ];
 
@@ -158,7 +158,7 @@ export default function Stage() {
           <div className="wrap hero-inner">
             <span className="badge">
               <i />
-              Structured notes · Arbitrum · Robinhood Chain
+              Structured notes · Robinhood Chain
             </span>
             <h1>Know the outcome before you invest.</h1>
             <p className="sub">
@@ -186,10 +186,6 @@ export default function Stage() {
             </div>
             <div className="built-on">
               <span className="built-label">Built on</span>
-              <span className="built-mark">
-                <img src="/logos/arbitrum.svg" alt="" height={26} />
-                Arbitrum
-              </span>
               <span className="built-mark">
                 <img src="/logos/robinhood-chain-dark.svg" alt="" height={24} />
                 Robinhood Chain

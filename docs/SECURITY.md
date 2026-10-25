@@ -143,10 +143,10 @@ memory-safe saved about 1.1 KB.
 
 ## Token risk: the cash token can be paused or frozen
 
-New notes settle in **USDG** (Paxos' Global Dollar): Arbitrum Sepolia `0xFFC95faa3d63Cde504a05B567C600B78C0b41892`,
-Robinhood Chain testnet `0x7E955252E15c84f5768B83c41a71F9eba181802F`. Checked on 2026-10-24:
+Notes settle in **USDG** (Paxos' Global Dollar) on Robinhood Chain testnet,
+`0x7E955252E15c84f5768B83c41a71F9eba181802F`. Checked on 2026-10-24:
 
-- It behaves as a plain ERC-20 for the engine: on an Arbitrum Sepolia fork, `transfer` and `transferFrom` delivered
+- It behaves as a plain ERC-20 for the engine: `transfer` and `transferFrom` delivered
   the full amount (no fee on transfer), and `approve` set the allowance.
 - It is an upgradeable proxy (EIP-1967), and its admin roles (AccessControl) can call `pause()`, `freeze(address)`
   and `wipeFrozenAddress(address)`. Both are currently unpaused.
@@ -157,8 +157,14 @@ balances are kept, so nothing is lost on-chain, but payments stall, and a frozen
 note could default on schedule. A wiped address loses its USDG outright; if that address is the engine, the engine
 would no longer be solvent in USDG. The engine cannot prevent any of this. It is the normal issuer risk of a
 regulated stablecoin: disclose it on the term sheet, and prefer collateral in assets with no freeze authority if that
-risk matters. Robinhood Chain's stock tokens (TSLA, AMZN, NFLX) are upgradeable proxies too; their admin powers were
-not audited here.
+risk matters.
+
+**The stock tokens carry the same risk.** Robinhood's TSLA, AMZN, AMD, PLTR (and NFLX) on Robinhood Chain are
+upgradeable proxies (BeaconProxy) whose issuer can pause, freeze or take back tokens; their admin powers were not
+audited here. Pledged as collateral or held in a delivery reserve, they sit in the engine's escrow: a freeze of the
+engine or a holder stalls withdrawals and deliveries of that token, and a seizure from the engine leaves it short of
+what its ledger owes in that token. The engine cannot prevent it; the haircut and the collateral ratio the issuer sets
+are the only buffer. Disclose it on the term sheet of any note that pledges or delivers a stock token.
 
 ## Before mainnet
 
