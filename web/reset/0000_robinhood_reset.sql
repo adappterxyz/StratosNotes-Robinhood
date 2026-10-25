@@ -30,7 +30,6 @@ DELETE FROM blocks;
 DELETE FROM chains;
 
 DELETE FROM email_outbox WHERE note_id IS NOT NULL;
-DELETE FROM email_messages WHERE note_id IS NOT NULL;
 
 DELETE FROM templates
 WHERE entry LIKE '%"arbitrum-sepolia"%'

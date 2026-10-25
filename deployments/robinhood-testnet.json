@@ -1,7 +1,14 @@
 {
+  "block": 142637623,
   "chain": "robinhood-testnet",
   "chainId": 46630,
-  "pending": "Placeholder: no engine is current. A fresh deploy (scripts/deploy-testnets.sh) overwrites this file with the new FlowEngine and NotesLens. The Arbitrum build's engines are kept for reference only in deployments/archive/arbitrum-build/.",
+  "deployedAt": 1792964540,
+  "engine": "0xCba17Fe422220AeCa3EE06D15BE4aA5a1F06D4eE",
   "forwarder": "0x0b93082D9b3C7C97fAcd250082899BAcf3af3885",
-  "forwarderMode": "mock"
+  "forwarderMode": "mock",
+  "lens": "0x57eE8461D4551cf22E1973E010C5c8b4f535C858",
+  "owner": "0x298afB9424188C7eA7c01556D8CAE6ff4768de0a",
+  "requireEmail": true,
+  "verifier": "0xBbAb30Cf49862BAfEb37a405D08949E81045093f",
+  "l1Block": 142637645
 }

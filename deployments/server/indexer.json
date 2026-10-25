@@ -1,3 +1,16 @@
 {
-  "chains": []
+  "chains": [
+    {
+      "key": "robinhood-testnet",
+      "family": "evm",
+      "chainId": 46630,
+      "rpc": "https://rpc.testnet.chain.robinhood.com",
+      "engine": "0xCba17Fe422220AeCa3EE06D15BE4aA5a1F06D4eE",
+      "startBlock": 142637623,
+      "confirmations": 120,
+      "maxRange": 20000,
+      "pollMs": 2000,
+      "legacyEngines": []
+    }
+  ]
 }

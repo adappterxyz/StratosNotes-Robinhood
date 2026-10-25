@@ -1,6 +1,17 @@
 {
   "schedule": "*/30 * * * * *",
-  "chains": [],
+  "chains": [
+    {
+      "chainSelectorName": "robinhood-testnet",
+      "engine": "0xCba17Fe422220AeCa3EE06D15BE4aA5a1F06D4eE",
+      "lens": "0x57eE8461D4551cf22E1973E010C5c8b4f535C858",
+      "gasLimit": "8000000",
+      "fromPid": 1,
+      "scan": 200,
+      "maxProcesses": 50,
+      "stateBlock": "latest"
+    }
+  ],
   "maxReportsPerRun": 5,
   "finalityAllowanceSec": 1800,
   "httpFeedChains": {
