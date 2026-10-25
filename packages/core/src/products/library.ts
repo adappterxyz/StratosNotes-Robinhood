@@ -104,13 +104,13 @@ export const SEED_TEMPLATES: Array<{ name: string; description: string; source: 
   {
     name: '12M Worst-of Phoenix on TSLA, AMZN',
     description:
-      '3% quarterly while the worst of Tesla and Amazon holds 70% of strike, with memory; autocalls at 100% from Q2; below the 60% knock-in, holders receive the worst performer\'s token (Robinhood\'s TSLA or AMZN). Secured by TSLA (60% haircut) and USDG pledged on Robinhood Chain. Prices: Chainlink on Robinhood Chain.',
+      "3% quarterly while the worst of Tesla and Amazon holds 70% of strike, with memory; autocalls at 100% from Q2; below the 60% knock-in, holders receive the worst performer's token (Robinhood's TSLA or AMZN). Secured by TSLA (60% haircut) and USDG pledged on Robinhood Chain. Prices: Chainlink on Robinhood Chain.",
     source: { product: tslaAmznPhoenix },
   },
   {
     name: '12M Reverse Convertible on TSLA',
     description:
-      '2.5% quarterly coupon; if Tesla ends below 70% of its strike, holders receive Robinhood\'s TSLA token (1 ÷ strike per unit) instead of par. Secured by TSLA (60% haircut) and USDG pledged on Robinhood Chain. Prices: Chainlink TSLA/USD on Robinhood Chain.',
+      "2.5% quarterly coupon; if Tesla ends below 70% of its strike, holders receive Robinhood's TSLA token (1 ÷ strike per unit) instead of par. Secured by TSLA (60% haircut) and USDG pledged on Robinhood Chain. Prices: Chainlink TSLA/USD on Robinhood Chain.",
     source: { product: tslaRc },
   },
   {

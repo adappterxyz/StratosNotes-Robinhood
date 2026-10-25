@@ -79,9 +79,7 @@ export const templateMessage = (definition: string) => `StratosNotes: publish te
  */
 export function templateOffered(t: TemplateSource): boolean {
   if (t.assets?.some((a) => !!a.token && isRetiredTestToken(a.token))) return false;
-  const receipts = new Set(
-    Object.values(REMOTE_COLLATERAL).flatMap((m) => Object.values(m).map((x) => x?.token)),
-  );
+  const receipts = new Set(Object.values(REMOTE_COLLATERAL).flatMap((m) => Object.values(m).map((x) => x?.token)));
   if (t.assets?.some((a) => !!a.token && a.token.includes('.') && !receipts.has(a.token))) return false;
   const p = t.product ?? t.basis;
   if (p) {

@@ -35,7 +35,9 @@ const deployed = CHAINS.filter((c) => existsSync(`deployments/${c.key}.json`))
   .map((c) => ({ ...c, d: read<Partial<Deployment>>(`deployments/${c.key}.json`) }))
   .filter((c): c is typeof c & { d: Deployment } => !!c.d.engine && !!c.d.lens);
 if (!deployed.length)
-  console.warn('no deployed engine yet (deployments/robinhood-testnet.json is a placeholder): writing configs with no chain');
+  console.warn(
+    'no deployed engine yet (deployments/robinhood-testnet.json is a placeholder): writing configs with no chain',
+  );
 
 /** Earlier engines: deployments/archive/v<N>/<chain>.json, oldest first (the flat v1/v2 files predate the read model). */
 const ARCHIVE = 'deployments/archive';
