@@ -6,7 +6,7 @@ import { cashSymbol } from '../lib/chains';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
-import { engineOf, marketplaceNotes, useChains, PREFERRED_CHAIN } from '../lib/chains';
+import { engineOf, useChains } from '../lib/chains';
 import { listingOf } from '../lib/listing';
 import { useNotes, useNow } from '../lib/live';
 import { ListingRow } from '../components/Listing';
@@ -34,12 +34,11 @@ export default function Marketplace() {
       config.chains.find((c) => c.key === chain),
       token,
     );
-  // Notes on an earlier engine (v3) take no new subscriptions: never "open now", labelled when shown.
+  // Notes on an earlier engine (none today) take no new subscriptions: never "open now", labelled when shown.
   const earlier = (id: string) => !!engineOf(config, id)?.legacy;
 
   const shown = useMemo(() => {
-    // Notes issued on Robinhood Chain (a collateral chain only) are legacy: never listed, reachable by link.
-    const items = marketplaceNotes(notes ?? [])
+    const items = (notes ?? [])
       .filter((n) => !openOnly || (n.view.phase === 'book' && !earlier(n.id)))
       .map((n) => ({
         n,
@@ -63,9 +62,7 @@ export default function Marketplace() {
         (b.n.view.phase === 'book' ? b.n.view.strikeDate : Infinity),
       newest: (a, b) => b.n.view.createdAt - a.n.view.createdAt,
     };
-    // Arbitrum first (where notes run) when otherwise equal.
-    const rank = (k: string) => (k === PREFERRED_CHAIN ? 0 : 1);
-    return items.sort((a, b) => by[sort](a, b) || rank(a.n.chain) - rank(b.n.chain)).map((x) => x.n);
+    return items.sort((a, b) => by[sort](a, b)).map((x) => x.n);
   }, [notes, filters, sort, openOnly]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = (f: Filter) =>

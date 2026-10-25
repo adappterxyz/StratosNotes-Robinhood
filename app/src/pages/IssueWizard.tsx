@@ -17,6 +17,7 @@ import {
   instantiateProduct,
   parseBpmn,
   PRODUCT_LABELS,
+  isRemoteCollateral,
   toIssuanceTerms,
   validateProductParams,
   type CollateralSymbol,
@@ -44,7 +45,7 @@ import {
   type AiReading,
   type ReadyMade,
 } from '../lib/readymade';
-import { issueChains, PREFERRED_CHAIN, useChains } from '../lib/chains';
+import { issueChains, NOTE_CHAIN, useChains } from '../lib/chains';
 
 const start = exampleOf;
 
@@ -61,8 +62,8 @@ export default function IssueWizard() {
     linked && (linked === 'worst-of' || EXAMPLE_PRODUCTS[linked as ProductType]) ? linked : null;
   const step = kind ? Math.min(4, Math.max(0, Number(search.get('step')) || 0)) : 0;
   const key = kind ? (ready ? `r:${ready}` : `k:${kind}`) : null;
-  // ?demo=tsla: the recorded demo's terms, every field filled in (a TSLA reverse convertible on Arbitrum, collateral TSLA
-  // locked on Robinhood Chain, a minutes-apart schedule): the presenter only clicks Continue and signs.
+  // ?demo=tsla: the recorded demo's terms, every field filled in (a TSLA reverse convertible on Robinhood Chain, TSLA
+  // and USDG pledged into the note, a minutes-apart schedule): the presenter only clicks Continue and signs.
   const demoTsla = kind === 'reverse-convertible' && search.get('demo') === 'tsla';
   // What can be filled in at once (a note type, a built-in, the AI's reading); a saved note loads in the effect below.
   const [init] = useState(() => {
@@ -73,8 +74,8 @@ export default function IssueWizard() {
     if (demoTsla) return { p: DEMO_TSLA, from: null, ai: null, shown: key };
     return { p: start(kind ?? 'phoenix'), from: null, ai: null, shown: kind && !ready ? key : null };
   });
-  // Every note is issued on Arbitrum: terms opened from elsewhere (an old saved note on Robinhood Chain, a physically
-  // settled stock note) are moved there as they load (toIssuanceTerms), and the issuer is told.
+  // Every note runs on Robinhood Chain: terms opened from elsewhere (e.g. saved by the earlier Arbitrum build, or
+  // delivering an underlying with no token there) are moved there as they load (toIssuanceTerms), and the issuer is told.
   const [p, setPRaw] = useState<ProductParams>(() => toIssuanceTerms(init.p));
   const [moved, setMoved] = useState(() => toIssuanceTerms(init.p) !== init.p);
   const setP = (next: ProductParams | ((prev: ProductParams) => ProductParams)) => {
@@ -90,10 +91,9 @@ export default function IssueWizard() {
   const [aiNotes, setAiNotes] = useState<string[]>(init.ai?.notes ?? []);
   const [shown, setShown] = useState<string | null>(init.shown); // the key whose terms are in p
   const [lost, setLost] = useState('');
-  // The network: Arbitrum Sepolia, always (left implicit in the terms so its definitions stay as they were). Robinhood
-  // Chain is a collateral chain only: stock collateral is locked there (step 4), no note is issued there.
+  // The network: Robinhood Chain testnet, always (left implicit in the terms).
   const issuable = issueChains(config);
-  const chainKey = issuable.find((c) => c.key === PREFERRED_CHAIN)?.key ?? issuable[0]?.key ?? '';
+  const chainKey = issuable.find((c) => c.key === NOTE_CHAIN)?.key ?? issuable[0]?.key ?? '';
   const [size, setSize] = useState(demoTsla ? 20 : (init.ai?.schedule?.size ?? 10_000));
   const [strikeIn, setStrikeIn] = useState(5);
   const [every, setEvery] = useState<Every>(
@@ -215,7 +215,7 @@ export default function IssueWizard() {
     );
   const eco = economicsOf(p);
   const errors = validateProductParams(p);
-  const remote = p.collateralChain === 'robinhood';
+  const remote = isRemoteCollateral(p);
   const chainCfg = config.chains.find((c) => c.key === chainKey);
   const colToken = (c: CollateralSymbol) => collateralTokenOf(p, c)?.token ?? null;
   const sym = config.chains.find((c) => c.key === chainKey)?.stablecoin.symbol ?? 'USDG';

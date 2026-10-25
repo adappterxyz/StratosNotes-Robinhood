@@ -9,14 +9,14 @@ import { useCrossChain, useReceiptBalances } from './legs';
 import { LockTracker } from './LockTracker';
 import { messageIdOf, receiptLabel } from './shared';
 
-/** Issue flow: lock collateral on Robinhood Chain so its receipts can be pledged into the note. */
-export function LockOnRobinhood({ needed }: { needed: Array<{ receipt: string; amount: number }> }) {
+/** Issue flow: lock collateral on its own (asset) chain so its receipts can be pledged into the note on Robinhood Chain. */
+export function LockOnAssetChain({ needed }: { needed: Array<{ receipt: string; amount: number }> }) {
   const leg = useCrossChain();
   const address = useAddress();
   const signer = useSigner();
   const { byKey } = useChains();
   const [tick, setTick] = useState(0);
-  const [sym, setSym] = useState(needed[0]?.receipt ?? 'TSLA.rh');
+  const [sym, setSym] = useState(needed[0]?.receipt ?? '');
   const [amount, setAmount] = useState(String(needed[0]?.amount ?? ''));
   const [state, setState] = useState<{ busy: boolean; text: string; bad?: boolean; msg?: string }>({
     busy: false,

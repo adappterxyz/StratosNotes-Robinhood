@@ -75,17 +75,11 @@ export function ProductForm({ p, set }: { p: ProductParams; set: (patch: Partial
       settlementLagDays: p.settlementLagDays,
       gracePeriodDays: p.gracePeriodDays,
       defaultRule: p.defaultRule,
-      collateralChain: p.collateralChain,
     });
   /** The token a collateral chip pledges, or null when the note's chain has none. */
   const colToken = (c: CollateralSymbol) => collateralTokenOf(p, c)?.token ?? null;
   const delivered = p.underlyings.map((u) => deliverableToken(p, u.symbol)?.token ?? `no ${u.symbol} token`).join('/');
   const eco = economicsOf(p);
-  /** Collateral that stays pledgeable under other terms (the stablecoin when nothing does). */
-  const keepCol = (q: ProductParams) => {
-    const kept = eco.collateral.filter((c) => !!collateralTokenOf(q, c.symbol));
-    return kept.length ? kept : [{ symbol: 'USD' as const, haircutPct: 100 }];
-  };
   const colSyms = eco.collateral.map((c) => c.symbol);
   const toggleCol = (c: CollateralSymbol) => {
     if (colSyms.includes(c)) {
@@ -240,36 +234,18 @@ export function ProductForm({ p, set }: { p: ProductParams; set: (patch: Partial
           </select>
           <span className="hint">
             {p.settlement === 'physical'
-              ? `Holders receive units ÷ strike of ${p.underlyings.length > 1 ? "the worst performer's" : `the ${p.underlyings[0]?.symbol}`} token (${delivered}, on Arbitrum); the issuer funds the delivery before maturity.`
+              ? `Holders receive units ÷ strike of ${p.underlyings.length > 1 ? "the worst performer's" : `the ${p.underlyings[0]?.symbol}`} token (${delivered}, on Robinhood Chain); the issuer funds the delivery before maturity.`
               : 'Holders receive final ÷ strike in USDG.'}
           </span>
         </div>
       )}
       <div className="field wide" data-issue-network>
         <span className="lbl">Network</span>
-        <strong>Arbitrum Sepolia</strong>
+        <strong>Robinhood Chain testnet</strong>
         <span className="hint">
-          Every note is issued and paid on Arbitrum: it can deliver WETH; stocks and BTC settle in cash. Stock
-          collateral is locked on Robinhood Chain (below).
-        </span>
-      </div>
-      <div className="field wide">
-        <label htmlFor="pd-colchain">Collateral held on</label>
-        <select
-          id="pd-colchain"
-          value={p.collateralChain ?? 'note'}
-          onChange={(e) => {
-            const v = e.target.value as 'note' | 'robinhood';
-            set({ collateralChain: v, collateral: keepCol({ ...p, collateralChain: v }) });
-          }}
-        >
-          <option value="note">Arbitrum: pledged into the note</option>
-          <option value="robinhood">Robinhood Chain: locked in place, via Chainlink CCIP</option>
-        </select>
-        <span className="hint">
-          {p.collateralChain === 'robinhood'
-            ? 'You lock USDG, TSLA, AMZN, AMD or PLTR in the vault on Robinhood Chain; Chainlink CCIP tells the note (about 15–25 minutes per message). The tokens never leave Robinhood Chain; on a default holders redeem their share there.'
-            : 'USDG or WETH, pledged straight into the note.'}
+          Notes run on Robinhood Chain: it can deliver Robinhood's TSLA, AMZN, AMD and PLTR tokens or WETH; BTC, SOL and
+          the other stocks settle in cash. Collateral (USDG, WETH or the stock tokens) is pledged straight into the
+          note.
         </span>
       </div>
       {use.protection && (
@@ -303,18 +279,17 @@ export function ProductForm({ p, set }: { p: ProductParams; set: (patch: Partial
               {colToken(c)}
             </button>
           ))}
-          {p.collateralChain === 'robinhood' &&
-            UNPRICED_STOCKS.map((k) => (
-              <button
-                key={k}
-                type="button"
-                className="chip"
-                disabled
-                title={`${k}: held on Robinhood Chain, no Chainlink price yet`}
-              >
-                {k}
-              </button>
-            ))}
+          {UNPRICED_STOCKS.map((k) => (
+            <button
+              key={k}
+              type="button"
+              className="chip"
+              disabled
+              title={`${k}: on Robinhood Chain, no Chainlink price yet`}
+            >
+              {k}
+            </button>
+          ))}
         </div>
         <span className="hint">
           Locked in the note's escrow until the final payment; on a default the holders are paid from it (see the
@@ -387,7 +362,7 @@ export default function ProductDialog({
   onClose: () => void;
   onCreate: (p: ProductParams) => void;
 }) {
-  // Notes are issued on Arbitrum only: an old term sheet (on Robinhood Chain, or delivering a stock) opens moved there.
+  // Notes run on Robinhood Chain only: an old term sheet (another chain, remote collateral) opens moved there.
   const [p, setP] = useState<ProductParams>(toIssuanceTerms(initial ?? EXAMPLE_PRODUCTS.phoenix));
   useEffect(() => {
     if (initial) setP(toIssuanceTerms(initial));

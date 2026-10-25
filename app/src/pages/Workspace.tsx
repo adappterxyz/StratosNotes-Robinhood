@@ -184,11 +184,12 @@ export default function Workspace() {
   };
 
   const openProduct = async (given: ProductParams, extra: Partial<Doc> = {}) => {
-    // Notes are issued on Arbitrum only: an old term sheet on Robinhood Chain (or delivering a stock) opens moved there.
+    // Notes run on Robinhood Chain only: an old term sheet (another chain, collateral held elsewhere, an underlying with
+    // no token to deliver) opens moved there.
     const p = toIssuanceTerms(given);
     if (p !== given)
       setNotice(
-        'These terms named Robinhood Chain or delivered a stock. Notes are now issued on Arbitrum only, so they were moved there: stock settles in cash, and stock collateral is locked on Robinhood Chain.',
+        'These terms named another chain, collateral held elsewhere, or a token Robinhood Chain does not have. Notes run on Robinhood Chain only, so they were moved there: such an underlying settles in cash, and the collateral is pledged into the note on Robinhood Chain.',
       );
     const prod = instantiateProduct(p);
     await load(prod.bpmnXml, { name: p.name, origin: 'product', basis: p, assets: prod.assets, ...extra });
@@ -200,15 +201,15 @@ export default function Workspace() {
       const r = await fetch(`/api/templates/${t.definition}`);
       if (!r.ok) throw new Error(`Template ${short(t.definition)} could not be read (${r.status}).`);
       const e = (await r.json()) as TemplateEntry;
-      // A saved note the library no longer offers (on Robinhood Chain, physical stock delivery): its terms open moved to
-      // Arbitrum; a custom workflow built for Robinhood Chain can't be issued at all.
+      // A saved note the library no longer offers (another chain, remote collateral, an undeliverable token): its terms
+      // open moved to Robinhood Chain; a custom workflow built for another chain can't be issued at all.
       if (!templateOffered(e)) {
         if (e.product && !e.bpmnXml) {
           await openProduct(normalizeParams(e.product), { name: e.name });
           return;
         }
         throw new Error(
-          'This saved workflow was built for Robinhood Chain. Notes are now issued on Arbitrum only (Robinhood Chain holds collateral): start from a ready-made note instead.',
+          'This saved workflow was built for another chain or names tokens notes no longer use. Notes run on Robinhood Chain only: start from a ready-made note instead.',
         );
       }
       const { bpmnXml, assets } = templateBpmn(e);

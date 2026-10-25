@@ -89,7 +89,7 @@ export default function App() {
   const workspace = pathname.startsWith('/issue');
   const extras = (
     <>
-      <span className="pill plain" title="Networks this deployment serves">
+      <span className="pill plain" title="Notes run on Robinhood Chain">
         <span className="dot text-success" />
         {networks}
       </span>
@@ -161,8 +161,8 @@ export default function App() {
       {!workspace && (
         <footer className="foot">
           <span>
-            notes.markets · testnet. Each note is a workflow run by one contract; Chainlink CRE writes the strikes and
-            observations.
+            notes.markets · Robinhood Chain testnet. Each note is a workflow run by one contract on Robinhood Chain;
+            Chainlink CRE writes the strikes and observations.
           </span>
           {config.chains
             .filter((c) => c.explorer)

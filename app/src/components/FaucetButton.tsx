@@ -1,7 +1,7 @@
 /**
  * Where to get testnet tokens. notes.markets mints none: every token a note uses is a real one, from its issuer's
- * own faucet, linked here in the order a newcomer needs them: ETH for gas (Arbitrum Sepolia faucets, Robinhood's
- * faucet), USDG (Paxos's faucet, both chains), WETH (wrapped from that ETH: the issue step offers it when a note takes
+ * own faucet, linked here in the order a newcomer needs them: ETH for gas (Robinhood Chain's faucet), USDG (Paxos's
+ * faucet), WETH (wrapped from that ETH: the issue step offers it when a note takes
  * ETH collateral), and Robinhood Chain's stock tokens (Robinhood's faucet). On a local dev chain the API mints its
  * mock stablecoin instead.
  */
@@ -13,9 +13,8 @@ import { api } from '../lib/api';
 import { useAddress, useChains } from '../lib/chains';
 import { errText } from '../lib/format';
 
-/** Where to get gas on each testnet. */
+/** Where to get gas on the testnet (Robinhood Chain's faucet also gives the stock tokens). */
 const GAS_FAUCETS: Record<string, string[]> = {
-  'arbitrum-sepolia': [...FAUCETS.arbitrumSepolia],
   'robinhood-testnet': [FAUCETS.robinhood],
 };
 const STOCKS = Object.values(CHAIN_TOKENS['robinhood-testnet'])
@@ -123,7 +122,7 @@ function TokenMenu({ gas, stocks }: { gas: Array<{ name: string; url: string }>;
             <span className="row gap-8">
               <AssetIcon sym={CASH_TOKEN.token} size={20} />
               <span>
-                {CASH_TOKEN.token} from Paxos<small>The stablecoin notes are paid in, on both chains</small>
+                {CASH_TOKEN.token} from Paxos<small>The stablecoin notes are paid in, on Robinhood Chain testnet</small>
               </span>
             </span>
             <ExternalLink className="i" />

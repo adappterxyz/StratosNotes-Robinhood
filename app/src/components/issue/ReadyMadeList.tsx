@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CalendarClock, LifeBuoy, ShieldCheck, Undo2, Workflow } from 'lucide-react';
-import { collateralTokenOf, economicsOf, NOTE_CHAIN_LABELS, noteChainOf } from '@sn/core';
+import { collateralTokenOf, economicsOf, isRemoteCollateral, NOTE_CHAIN_LABELS, noteChainOf } from '@sn/core';
 import { listingOf } from '../../lib/listing';
 import { BUILT_IN, libraryReadyMade, type ReadyMade } from '../../lib/readymade';
 import { short } from '../../lib/format';
@@ -24,13 +24,12 @@ function collateralLine(r: ReadyMade) {
   const e = economicsOf(r.params);
   const names = [
     ...new Set(
-      e.collateral.map((c) => (collateralTokenOf(r.params, c.symbol)?.token ?? c.symbol).replace(/\.rh$/, '')),
+      e.collateral.map((c) => (collateralTokenOf(r.params, c.symbol)?.token ?? c.symbol).replace(/\.[a-z]+$/, '')),
     ),
   ];
-  const where =
-    r.params.collateralChain === 'robinhood'
-      ? 'locked on Robinhood Chain'
-      : `on ${NOTE_CHAIN_LABELS[noteChainOf(r.params)]}`;
+  const where = isRemoteCollateral(r.params)
+    ? 'locked on another chain'
+    : `on ${NOTE_CHAIN_LABELS[noteChainOf(r.params)]}`;
   return `Backed by ${e.collateralRatioPct}% collateral (${names.join(' + ')}, ${where})`;
 }
 

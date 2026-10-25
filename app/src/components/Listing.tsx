@@ -6,7 +6,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CalendarClock, Clock, Coins, HandCoins, LifeBuoy, ShieldCheck, Undo2 } from 'lucide-react';
-import { payoutMethodOf, PRODUCT_LABELS } from '@sn/core';
+import { isRemoteCollateral, payoutMethodOf, PRODUCT_LABELS } from '@sn/core';
 import type { NoteView } from '@sn/sdk';
 import { fmtMoney } from '../lib/format';
 import { inTime, listingOf, PAYOUT_TEXT, SIMPLE_STATUS_LABEL, simpleStatus } from '../lib/listing';
@@ -22,9 +22,10 @@ export function collateralPhrase(o: NoteView, cash: string): string | null {
   const lines = o.economics?.collateral.length
     ? o.economics.collateral.map((c) => c.symbol)
     : (o.params.collateral ?? []).map((c) => c.symbol);
-  const remote = lines.some((s) => /\.rh$/i.test(s)) || o.params.collateralChain === 'robinhood';
-  const names = [...new Set(lines.map((s) => (s === 'USD' ? cash : s.replace(/\.rh$/i, ''))))];
-  return `Backed by ${Math.round(ratio * 100)}% collateral${names.length ? ` (${names.join(' + ')}${remote ? ' on Robinhood Chain' : ''})` : ''}`;
+  // A receipt (planned: collateral held on another chain) has a chain suffix, e.g. USDC.eth.
+  const remote = lines.some((s) => /\.[a-z]+$/.test(s)) || isRemoteCollateral(o.params);
+  const names = [...new Set(lines.map((s) => (s === 'USD' ? cash : s.replace(/\.[a-z]+$/, ''))))];
+  return `Backed by ${Math.round(ratio * 100)}% collateral${names.length ? ` (${names.join(' + ')}${remote ? ' on another chain' : ''})` : ''}`;
 }
 
 export function StatusPill({ phase }: { phase: string }) {

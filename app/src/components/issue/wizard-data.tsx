@@ -40,7 +40,10 @@ export const PRODUCTS: Array<{ kind: Kind; icon: ReactNode; title: string; line:
 ];
 export const STEPS = ['Product', 'Terms', 'Schedule', 'Collateral', 'Review & issue'] as const;
 
-/** The recorded demo's note (?product=reverse-convertible&demo=tsla). */
+/**
+ * The recorded demo's note (?product=reverse-convertible&demo=tsla): a TSLA reverse convertible on Robinhood Chain,
+ * cash-settled in USDG, secured by Robinhood's TSLA token (60% haircut) and USDG, both pledged straight into the note.
+ */
 export const DEMO_TSLA: ProductParams = {
   ...EXAMPLE_PRODUCTS['reverse-convertible'],
   name: 'TSLA Reverse Convertible',
@@ -50,8 +53,10 @@ export const DEMO_TSLA: ProductParams = {
   observations: 2,
   couponRatePct: 2.5,
   knockInBarrierPct: 70,
-  collateralChain: 'robinhood',
-  collateral: [{ symbol: 'TSLA', haircutPct: 60 }],
+  collateral: [
+    { symbol: 'TSLA', haircutPct: 60 },
+    { symbol: 'USD', haircutPct: 100 },
+  ],
   collateralRatioPct: 100,
   defaultRule: 'cap-at-owed',
   payouts: 'claim',

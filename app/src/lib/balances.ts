@@ -59,7 +59,7 @@ export function useWalletBalances(address: string | null) {
             (t) => [t.token, t.address] as const,
           );
           for (const [sym, token] of [...known, ...Object.entries(cfg.tokens)]) {
-            if (isRetiredTestToken(sym) || sym.endsWith('.rh')) continue; // receipts: listed below, from the gateway
+            if (isRetiredTestToken(sym) || /\.[a-z]+$/.test(sym)) continue; // receipts: listed below, from the gateway
             add(
               sym,
               token as `0x${string}`,

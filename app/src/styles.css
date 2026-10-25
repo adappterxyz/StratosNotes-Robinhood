@@ -1656,10 +1656,6 @@ details.adv > .adv-body {
   color: hsl(var(--muted-foreground));
   padding: 0 1px;
 }
-.asset-tag.rh img {
-  width: 7px;
-  height: 7px;
-}
 .asset-stack {
   display: inline-flex;
   align-items: center;

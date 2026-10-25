@@ -21,6 +21,6 @@ Shown small, next to the ticker, to identify an asset (nominative use). Trademar
 | SPY | text badge "S&P" | an index fund; no mark used | — |
 | MSFT | text badge "MSFT" | no openly licensed mark (simple-icons removed Microsoft) | — |
 | USDG | text badge "$G" | Paxos's brand page (https://paxos.com/brand) offers no public USDG logo download (checked 2026-10-24); no lookalike drawn | — |
-| Robinhood Chain tag (receipts `*.rh`) | `robinhood-feather.svg` | https://cdn.robinhood.com/assets/generated_assets/hoodchain_docsite/feather-dark.svg (official Robinhood Chain docs; same file as landing/public/logos/robinhood-chain-dark.svg) | used unmodified, as attribution |
+| Robinhood Chain mark (collateral held on Robinhood Chain, issue flow) | `robinhood-feather.svg` | https://cdn.robinhood.com/assets/generated_assets/hoodchain_docsite/feather-dark.svg (official Robinhood Chain docs; same file as landing/public/logos/robinhood-chain-dark.svg) | used unmodified, as attribution |
 
 Icons in the issue flow are lucide-react (ISC).

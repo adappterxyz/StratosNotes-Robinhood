@@ -15,13 +15,14 @@ export interface ChainConfig extends ChainInfo {
   faucet: boolean;
   /** The retired notes.markets TokenFaucet, when the API still names one: the app no longer offers it. */
   tokenFaucet: `0x${string}` | null;
-  /** Tokens by symbol: the chain's real tokens (USDG, WETH, Robinhood's stock tokens), receipts (TSLA.rh…) on the
-   * home chain, and tUSD where older notes settle in it. */
+  /** Tokens by symbol: the chain's real tokens (USDG, WETH, Robinhood's stock tokens), plus receipts of collateral held
+   * on other chains once cross-chain collateral is deployed (planned; none today). */
   tokens: Record<string, `0x${string}`>;
-  /** Cross-chain collateral (docs/CROSS-CHAIN.md): home = this chain runs notes and holds receipts; asset = vault. */
+  /** Cross-chain collateral (planned, docs/CROSS-CHAIN.md): absent today. home = this chain (Robinhood Chain) runs
+   * notes and holds receipts; asset = a vault on another chain. The app hides every cross-chain step without it. */
   crossChain?: CrossChainConfig | null;
   /**
-   * Earlier engines on this chain whose notes stay on them (FlowEngine v3 next to v4): their notes render and
+   * Earlier engines on this chain whose notes stay on them (none today): their notes render and
    * holders withdraw and settle on them; new issuance and subscriptions go to `engine`.
    */
   legacyEngines?: LegacyEngineConfig[];

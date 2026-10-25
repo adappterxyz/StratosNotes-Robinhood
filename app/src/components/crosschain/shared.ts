@@ -1,7 +1,7 @@
 import type { ChainConfig, CrossChainReceipt } from '../../lib/api';
 
 export const ccipLink = (id: string) => `https://ccip.chain.link/msg/${id}`;
-export const receiptLabel = (sym: string) => sym.replace(/\.rh$/, '');
+export const receiptLabel = (sym: string) => sym.replace(/\.[a-z]+$/, '');
 
 /** `version`: set for an earlier engine's own gateway–vault pair (its notes' collateral is released through it). */
 export type Leg = {

@@ -34,12 +34,14 @@ export function agentLabel(o: Pick<NoteView, 'reports'>) {
   return `Chainlink CRE (${o.reports.cre}) and fallback keeper (${o.reports.fallback})`;
 }
 
-/** The asset a person locks, for a collateral token name: "TSLA.rh" (the note's internal stand-in for TSLA locked in the
- * Robinhood Chain vault) reads as "TSLA". */
-export const lockedAsset = (token: string) => token.replace(/\.rh$/, '');
-/** "TSLA on Robinhood Chain" for a locked asset, else the token itself. */
+/** A receipt for collateral held on another chain (planned, docs/CROSS-CHAIN.md): a token name with a chain suffix,
+ * e.g. "USDC.eth". None exists today: every collateral token is a Robinhood Chain token. */
+export const isReceipt = (token: string) => /\.[a-z]+$/.test(token);
+/** The asset a person locks, for a collateral token name: a receipt ("USDC.eth") reads as its asset ("USDC"). */
+export const lockedAsset = (token: string) => token.replace(/\.[a-z]+$/, '');
+/** "USDC on another chain" for a receipt, else the token itself. */
 export const lockedAssetWhere = (token: string) =>
-  token.endsWith('.rh') ? `${lockedAsset(token)} on Robinhood Chain` : token;
+  isReceipt(token) ? `${lockedAsset(token)} on another chain` : token;
 
 /** What the engine's refusals mean, in the words a person acting on the page would use. */
 const ENGINE_ERRORS: Record<string, string> = {

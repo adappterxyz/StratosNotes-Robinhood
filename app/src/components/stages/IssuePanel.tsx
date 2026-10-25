@@ -9,12 +9,13 @@ import {
   FKIND,
   MAX_GRACE_DAYS,
   isLegacyChainTerms,
+  isRemoteCollateral,
   PRODUCT_LABELS,
   type CollateralSymbol,
 } from '@sn/core';
 import { FIELD_LABEL, fieldLabel, noteTokenMeta, obsIndex, planIssuance, type InputValue } from '@sn/sdk';
 import WrapEth from '../WrapEth';
-import { issueChains, PREFERRED_CHAIN, useAddress, useChains, useSigner } from '../../lib/chains';
+import { issueChains, NOTE_CHAIN, useAddress, useChains, useSigner } from '../../lib/chains';
 import { Steps } from '../ui';
 import { useVerifiedEmail } from '../VerifiedEmail';
 import { errText } from '../../lib/format';
@@ -56,11 +57,11 @@ export function IssuePanel({
       return e instanceof Error ? e.message : String(e);
     }
   }, [built]);
-  // Every note is issued on Arbitrum (the deployment's issuance chain); Robinhood Chain holds collateral only. A term
-  // sheet that still names Robinhood Chain (a legacy note) can't be issued.
+  // Every note runs on Robinhood Chain (the deployment's one chain). A term sheet that names another chain (saved by
+  // the earlier Arbitrum build) can't be issued as it is.
   const issuable = issueChains(config);
   const chainKey =
-    issuable.find((c) => c.key === PREFERRED_CHAIN)?.key ??
+    issuable.find((c) => c.key === NOTE_CHAIN)?.key ??
     issuable.find((c) => c.key === preset?.chainKey)?.key ??
     issuable[0]?.key ??
     '';
@@ -84,8 +85,8 @@ export function IssuePanel({
   const [pledges, setPledges] = useState<Record<string, string>>({});
   const [timing, setTiming] = useState<{ lag: number; grace: number } | null>(preset?.timing ?? null);
   const chain = byKey[chainKey];
-  // Collateral locked on Robinhood Chain: the note pledges the CCIP receipts (TSLA.rh…), not the token itself.
-  const remote = doc.basis?.collateralChain === 'robinhood';
+  // Collateral held on another chain (planned, none today): the note pledges the CCIP receipts, not the token itself.
+  const remote = isRemoteCollateral(doc.basis);
   const tokOf = (c: string) =>
     collateralTokenOf(doc.basis ?? {}, c as CollateralSymbol)?.token ??
     (c === 'USD' ? (chain?.cfg.stablecoin.symbol ?? 'USDG') : c);
@@ -104,10 +105,9 @@ export function IssuePanel({
       <>
         <Head title="Issue" />
         <div className="section">
-          <div className="notice err" data-robinhood-terms>
-            These terms put the note on Robinhood Chain. Notes are issued on Arbitrum only; Robinhood Chain is where
-            stock collateral is locked. Edit the terms (the note moves to Arbitrum, stock settles in cash) and issue
-            there.
+          <div className="notice err" data-other-chain-terms>
+            These terms put the note on another chain. Notes run on Robinhood Chain only: edit the terms (the note moves
+            to Robinhood Chain) and issue there.
           </div>
         </div>
       </>
@@ -201,7 +201,7 @@ export function IssuePanel({
         throw new Error('The strike date must be at least a minute away.');
       if (unsupported.length)
         throw new Error(
-          `${chain.cfg.name} has no token configured for ${unsupported.join(', ')}.${unsupported.some((t) => !!CHAIN_TOKENS['robinhood-testnet'][t]) ? " Robinhood Chain's stock tokens stay on Robinhood Chain: settle in cash, and lock stock collateral there (its .rh receipt is pledged on Arbitrum)." : ''}`,
+          `${chain.cfg.name} has no token configured for ${unsupported.join(', ')}.${unsupported.some((t) => !CHAIN_TOKENS['robinhood-testnet'][t]) ? ' Notes use Robinhood Chain tokens only (USDG, WETH, TSLA, AMZN, AMD, PLTR): settle in cash, or pledge one of those.' : ''}`,
         );
       if (timingBad) throw new Error(timingBad);
       const value = (f: { name: string; kind: number }): InputValue => {
@@ -275,10 +275,7 @@ export function IssuePanel({
               {byKey[chainKey]?.cfg.name ?? chainKey}
               {byKey[chainKey]?.cfg.cre === false ? ' (fallback keeper)' : ''}
             </strong>
-            <span className="hint">
-              Every note is issued and paid on Arbitrum. Robinhood Chain holds collateral only (stock tokens locked in
-              its vault).
-            </span>
+            <span className="hint">Notes run on Robinhood Chain: issued, paid and collateralised there.</span>
           </div>
         )}
         <div className="form-grid" hidden={compact}>

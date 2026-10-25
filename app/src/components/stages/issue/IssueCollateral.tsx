@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { ByKey } from '../../../lib/engines';
 import { fmtMoney, lockedAsset, lockedAssetWhere } from '../../../lib/format';
-import { LockOnRobinhood } from '../../CrossChainCollateral';
+import { LockOnAssetChain } from '../../CrossChainCollateral';
 
 /** Step 3 of the issue panel: the collateral ratio, haircuts and what the issuer pledges. */
 export function IssueCollateral({
@@ -109,14 +109,14 @@ export function IssueCollateral({
         })}
       </div>
       {remote && (
-        <LockOnRobinhood
+        <LockOnAssetChain
           needed={collateralSyms.map((c) => ({ receipt: tokOf(c), amount: Number(pledgeOf(c)) || 0 }))}
         />
       )}
       {remote && chain?.cfg.crossChain?.role !== 'home' && (
         <p className="xs err">
-          Collateral locked on Robinhood Chain needs this deployment's Arbitrum cross-chain gateway, which it does not
-          configure.
+          Collateral held on another chain needs a cross-chain gateway on Robinhood Chain, which this deployment does
+          not configure yet.
         </p>
       )}
       {collateralSyms.every((c) => c === 'USD') && (

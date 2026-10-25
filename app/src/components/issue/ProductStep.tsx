@@ -84,16 +84,17 @@ export function ProductStep({
       </div>
       <div className="field" data-issue-network>
         <span className="lbl">Network</span>
-        <strong>{chainCfg?.name ?? 'Arbitrum Sepolia'}</strong>
+        <strong>{chainCfg?.name ?? 'Robinhood Chain testnet'}</strong>
         <span className="hint">
-          Every note is issued and paid on Arbitrum. It can deliver WETH; stocks and BTC settle in cash. Stock
-          collateral (TSLA, AMZN, AMD, PLTR) is locked on Robinhood Chain in the Collateral step.
+          Notes run on Robinhood Chain: issued, paid and collateralised there. Below the knock-in a note can deliver
+          Robinhood's TSLA, AMZN, AMD or PLTR token, or WETH; BTC, SOL and the other stocks settle in cash.
         </span>
       </div>
       {moved && (
-        <div className="notice info" role="note" data-moved-to-arbitrum>
-          These terms named Robinhood Chain or delivered a stock. Notes are now issued on Arbitrum only, so they were
-          moved there: stock settles in cash, and stock collateral is locked on Robinhood Chain.
+        <div className="notice info" role="note" data-moved-to-robinhood>
+          These terms named another chain, collateral held elsewhere, or a token Robinhood Chain does not have. Notes
+          run on Robinhood Chain only, so they were moved there: such an underlying settles in cash, and the collateral
+          is pledged into the note on Robinhood Chain.
         </div>
       )}
       {kind === 'worst-of' && (
@@ -107,7 +108,6 @@ export function ProductStep({
                 ...EXAMPLE_PRODUCTS[e.target.value as ProductType],
                 name: p.name,
                 underlyings: p.underlyings,
-                collateralChain: p.collateralChain,
               })
             }
           >
@@ -151,12 +151,12 @@ export function ProductStep({
           <span className="hint">
             {physicalOk
               ? `The asset itself: ${syms.map((s) => delivered(s)).join(', ')} on ${chainCfg?.name ?? "the note's network"}.`
-              : `No ${syms.filter((s) => !delivered(s)).join(', ')} token on ${chainCfg?.name ?? 'Arbitrum'}: cash only (stocks stay on Robinhood Chain).`}
+              : `No ${syms.filter((s) => !delivered(s)).join(', ')} token on ${chainCfg?.name ?? 'Robinhood Chain'}: cash only.`}
           </span>
           {p.settlement === 'physical' && !physicalOk && (
             <div className="notice warn">
-              This network has no token to deliver for {syms.filter((s) => !delivered(s)).join(', ')}: settle in cash
-              (stock notes are cash-settled), or pick another underlying.
+              Robinhood Chain has no token to deliver for {syms.filter((s) => !delivered(s)).join(', ')}: settle in
+              cash, or pick another underlying.
             </div>
           )}
         </div>

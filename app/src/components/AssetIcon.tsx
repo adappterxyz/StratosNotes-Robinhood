@@ -7,7 +7,7 @@
  * lookalike. Sources: app/public/assets/SOURCES.md.
  *
  * Variants: tUSD (the retired test dollar older notes settle in) carries a small "t" tag; receipts for collateral
- * locked on Robinhood Chain (TSLA.rh, USDG.rh…) carry a small Robinhood Chain tag.
+ * held on another chain (planned; a token name with a chain suffix, e.g. USDC.eth) carry a small tag.
  */
 import {
   siAmd,
@@ -51,20 +51,21 @@ const BADGES: Record<string, string> = {
   HYPE: 'HY',
 };
 
-/** "tUSD" -> { base: TUSD, test }, "TSLA.rh" -> { base: TSLA, rh }, "USDG" -> { base: USDG }. */
-export function parseAsset(sym: string): { base: string; test: boolean; rh: boolean } {
+/** "tUSD" -> { base: TUSD, test }, "USDC.eth" -> { base: USDC, remote }, "USDG" -> { base: USDG }. */
+export function parseAsset(sym: string): { base: string; test: boolean; remote: boolean } {
   let s = sym.trim();
-  const rh = /\.rh$/i.test(s);
-  if (rh) s = s.slice(0, -3);
-  if (s === 'tUSD') return { base: 'TUSD', test: true, rh };
-  return { base: s.toUpperCase(), test: false, rh };
+  const remote = /\.[a-z]+$/.test(s);
+  if (remote) s = s.replace(/\.[a-z]+$/, '');
+  if (s === 'tUSD') return { base: 'TUSD', test: true, remote };
+  return { base: s.toUpperCase(), test: false, remote };
 }
 
 export function AssetIcon({ sym, size = 18, title }: { sym: string; size?: number; title?: string }) {
-  const { base, test, rh } = parseAsset(sym);
+  const { base, test, remote } = parseAsset(sym);
   const mark = MARKS[base];
   const label =
-    title ?? `${mark?.title ?? base}${test ? ' (retired test dollar)' : ''}${rh ? ' (locked on Robinhood Chain)' : ''}`;
+    title ??
+    `${mark?.title ?? base}${test ? ' (retired test dollar)' : ''}${remote ? ' (locked on another chain)' : ''}`;
   return (
     <span className="asset-ic" style={{ width: size, height: size }} role="img" aria-label={label} title={label}>
       {mark ? (
@@ -85,9 +86,9 @@ export function AssetIcon({ sym, size = 18, title }: { sym: string; size?: numbe
           t
         </span>
       )}
-      {rh && (
-        <span className="asset-tag rh" aria-hidden="true">
-          <img src={`${import.meta.env.BASE_URL}assets/robinhood-feather.svg`} alt="" />
+      {remote && (
+        <span className="asset-tag t" aria-hidden="true">
+          x
         </span>
       )}
     </span>

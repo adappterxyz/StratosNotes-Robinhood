@@ -24,6 +24,20 @@ async function boot() {
     );
     return;
   }
+  // Before the contracts on Robinhood Chain are deployed the API serves no chain: wagmi needs at least one, so say so.
+  if (!config.chains.some((c) => c.family === 'evm' && c.chainId)) {
+    root.render(
+      <main className="page">
+        <div className="empty">
+          <strong>notes.markets is moving to Robinhood Chain.</strong>
+          <span className="small">
+            The new contracts are being deployed: the app opens here as soon as they are live.
+          </span>
+        </div>
+      </main>,
+    );
+    return;
+  }
   // Dev builds only: a test wallet on the first chain (a local anvil fork), signing with anvil's public test keys.
   if (import.meta.env.VITE_TEST_WALLET === '1' && config.chains[0]?.chainId) {
     const { installTestWallet } = await import('./lib/testWallet');

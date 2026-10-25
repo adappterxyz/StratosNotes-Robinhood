@@ -1,8 +1,8 @@
 /**
  * Chains and wallets. The API's /api/config says which chains this deployment serves (RPC, engine, lens,
- * stablecoin); this builds the wagmi + RainbowKit setup for them (injected wallets, discovered with EIP-6963)
- * and one SDK adapter per (chain, engine): the chain's current engine, plus each earlier engine whose notes stay on
- * it (FlowEngine v3). `useNoteChain` picks the one that runs a note. Writes go through `useSigner`, which puts the
+ * stablecoin): Robinhood Chain testnet. This builds the wagmi + RainbowKit setup for it (injected wallets,
+ * discovered with EIP-6963) and one SDK adapter per (chain, engine): the chain's current engine, plus any earlier
+ * engine whose notes stay on it (none today). `useNoteChain` picks the one that runs a note. Writes go through `useSigner`, which puts the
  * wallet on the note's chain first.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -23,52 +23,32 @@ import { CASH_TOKEN, CASH_TOKENS, EXTERNAL_TOKENS, TEST_CASH_TOKEN } from '@sn/c
 import type { AppConfig, ChainConfig } from './api';
 import { entryFor, legacyConfig, type ByKey, type EngineEntry } from './engines';
 
-export {
-  COLLATERAL_CHAIN,
-  engineOf,
-  entryFor,
-  issueChains,
-  legacyConfig,
-  marketplaceNotes,
-  onRobinhoodChain,
-  ROBINHOOD_LEGACY_LABEL,
-  type ByKey,
-  type EngineEntry,
-} from './engines';
+export { engineOf, entryFor, issueChains, legacyConfig, type ByKey, type EngineEntry } from './engines';
 import '@rainbow-me/rainbowkit/styles.css';
 
-/**
- * The network the app leads with and issues on: Arbitrum (Sepolia), where every note's lifecycle runs. Robinhood
- * Chain is the asset chain, where the stock tokens live (STOCK_CHAIN): a collateral chain only (the vault behind
- * Arbitrum notes). Notes issued there earlier are legacy (onRobinhoodChain): reachable, never listed or issued.
- */
-export const PREFERRED_CHAIN = 'arbitrum-sepolia';
-export const STOCK_CHAIN = 'robinhood-testnet';
+/** The chain notes run on: Robinhood Chain testnet (the only one this deployment serves). */
+export const NOTE_CHAIN = 'robinhood-testnet';
 
 /**
- * The deployment's config as the app uses it: Arbitrum first (so it is the default everywhere a network is picked);
- * USDG (Paxos) as the cash token where it exists, with the deployment's own test dollar kept under its symbol (tUSD)
- * for notes issued before; and each chain's own tokens (Robinhood Chain's TSLA, AMZN, NFLX).
+ * The deployment's config as the app uses it: USDG (Paxos) as the cash token, with a deployment's own test dollar kept
+ * under its symbol (tUSD) if the API names one, and the chain's own tokens (WETH, Robinhood's stock tokens).
  */
 export function prepareConfig(config: AppConfig): AppConfig {
-  const rank = (k: string) => (k === PREFERRED_CHAIN ? 0 : 1);
-  const chains = [...config.chains]
-    .sort((a, b) => rank(a.key) - rank(b.key))
-    .map((c) => {
-      const usdg = CASH_TOKENS[c.key];
-      const tokens: Record<string, `0x${string}`> = { ...(EXTERNAL_TOKENS[c.key] ?? {}), ...c.tokens };
-      if (!usdg) return { ...c, tokens };
-      // An older deployment's own test dollar, when the API still names it the stablecoin. Never overwrite a tUSD the
-      // API already lists: that would relabel every tUSD note as USDG.
-      if (
-        c.stablecoin?.address &&
-        c.stablecoin.address.toLowerCase() !== usdg.toLowerCase() &&
-        !tokens[TEST_CASH_TOKEN.token]
-      ) {
-        tokens[TEST_CASH_TOKEN.token] = c.stablecoin.address;
-      }
-      return { ...c, tokens, stablecoin: { symbol: CASH_TOKEN.token, address: usdg, decimals: CASH_TOKEN.decimals } };
-    });
+  const chains = config.chains.map((c) => {
+    const usdg = CASH_TOKENS[c.key];
+    const tokens: Record<string, `0x${string}`> = { ...(EXTERNAL_TOKENS[c.key] ?? {}), ...c.tokens };
+    if (!usdg) return { ...c, tokens };
+    // An older deployment's own test dollar, when the API still names it the stablecoin. Never overwrite a tUSD the
+    // API already lists: that would relabel every tUSD note as USDG.
+    if (
+      c.stablecoin?.address &&
+      c.stablecoin.address.toLowerCase() !== usdg.toLowerCase() &&
+      !tokens[TEST_CASH_TOKEN.token]
+    ) {
+      tokens[TEST_CASH_TOKEN.token] = c.stablecoin.address;
+    }
+    return { ...c, tokens, stablecoin: { symbol: CASH_TOKEN.token, address: usdg, decimals: CASH_TOKEN.decimals } };
+  });
   return { ...config, chains };
 }
 

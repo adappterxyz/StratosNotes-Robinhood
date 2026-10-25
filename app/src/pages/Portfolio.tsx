@@ -11,11 +11,11 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { isAddress } from 'viem';
 import { BadgeCheck, Coins, FileText, Landmark, Lock, RefreshCw, Wallet } from 'lucide-react';
 import { CASH_ASSET, type NoteView } from '@sn/sdk';
-import { entryFor, onRobinhoodChain, ROBINHOOD_LEGACY_LABEL, useAddress, useChains, useSigner } from '../lib/chains';
+import { entryFor, useAddress, useChains, useSigner } from '../lib/chains';
 import { errText, fmtMoney, fmtPct, nextEvent } from '../lib/format';
 import { useNotes, usePortfolio } from '../lib/live';
 import { useClaimable, useWalletBalances } from '../lib/balances';
-import { RedeemOnRobinhood } from '../components/CrossChainCollateral';
+import { RedeemOnAssetChain } from '../components/CrossChainCollateral';
 import { Asset, AssetStack } from '../components/AssetIcon';
 import { StatePill, currentState } from '../components/NoteState';
 import { Addr } from '../components/ui';
@@ -77,7 +77,7 @@ export default function Portfolio() {
         <div className="empty">
           <strong>Connect a wallet to see your portfolio.</strong>
           <span className="small">
-            Your assets on Arbitrum and Robinhood Chain, the notes you hold or issued, and what you can claim.
+            Your assets on Robinhood Chain, the notes you hold or issued, and what you can claim.
           </span>
           <Link to="/" className="btn">
             Browse notes
@@ -88,18 +88,9 @@ export default function Portfolio() {
   }
 
   const open = (id: string) => nav(`/note/${encodeURIComponent(id)}`);
-  // Notes on an earlier engine (v3): shown and settled as before, labelled so the different mechanics are clear.
+  // Notes on an earlier engine (none today): shown and settled as before, labelled so the different mechanics are clear.
   const earlier = (id: string) => (
     <>
-      {onRobinhoodChain({ id }) && (
-        <span
-          data-robinhood-legacy
-          title="Notes are now issued on Arbitrum only; this one runs to maturity on Robinhood Chain."
-        >
-          {' '}
-          · {ROBINHOOD_LEGACY_LABEL}
-        </span>
-      )}
       {entryFor(byKey, { id })?.legacy && (
         <span title="On an earlier engine: payouts wait in the note until you claim them (no receipt); units are not an ERC-20.">
           {' '}
@@ -595,7 +586,7 @@ export default function Portfolio() {
 
       {tab === 'collateral' && (
         <div className="stack">
-          {!readOnly && <RedeemOnRobinhood />}
+          {!readOnly && <RedeemOnAssetChain />}
           {issued.some((n) => n.view.economics?.collateral.length) ? (
             <div className="card scroll-x p-0">
               <table className="t">
@@ -624,8 +615,8 @@ export default function Portfolio() {
                           </span>
                         </td>
                         <td className="small">
-                          {/\.rh$/i.test(c.symbol)
-                            ? 'Robinhood Chain (via Chainlink CCIP)'
+                          {/\.[a-z]+$/.test(c.symbol)
+                            ? 'Another chain (via Chainlink CCIP)'
                             : (byKey[o.chain]?.cfg.name ?? o.chain)}
                         </td>
                         <td className="r num">{c.value == null ? '—' : fmtMoney(c.value)}</td>
@@ -638,7 +629,7 @@ export default function Portfolio() {
           ) : (
             <Empty
               title="No collateral locked."
-              body="Issuers lock collateral when they issue: on Arbitrum, or on Robinhood Chain where the stock tokens live. Collateral a note pays you after a default is released to your wallet on Robinhood Chain automatically; it shows here."
+              body="Issuers lock collateral in the note when they issue, on Robinhood Chain: USDG, WETH or Robinhood's stock tokens. Collateral a note pays you after a default can be claimed from the note; it shows here."
             />
           )}
         </div>

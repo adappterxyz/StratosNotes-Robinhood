@@ -1,6 +1,5 @@
 import {
   COLLATERAL_SYMBOLS,
-  collateralTokenOf,
   DEFAULT_HAIRCUT,
   MAX_COLLATERAL,
   MAX_GRACE_DAYS,
@@ -47,14 +46,9 @@ export function CollateralStep({
   timingBad: string;
   errors: string[];
 }) {
-  /** A receipt (TSLA.rh…) is offered only when the chain's config lists it (the gateway registered it). */
-  const colLive = (tok: string | null) => !!tok && (!tok.endsWith('.rh') || !!chainCfg?.tokens?.[tok]);
+  /** A receipt of collateral held on another chain (planned) is offered only when the chain's config lists it. */
+  const colLive = (tok: string | null) => !!tok && (!tok.includes('.') || !!chainCfg?.tokens?.[tok]);
   const colSyms = eco.collateral.map((c) => c.symbol);
-  /** The collateral that stays pledgeable under other terms (the stablecoin when nothing does). */
-  const keepCol = (q: ProductParams) => {
-    const kept = eco.collateral.filter((c) => !!collateralTokenOf(q, c.symbol));
-    return kept.length ? kept : [{ symbol: 'USD' as const, haircutPct: 100 }];
-  };
   const toggleCol = (c: CollateralSymbol) => {
     if (colSyms.includes(c)) {
       if (colSyms.length > 1) set({ collateral: eco.collateral.filter((x) => x.symbol !== c) });
@@ -70,31 +64,14 @@ export function CollateralStep({
       </p>
       <div className="field">
         <span className="lbl">Held on</span>
-        <div className="seg" role="radiogroup" aria-label="Collateral held on">
-          <button
-            role="radio"
-            aria-checked={!remote}
-            className={!remote ? 'active' : ''}
-            onClick={() => set({ collateralChain: 'note', collateral: keepCol({ ...p, collateralChain: 'note' }) })}
-          >
-            Arbitrum (the note's chain)
-          </button>
-          <button
-            role="radio"
-            aria-checked={remote}
-            className={remote ? 'active' : ''}
-            onClick={() =>
-              set({ collateralChain: 'robinhood', collateral: keepCol({ ...p, collateralChain: 'robinhood' }) })
-            }
-          >
-            <img src={`${import.meta.env.BASE_URL}assets/robinhood-feather.svg`} alt="" width={14} height={14} />
-            Robinhood Chain
-          </button>
-        </div>
+        <span className="small">
+          <img src={`${import.meta.env.BASE_URL}assets/robinhood-feather.svg`} alt="" width={14} height={14} />{' '}
+          Robinhood Chain, in the note itself
+        </span>
         <span className="hint">
           {remote
-            ? 'USDG, TSLA, AMZN, AMD or PLTR stay locked in the vault on Robinhood Chain; Chainlink CCIP tells the note (about 15–25 minutes), and the note sends them back there when it lets them go. Nothing is bridged.'
-            : 'USDG or WETH, pledged into the note on Arbitrum. To pledge TSLA, AMZN, AMD or PLTR, lock them on Robinhood Chain.'}
+            ? 'Held in a vault on another chain; Chainlink CCIP tells the note, and the note sends it back there when it lets it go. Nothing is bridged.'
+            : "USDG, WETH or Robinhood's stock tokens (TSLA, AMZN, AMD, PLTR), pledged into the note on Robinhood Chain."}
         </span>
       </div>
       <div className="field">
@@ -118,25 +95,22 @@ export function CollateralStep({
               </button>
             );
           })}
-          {remote &&
-            UNPRICED_STOCKS.map((k) => (
-              <button
-                key={k}
-                type="button"
-                className="chip"
-                disabled
-                title={`${k}: held on Robinhood Chain, no Chainlink price yet`}
-              >
-                <AssetIcon sym={k} size={18} />
-                {k}
-              </button>
-            ))}
+          {UNPRICED_STOCKS.map((k) => (
+            <button
+              key={k}
+              type="button"
+              className="chip"
+              disabled
+              title={`${k}: on Robinhood Chain, no Chainlink price yet`}
+            >
+              <AssetIcon sym={k} size={18} />
+              {k}
+            </button>
+          ))}
         </div>
-        {remote && (
-          <span className="hint">
-            {UNPRICED_STOCKS.join(', ')}: held on Robinhood Chain, no Chainlink price yet, so they can't be pledged.
-          </span>
-        )}
+        <span className="hint">
+          {UNPRICED_STOCKS.join(', ')}: on Robinhood Chain, no Chainlink price yet, so it can't be pledged.
+        </span>
       </div>
       <div className="form-grid">
         <Num
