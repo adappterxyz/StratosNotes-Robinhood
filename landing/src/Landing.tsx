@@ -148,6 +148,30 @@ export default function Landing() {
       <main id="top">
         <Stage />
 
+        <section id="note-types" className="notes-sec">
+          <div className="wrap">
+            <div className="section-head">
+              <span className="eyebrow">What a note can do</span>
+              <SideTabs side={side} onChange={setSide} />
+              <p className="side-sub" aria-live="polite">
+                {side === 'Investors'
+                  ? 'A result agreed before you buy: income, protection, exposure or a hedge, paid in USDG.'
+                  : 'Raise USDG against collateral you lock, and pay each coupon when it falls due.'}
+              </p>
+            </div>
+          </div>
+          <div id="notes-panel" role="tabpanel" aria-labelledby={`tab-${side}`}>
+            <Carousel key={side} side={side} onOpen={openExplorer} />
+          </div>
+          <div className="wrap">
+            <div className="try-row">
+              <button type="button" className="btn btn-ghost" onClick={() => openExplorer()}>
+                Try a note yourself
+              </button>
+            </div>
+          </div>
+        </section>
+
         <section id="live" className="ts-sec">
           <div className="wrap ts-wrap">
             <div className="section-head" data-reveal>
@@ -175,30 +199,6 @@ export default function Landing() {
         <WhyOnchain />
         <Outcomes />
         <Shelf />
-
-        <section id="note-types" className="notes-sec">
-          <div className="wrap">
-            <div className="section-head">
-              <span className="eyebrow">What a note can do</span>
-              <SideTabs side={side} onChange={setSide} />
-              <p className="side-sub" aria-live="polite">
-                {side === 'Investors'
-                  ? 'A result agreed before you buy: income, protection, exposure or a hedge, paid in USDG.'
-                  : 'Raise USDG against collateral you lock, and pay each coupon when it falls due.'}
-              </p>
-            </div>
-          </div>
-          <div id="notes-panel" role="tabpanel" aria-labelledby={`tab-${side}`}>
-            <Carousel key={side} side={side} onOpen={openExplorer} />
-          </div>
-          <div className="wrap">
-            <div className="try-row">
-              <button type="button" className="btn btn-ghost" onClick={() => openExplorer()}>
-                Try a note yourself
-              </button>
-            </div>
-          </div>
-        </section>
 
         <HowItWorks />
 
