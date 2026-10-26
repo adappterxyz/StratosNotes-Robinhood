@@ -6,12 +6,13 @@
  *
  * config.json:
  *   { "chain": { "name": "robinhood-mainnet", "chainId": 4663, "rpc": "https://...", "engine": "0x...", "lens": "0x..." },
- *     "feedRpcs": { "ethereum-mainnet": "https://..." },      // robinhood-mainnet has a built-in default
+ *     "feedRpcs": { "ethereum-mainnet": "https://..." },      // optional: every catalogue feed chain has a default
  *     "blockTag": "finalized", "finalityAllowanceSec": 1800, "maxReportsPerRun": 5, "gasLimit": "2500000",
  *     "intervalSec": 60, "feedRoutes": {} }
  *
- * Feed chains in HTTP_FEED_CHAINS (Robinhood Chain mainnet: the equity feeds) get their public RPC and block rule
- * by default; "feedRpcs" and "feedReadAt" ({ "<chain>": { "blockTag": "latest" } or { "lagBlocks": 600 } }) override.
+ * Every feed chain of the underlyings catalogue has a public RPC by default: EVM_FEED_CHAINS (Ethereum mainnet,
+ * Arbitrum One) and HTTP_FEED_CHAINS (Robinhood Chain mainnet: the equity feeds, with its block rule); "feedRpcs" and
+ * "feedReadAt" ({ "<chain>": { "blockTag": "latest" } or { "lagBlocks": 600 } }) override.
  *
  * The key file holds the fallback reporter's private key (0x-hex, one line). Keep it in a secret store or KMS
  * in production; this process only reads the path it is given and never logs the key.
@@ -27,7 +28,7 @@ import {
   type PublicClient,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { HTTP_FEED_CHAINS, type FeedReadAt } from '@sn/core';
+import { EVM_FEED_CHAINS, HTTP_FEED_CHAINS, type FeedReadAt } from '@sn/core';
 import { runOnce } from './keeper';
 
 interface FileConfig {
@@ -56,6 +57,7 @@ const chain = defineChain({
 const client = createPublicClient({ chain, transport: http(fc.chain.rpc) }) as PublicClient;
 const wallet = createWalletClient({ chain, account, transport: http(fc.chain.rpc) });
 const feedRpcs = {
+  ...Object.fromEntries(Object.entries(EVM_FEED_CHAINS).map(([k, c]) => [k, c.rpc])),
   ...Object.fromEntries(Object.entries(HTTP_FEED_CHAINS).map(([k, c]) => [k, c.rpc])),
   ...fc.feedRpcs,
 };

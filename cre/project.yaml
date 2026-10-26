@@ -2,9 +2,11 @@
 #
 # Notes run on Robinhood Chain testnet (CRE chain robinhood-testnet); the keeper writes there. Every target also needs
 # the chains it reads Chainlink price feeds from (the testnet has no feeds):
-#   ethereum-mainnet   crypto (ETH/USD, BTC/USD, SOL/USD)
+#   ethereum-mainnet               crypto, forex and commodities (ETH/USD, BTC/USD, EUR/USD, XAU/USD…)
+#   ethereum-mainnet-arbitrum-1    the catalogue's few feeds Ethereum has not (e.g. HKD/USD, SEK/USD, DOGE/USD)
 #   equities (TSLA, AMZN, AMD, PLTR, NVDA…) come from Robinhood Chain mainnet's feeds over the HTTP capability
 #   (config httpFeedChains), not an EVM read: no RPC entry needed here.
+# The catalogue (packages/core/src/products/feeds-catalogue.ts, docs/UNDERLYINGS.md) uses only these three chains.
 # RPC URLs may use ${VAR} from the shell or the env file given with -e.
 #
 # There is no production target: CRE cannot write to Robinhood Chain mainnet yet (services/keeper-fallback).
@@ -17,6 +19,8 @@ local-fork:
       url: "http://127.0.0.1:${SN_FORK_PORT}"
     - chain-name: ethereum-mainnet
       url: https://ethereum-rpc.publicnode.com
+    - chain-name: ethereum-mainnet-arbitrum-1
+      url: https://arbitrum-one-rpc.publicnode.com
 
 # Testnet: `cre workflow simulate --broadcast` writes through Robinhood Chain testnet's MockKeystoneForwarder.
 staging-settings:
@@ -25,3 +29,5 @@ staging-settings:
       url: https://rpc.testnet.chain.robinhood.com
     - chain-name: ethereum-mainnet
       url: https://ethereum-rpc.publicnode.com
+    - chain-name: ethereum-mainnet-arbitrum-1
+      url: https://arbitrum-one-rpc.publicnode.com

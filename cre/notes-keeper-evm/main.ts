@@ -8,7 +8,9 @@
 //     observation whose date has come, or a plain timer to advance.
 //  3. For each due oracle step, reads the Chainlink price feed of every underlying it captures (one for a
 //     single-asset note, several for a worst-of basket), on the chain the feed lives on, at a finalized block,
-//     staleness-checked against the feed's heartbeat. A feed chain CRE has no EVM read capability for
+//     staleness-checked against the feed's allowance. Any feed chain of the underlyings catalogue works: Ethereum
+//     mainnet and Arbitrum One through the EVM read capability (an `rpcs` entry per target in ../project.yaml).
+//     A feed chain CRE has no EVM read capability for
 //     (Robinhood Chain mainnet, the stock tokens' native chain) is read over the HTTP capability instead: one
 //     batched JSON-RPC eth_call request per chain per run, every node decoding it to the same readings
 //     (httpFeedChains, packages/core/src/feed-rpc.ts).

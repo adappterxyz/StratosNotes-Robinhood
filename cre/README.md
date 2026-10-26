@@ -10,8 +10,10 @@ Each cron run does this for each chain in the config:
 2. **Decide what is due.** The shared logic in `packages/core/src/keeper.ts` picks strike fixings and
    observations whose date has come, plus plain timers to advance.
 3. **Read prices.** Each due oracle step reads the Chainlink feed of every underlying it captures, on the
-   chain that feed lives on, at a finalized block. A round older than the feed's heartbeat plus
-   `finalityAllowanceSec` is refused. Feeds on a chain CRE has no EVM read capability for (Robinhood Chain
+   chain that feed lives on, at a finalized block. A round older than the feed's staleness allowance plus
+   `finalityAllowanceSec` is refused. Underlyings come from the Chainlink catalogue (`docs/UNDERLYINGS.md`), whose
+   feeds live on three chains: Ethereum mainnet and Arbitrum One (EVM read; each target lists their RPCs in
+   `project.yaml`) and Robinhood Chain mainnet. Feeds on a chain CRE has no EVM read capability for (Robinhood Chain
    mainnet, where the equity feeds live) are read over the HTTP capability instead; see below.
 4. **Write a report.** It sends `abi.encode(uint256 pid, uint16 step, int256[] values)` with `writeReport`
    to the chain's FlowEngine, through the KeystoneForwarder. The engine bounds-checks every value, then runs
@@ -19,13 +21,14 @@ Each cron run does this for each chain in the config:
 
 | Target | Chains written | Feeds read | Forwarder |
 |---|---|---|---|
-| `local-fork` | an anvil fork of Robinhood Chain testnet (`SN_FORK_PORT`) | Ethereum mainnet (crypto), Robinhood Chain mainnet over HTTP (equities) | MockKeystoneForwarder (`--broadcast`) |
+| `local-fork` | an anvil fork of Robinhood Chain testnet (`SN_FORK_PORT`) | Ethereum mainnet and Arbitrum One (crypto, forex, commodities), Robinhood Chain mainnet over HTTP (equities) | MockKeystoneForwarder (`--broadcast`) |
 | `staging-settings` | Robinhood Chain testnet | the same: the testnet has no feeds | MockKeystoneForwarder (`--broadcast`) or KeystoneForwarder once deployed |
 
 There is no production target: CRE cannot write to Robinhood Chain mainnet yet.
 
-Equity feeds (TSLA, AMZN, AMD, PLTR, NVDA, AAPL, SPY on Robinhood Chain mainnet) follow NYSE hours with a 24 h heartbeat; the products set
-a 4-day staleness allowance for them so a weekend doesn't block an observation. A note observed on a Monday
+Equity feeds (TSLA, AMZN, AMD, PLTR, NVDA, AAPL, SPY… on Robinhood Chain mainnet), forex and commodity feeds follow
+market hours with a 24 h heartbeat; the catalogue sets a 4-day staleness allowance for them so a weekend doesn't
+block an observation. A note observed on a Monday
 morning before the open uses Friday's close.
 
 CRE has no Robinhood Chain **mainnet** write support yet. Notes there would be run by `services/keeper-fallback`.

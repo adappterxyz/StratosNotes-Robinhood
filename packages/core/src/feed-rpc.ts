@@ -33,6 +33,16 @@ export const HTTP_FEED_CHAINS: Record<string, { rpc: string; chainId: number } &
   'robinhood-mainnet': { rpc: 'https://rpc.mainnet.chain.robinhood.com', chainId: 4663, lagBlocks: 600 },
 };
 
+/**
+ * Feed chains Chainlink CRE reads with its EVM read capability (the keeper's EVMClient), by chain-selector name, with
+ * a public RPC for the fallback keeper and the catalogue generator. Every feed in the catalogue (FEED_CATALOGUE) lives
+ * on one of these or on an HTTP_FEED_CHAINS chain. A CRE target needs an `rpcs` entry for each (cre/project.yaml).
+ */
+export const EVM_FEED_CHAINS: Record<string, { rpc: string; chainId: number }> = {
+  'ethereum-mainnet': { rpc: 'https://ethereum-rpc.publicnode.com', chainId: 1 },
+  'ethereum-mainnet-arbitrum-1': { rpc: 'https://arbitrum-one-rpc.publicnode.com', chainId: 42161 },
+};
+
 /** The JSON-RPC body asking for the head block number. */
 export const blockNumberBody = (): string =>
   JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] });
