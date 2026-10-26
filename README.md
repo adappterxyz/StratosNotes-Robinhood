@@ -1,6 +1,6 @@
 # notes.markets on Robinhood Chain
 
-Structured notes on stocks and crypto that anyone can issue and sell, running on **Robinhood Chain testnet** (chain id
+Structured notes on stocks, crypto, forex and commodities that anyone can issue and sell, running on **Robinhood Chain testnet** (chain id
 46630). Issuance, subscriptions, the note's ERC-20 units, the escrow, coupons, redemption and every **Chainlink CRE**
 report happen there. A note raises USDG for the issuer against collateral pledged into the note on Robinhood Chain:
 USDG, WETH, or Robinhood's TSLA, AMZN, AMD and PLTR stock tokens, valued by Chainlink after a haircut. Below the
@@ -10,8 +10,11 @@ from the collateral ([docs/NOTE-ECONOMICS.md](docs/NOTE-ECONOMICS.md)). Chainlin
 pays each coupon into the note on its payment date, and holders claim it from their portfolio whenever they like, with
 a receipt per claim ([docs/ERC20-NOTES.md](docs/ERC20-NOTES.md) §5).
 
-Prices: equities from Robinhood Chain **mainnet** Chainlink feeds, read by CRE over its HTTP capability; crypto from
-Ethereum mainnet Chainlink feeds. Collateral on other chains, with Robinhood Chain as the home chain, is planned
+Underlyings: any price in the Chainlink catalogue (141 USD feeds: stocks, crypto, forex, commodities;
+[docs/UNDERLYINGS.md](docs/UNDERLYINGS.md)), generated from Chainlink's reference data directory by
+`scripts/feeds-catalogue.ts`. Equities come from Robinhood Chain **mainnet** Chainlink feeds, read by CRE over its HTTP
+capability; crypto, forex and commodities from Ethereum mainnet (a few from Arbitrum One). Collateral is a separate
+whitelist of tokens a note can lock (above); forex, commodities and stocks with no token there settle in cash. Collateral on other chains, with Robinhood Chain as the home chain, is planned
 ([docs/CROSS-CHAIN.md](docs/CROSS-CHAIN.md)); the contracts are in the repo, nothing of it is deployed.
 
 - Site: https://notes.markets · App: https://notes.markets/app
