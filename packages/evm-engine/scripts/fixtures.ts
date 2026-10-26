@@ -19,7 +19,7 @@ import {
 /** Block time the Foundry test starts each run at (fixed, so dates can be baked in). */
 export const T0 = 1_900_000_000;
 const LAG = 10, GRACE = 20, STEP = 100;
-const STRIKES: Record<string, number> = { ETH: 2000, BTC: 60000, SOL: 150, AMZN: 200, TSLA: 250 };
+const STRIKES: Record<string, number> = { ETH: 2000, BTC: 60000, SOL: 150, AMZN: 200, TSLA: 250, EUR: 1.16, JPY: 0.0064, XAU: 2650 };
 /** The mock tokens test/Products.t.sol deploys for the real ones the notes name (USDG, WETH, Robinhood's AMZN and
  * TSLA), with the same decimals. */
 const TOKEN_ID: Record<string, number> = { USDG: 1, WETH: 2, AMZN: 3, TSLA: 4 };
@@ -47,6 +47,10 @@ const PHYS_ETH: ProductParams = { ...EXAMPLE_PRODUCTS.fcn, name: '12M FCN on ETH
 const PHYS_BASKET: ProductParams = { ...EXAMPLE_PRODUCTS['reverse-convertible'], name: '12M Worst-of RC on ETH, AMZN, TSLA, physical', underlyings: [FEEDS.ETH, FEEDS.AMZN, FEEDS.TSLA], settlement: 'physical', chain: 'robinhood-testnet' };
 const PHOENIX_NO_MEMORY: ProductParams = { ...EXAMPLE_PRODUCTS.phoenix, name: '12M Phoenix (no memory) on ETH', memory: false };
 const ETH_COLLATERAL: ProductParams = { ...EXAMPLE_PRODUCTS.phoenix, name: '12M Phoenix on ETH, ETH collateral', collateral: [{ symbol: 'ETH', haircutPct: 70 }], collateralRatioPct: 50 };
+// Forex and commodity underlyings (the Chainlink catalogue): barriers are % of the strike, so the same engines run them.
+const EUR_PHOENIX: ProductParams = { ...EXAMPLE_PRODUCTS.phoenix, name: '12M Phoenix on EUR/USD', underlyings: [FEEDS.EUR] };
+const JPY_RC: ProductParams = { ...EXAMPLE_PRODUCTS['reverse-convertible'], name: '12M Reverse Convertible on JPY/USD', underlyings: [FEEDS.JPY] };
+const FX_GOLD_STOCK: ProductParams = { ...EXAMPLE_PRODUCTS.fcn, name: '12M Worst-of FCN on EUR, XAU, TSLA', underlyings: [FEEDS.EUR, FEEDS.XAU, FEEDS.TSLA] };
 const MIXED_COLLATERAL: ProductParams = { ...EXAMPLE_PRODUCTS.fcn, name: '12M FCN on ETH, USD + ETH collateral', collateral: [{ symbol: 'USD', haircutPct: 100 }, { symbol: 'ETH', haircutPct: 70 }], collateralRatioPct: 40 };
 
 const RUNS: Run[] = [
@@ -69,6 +73,11 @@ const RUNS: Run[] = [
   { type: 'reverse-convertible', params: PHYS_BASKET, path: [[95, 90, 92], [90, 85, 80], [80, 99, 75], [90, 95, 55]], investors: [400, 600] },
   // Servicing fee: investors get the plain phoenix payoff; the paying agent collects 0.1% of 1,000 with each of the 2 coupons paid.
   { type: 'phoenix', source: seed('servicing fee'), params: seed('servicing fee').basis, path: [60, 65, 80, 75], investors: [500, 500], paFee: 2 },
+  // Forex / commodities: a phoenix on EUR/USD (memory catches up at 3), a reverse convertible on JPY/USD (a price of
+  // 0.0064: knocked in, cash-settled at 0.65), a worst-of FCN on EUR, gold and TSLA (TSLA knocked in at maturity).
+  { type: 'phoenix', params: EUR_PHOENIX, path: [60, 65, 80, 75], investors: [400, 600] },
+  { type: 'reverse-convertible', params: JPY_RC, path: [95, 80, 75, 65], investors: [500, 500] },
+  { type: 'fcn', params: FX_GOLD_STOCK, path: [[95, 90, 92], [90, 85, 80], [80, 99, 75], [90, 95, 55]], investors: [300, 700] },
   // ---- The issuer in the loop -------------------------------------------------------------------------------
   // Misses the coupon due at 3: the grace period ends unfunded and the collateral goes to the holders.
   { type: 'phoenix', label: 'misses coupon 3 -> default', path: [60, 65, 80, 75], investors: [250, 750], behaviour: { missPayment: 3 } },

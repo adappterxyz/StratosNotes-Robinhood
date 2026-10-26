@@ -1,5 +1,5 @@
 /**
- * The seed template library: four equity notes, four crypto products and two custom workflows. Every note is
+ * The seed template library: four equity notes, a forex note, four crypto products and two custom workflows. Every note is
  * issued on Robinhood Chain testnet, where its whole lifecycle runs and its collateral is pledged. Stock notes on
  * Robinhood's own stock tokens (TSLA, AMZN) deliver the token below the knock-in barrier and take TSLA itself as
  * collateral; stocks with no token there (NVDA, AAPL) and the crypto notes settle in cash. Every token they deliver
@@ -93,6 +93,19 @@ const tslaRc: ProductParams = {
   settlement: 'physical',
   ...TSLA_PLEDGED,
 };
+// Forex from the Chainlink catalogue (EUR/USD on Ethereum mainnet): barriers are % of the strike, so the phoenix
+// engine runs it unchanged; tight barriers suit a currency's smaller moves. No EUR token: settles in cash.
+const eurPhoenix: ProductParams = {
+  ...EXAMPLE_PRODUCTS.phoenix,
+  name: '12M Phoenix on EUR/USD',
+  underlyings: [FEEDS.EUR],
+  couponRatePct: 1.25,
+  couponBarrierPct: 97,
+  memory: true,
+  autocallLevelPct: 101,
+  autocallFromPeriod: 2,
+  knockInBarrierPct: 92,
+};
 const btcPhoenix: ProductParams = {
   ...EXAMPLE_PRODUCTS.phoenix,
   name: '12M Phoenix on BTC with servicing fee',
@@ -124,6 +137,12 @@ export const SEED_TEMPLATES: Array<{ name: string; description: string; source: 
     description:
       '2.5% quarterly coupon; if Apple ends below 70% of its strike, holders are repaid final ÷ strike in USDG. Prices: Chainlink AAPL/USD on Robinhood Chain.',
     source: { product: aaplRc },
+  },
+  {
+    name: '12M Phoenix on EUR/USD',
+    description:
+      '1.25% quarterly while the euro holds 97% of its strike against the dollar, with memory; autocalls at 101% from Q2; below the 92% knock-in at maturity, holders are repaid final ÷ strike in USDG. Prices: Chainlink EUR/USD on Ethereum. Forex works in every payoff: barriers are % of the strike.',
+    source: { product: eurPhoenix },
   },
   {
     name: '12M Worst-of Phoenix on ETH, BTC, SOL',
