@@ -2789,3 +2789,102 @@ svg.i.issue-ic {
 .whatif-grid {
   grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
 }
+
+/* Underlying picker (components/UnderlyingPicker.tsx): chips for the chosen and popular, search over the catalogue. */
+.und-picker {
+  display: grid;
+  gap: 10px;
+}
+.und-search {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.und-search .btn {
+  flex: none;
+  white-space: nowrap;
+}
+.und-results {
+  max-height: 340px;
+  overflow-y: auto;
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  padding: 6px;
+  background: hsl(var(--surface-elevated));
+}
+.und-group + .und-group {
+  margin-top: 6px;
+}
+.und-group-h {
+  font: 600 12px var(--font);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: hsl(var(--muted-foreground));
+  padding: 6px 8px 4px;
+}
+.und-group-h .dim {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+.und-group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.und-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  color: hsl(var(--foreground));
+  font: 400 14px var(--font);
+  text-align: left;
+  cursor: pointer;
+}
+.und-item:hover:not(:disabled) {
+  background: hsl(var(--muted));
+}
+.und-item.on {
+  border-color: hsl(var(--accent) / 0.5);
+  background: hsl(var(--accent) / 0.1);
+}
+.und-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.und-main {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+}
+.und-name {
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.und-src {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+  text-align: right;
+}
+@media (max-width: 520px) {
+  .und-item {
+    flex-wrap: wrap;
+  }
+  .und-src {
+    width: 100%;
+    justify-content: flex-start;
+    padding-left: 32px;
+  }
+}

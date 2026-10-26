@@ -1,16 +1,18 @@
 import {
+  catalogueFeed,
   deliverableToken,
   EXAMPLE_PRODUCTS,
   FEEDS,
+  isCatalogueSymbol,
   MAX_UNDERLYINGS,
   PRODUCT_LABELS,
   productUses,
-  UNPRICED_STOCKS,
   type ProductParams,
   type ProductType,
 } from '@sn/core';
 import type { ChainConfig } from '../../lib/api';
-import { Asset, AssetIcon, AssetStack } from '../AssetIcon';
+import { Asset, AssetStack } from '../AssetIcon';
+import { feedSource, renameForUnderlyings, UnderlyingPicker } from '../UnderlyingPicker';
 import { Num } from './Num';
 import { PRODUCTS, type Kind } from './wizard-data';
 
@@ -32,12 +34,27 @@ export function ProductStep({
   const syms = p.underlyings.map((u) => u.symbol);
   const delivered = (s: string) => deliverableToken(p, s)?.token ?? null;
   const physicalOk = syms.every((s) => !!delivered(s));
-  const toggleUnd = (k: keyof typeof FEEDS) => {
+  const toggleUnd = (k: string) => {
+    if (!isCatalogueSymbol(k)) return;
+    const pick = (underlyings: ProductParams['underlyings']) =>
+      set({
+        underlyings,
+        name: renameForUnderlyings(
+          p.name,
+          syms,
+          underlyings.map((u) => u.symbol),
+        ),
+      });
     if (syms.includes(k)) {
-      if (syms.length > 1) set({ underlyings: p.underlyings.filter((u) => u.symbol !== k) });
-    } else if (kind !== 'worst-of') set({ underlyings: [FEEDS[k]] });
-    else if (syms.length < MAX_UNDERLYINGS) set({ underlyings: [...p.underlyings, FEEDS[k]] });
+      if (syms.length > 1) pick(p.underlyings.filter((u) => u.symbol !== k));
+    } else if (kind !== 'worst-of') pick([FEEDS[k]]);
+    else if (syms.length < MAX_UNDERLYINGS) pick([...p.underlyings, FEEDS[k]]);
   };
+  const undeliverable = syms.filter((s) => !delivered(s));
+  /** Why physical delivery is off: no token on the note's chain for these (forex, commodities, most stocks). */
+  const whyCashOnly = undeliverable.length
+    ? `${undeliverable.join(', ')} ${undeliverable.length > 1 ? 'have' : 'has'} no token on ${chainCfg?.name ?? 'Robinhood Chain'} to deliver${undeliverable.some((s) => ['Forex', 'Commodities'].includes(catalogueFeed(s)?.assetClass ?? '')) ? ' (a currency or commodity price is cash-settled)' : ''}: the note settles in cash, final ÷ strike in USDG.`
+    : '';
   return (
     <>
       <h2>
@@ -51,35 +68,22 @@ export function ProductStep({
         <span className="lbl">
           {kind === 'worst-of' ? `Underlyings (2–${MAX_UNDERLYINGS}): the weakest decides` : 'Underlying'}
         </span>
-        <div className="row iw-unds" role="group" aria-label="Underlyings">
-          {(Object.keys(FEEDS) as Array<keyof typeof FEEDS>).map((k) => (
-            <button
-              key={k}
-              type="button"
-              className={`chip ${syms.includes(k) ? 'on' : ''}`}
-              aria-pressed={syms.includes(k)}
-              onClick={() => toggleUnd(k)}
-            >
-              <AssetIcon sym={k} size={18} />
-              {k}
-            </button>
-          ))}
-          {UNPRICED_STOCKS.map((k) => (
-            <button
-              key={k}
-              type="button"
-              className="chip"
-              disabled
-              title={`${k}: a Robinhood Chain stock token you can hold, with no Chainlink price yet`}
-            >
-              <AssetIcon sym={k} size={18} />
-              {k}
-            </button>
-          ))}
-        </div>
-        <span className="hint">
-          Fixed by Chainlink on each asset's own chain: crypto on Ethereum, stocks on Robinhood Chain.{' '}
-          {UNPRICED_STOCKS.join(', ')}: held on Robinhood Chain, no Chainlink price yet.
+        <UnderlyingPicker
+          selected={syms}
+          onToggle={toggleUnd}
+          canAdd={kind !== 'worst-of' || syms.length < MAX_UNDERLYINGS}
+          deliverable={delivered}
+          idPrefix="iw-und"
+        />
+        <span className="hint" data-underlying-sources>
+          Any Chainlink price: stocks, crypto, forex, commodities, each fixed on its own oracle.{' '}
+          {p.underlyings
+            .map((u) => {
+              const f = catalogueFeed(u.symbol);
+              return `${u.symbol}/USD${f && f.name !== u.symbol ? ` (${f.name})` : ''} from ${f ? feedSource(f) : `Chainlink feed ${u.feed}`}`;
+            })
+            .join('; ')}
+          .
         </span>
       </div>
       <div className="field" data-issue-network>
@@ -87,7 +91,8 @@ export function ProductStep({
         <strong>{chainCfg?.name ?? 'Robinhood Chain testnet'}</strong>
         <span className="hint">
           Notes run on Robinhood Chain: issued, paid and collateralised there. Below the knock-in a note can deliver
-          Robinhood's TSLA, AMZN, AMD or PLTR token, or WETH; BTC, SOL and the other stocks settle in cash.
+          Robinhood's TSLA, AMZN, AMD or PLTR token, or WETH; every other underlying (BTC, other stocks, forex,
+          commodities) settles in cash.
         </span>
       </div>
       {moved && (
@@ -137,11 +142,8 @@ export function ProductStep({
               aria-checked={p.settlement === 'physical'}
               className={p.settlement === 'physical' ? 'active' : ''}
               disabled={!physicalOk && p.settlement !== 'physical'}
-              title={
-                physicalOk
-                  ? undefined
-                  : `No ${syms.filter((s) => !delivered(s)).join(', ')} token on ${chainCfg?.name ?? 'this network'}`
-              }
+              title={physicalOk ? undefined : whyCashOnly}
+              data-physical-disabled={physicalOk ? undefined : true}
               onClick={() => set({ settlement: 'physical' })}
             >
               <AssetStack syms={syms} size={16} label={false} />
@@ -151,7 +153,7 @@ export function ProductStep({
           <span className="hint">
             {physicalOk
               ? `The asset itself: ${syms.map((s) => delivered(s)).join(', ')} on ${chainCfg?.name ?? "the note's network"}.`
-              : `No ${syms.filter((s) => !delivered(s)).join(', ')} token on ${chainCfg?.name ?? 'Robinhood Chain'}: cash only.`}
+              : `Cash only. ${whyCashOnly}`}
           </span>
           {p.settlement === 'physical' && !physicalOk && (
             <div className="notice warn">

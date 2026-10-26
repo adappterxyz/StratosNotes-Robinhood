@@ -3,7 +3,11 @@ import { BaseError, ContractFunctionRevertedError } from 'viem';
 
 export const fmtMoney = (x: number, dp = 2) =>
   (Number.isFinite(x) ? x : 0).toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
-export const fmtPrice = (x: number) => x.toLocaleString(undefined, { maximumFractionDigits: 2 });
+/** A price: 2 decimals from 10 up; below that, 4 significant figures (EUR 1.1634, JPY 0.006423). */
+export const fmtPrice = (x: number) =>
+  Math.abs(x) >= 10 || x === 0
+    ? x.toLocaleString(undefined, { maximumFractionDigits: 2 })
+    : x.toLocaleString(undefined, { maximumSignificantDigits: 4 });
 export const fmtPct = (r: number) => `${(r * 100).toFixed(1)}%`;
 export const fmtDate = (t: number) =>
   t ? new Date(t * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—';

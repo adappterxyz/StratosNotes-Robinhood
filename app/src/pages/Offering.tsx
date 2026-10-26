@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { isAddress } from 'viem';
 import { AlertTriangle, ArrowLeft, CheckCircle2, Info, Radio, ShieldCheck, WalletCards } from 'lucide-react';
-import { dec, defToBpmn, instantiateProduct, SCALE } from '@sn/core';
+import { dec, defToBpmn, FEED_CHAIN_LABELS, instantiateProduct, SCALE } from '@sn/core';
 import { CASH_ASSET, NOTE_ASSET, noteView, PHASE_LABEL, positionOf } from '@sn/sdk';
 import TasksPanel from '../components/TasksPanel';
 import EconomicsPanel from '../components/EconomicsPanel';
@@ -339,7 +339,7 @@ export default function OfferingPage() {
                               {u.symbol}/USD
                             </span>{' '}
                             <span className="xs dim" title={`Chainlink feed on ${u.feedChain}: ${u.feed}`}>
-                              Chainlink
+                              Chainlink · {FEED_CHAIN_LABELS[u.feedChain] ?? u.feedChain}
                             </span>
                           </td>
                           <td className="r num">{u.strike === null ? '—' : fmtPrice(u.strike)}</td>

@@ -2,26 +2,47 @@
  * Asset marks: a small neutral circle with the asset's logo, next to its ticker (the ticker always stays as text).
  *
  * Marks come from simple-icons (CC0-1.0): Bitcoin, Ethereum (also for WETH), Solana, Tesla, NVIDIA, Apple, Netflix,
- * AMD, Palantir, Meta, Google, Coinbase. They identify the asset (nominative use); trademarks belong to their owners.
- * Where no openly licensed mark exists (AMZN, SPY, MSFT, USDG, HYPE) a plain text badge is shown instead of a
- * lookalike. Sources: app/public/assets/SOURCES.md.
+ * AMD, Palantir, Meta, Google, Coinbase, and the catalogue underlyings simple-icons has (Chainlink, Dogecoin, Intel…).
+ * They identify the asset (nominative use); trademarks belong to their owners. Where no openly licensed mark exists
+ * (AMZN, SPY, MSFT, USDG, HYPE, most catalogue symbols) a plain text badge is shown instead of a lookalike: the
+ * currency sign for forex, the element for metals (Au, Ag), else the ticker. Sources: app/public/assets/SOURCES.md.
  *
  * Variants: tUSD (the retired test dollar older notes settle in) carries a small "t" tag; receipts for collateral
  * held on another chain (planned; a token name with a chain suffix, e.g. USDC.eth) carry a small tag.
  */
 import {
+  siAlibabadotcom,
   siAmd,
   siApple,
   siBitcoin,
+  siBnbchain,
+  siCardano,
+  siChainlink,
+  siCircle,
   siCoinbase,
+  siDell,
+  siDogecoin,
+  siEns,
   siEthereum,
+  siGmx,
   siGoogle,
+  siIntel,
+  siLitecoin,
   siMeta,
+  siMonero,
+  siNear,
   siNetflix,
   siNvidia,
+  siOptimism,
   siPalantir,
+  siPolkadot,
+  siPolygon,
   siSolana,
+  siSui,
   siTesla,
+  siTon,
+  siXrp,
+  siZcash,
 } from 'simple-icons';
 
 type Mark = { path: string; hex: string; title: string };
@@ -39,6 +60,27 @@ const MARKS: Record<string, Mark> = {
   GOOGL: { path: siGoogle.path, hex: siGoogle.hex, title: 'Alphabet (Google)' },
   COIN: { path: siCoinbase.path, hex: siCoinbase.hex, title: 'Coinbase' },
   WETH: { path: siEthereum.path, hex: siEthereum.hex, title: 'Wrapped Ether (WETH)' },
+  // Catalogue underlyings (packages/core/src/products/feeds-catalogue.ts) with an openly licensed mark.
+  LINK: { path: siChainlink.path, hex: siChainlink.hex, title: 'Chainlink' },
+  DOGE: { path: siDogecoin.path, hex: siDogecoin.hex, title: 'Dogecoin' },
+  LTC: { path: siLitecoin.path, hex: siLitecoin.hex, title: 'Litecoin' },
+  XRP: { path: siXrp.path, hex: siXrp.hex, title: 'XRP' },
+  ADA: { path: siCardano.path, hex: siCardano.hex, title: 'Cardano' },
+  DOT: { path: siPolkadot.path, hex: siPolkadot.hex, title: 'Polkadot' },
+  BNB: { path: siBnbchain.path, hex: siBnbchain.hex, title: 'BNB' },
+  POL: { path: siPolygon.path, hex: siPolygon.hex, title: 'Polygon (POL)' },
+  OP: { path: siOptimism.path, hex: siOptimism.hex, title: 'Optimism' },
+  XMR: { path: siMonero.path, hex: siMonero.hex, title: 'Monero' },
+  TON: { path: siTon.path, hex: siTon.hex, title: 'Toncoin' },
+  SUI: { path: siSui.path, hex: siSui.hex, title: 'Sui' },
+  NEAR: { path: siNear.path, hex: siNear.hex, title: 'NEAR Protocol' },
+  ZEC: { path: siZcash.path, hex: siZcash.hex, title: 'Zcash' },
+  ENS: { path: siEns.path, hex: siEns.hex, title: 'Ethereum Name Service' },
+  GMX: { path: siGmx.path, hex: siGmx.hex, title: 'GMX' },
+  INTC: { path: siIntel.path, hex: siIntel.hex, title: 'Intel' },
+  BABA: { path: siAlibabadotcom.path, hex: siAlibabadotcom.hex, title: 'Alibaba' },
+  DELL: { path: siDell.path, hex: siDell.hex, title: 'Dell Technologies' },
+  CRCL: { path: siCircle.path, hex: siCircle.hex, title: 'Circle' },
 };
 /** No openly licensed mark: a short text badge (never a drawn lookalike). */
 const BADGES: Record<string, string> = {
@@ -49,6 +91,28 @@ const BADGES: Record<string, string> = {
   USDC: '$C',
   TUSD: '$t',
   HYPE: 'HY',
+  // Forex (the currency's sign) and metals (the element): no logo exists.
+  EUR: '€',
+  GBP: '£',
+  JPY: '¥',
+  CNY: '元',
+  KRW: '₩',
+  CHF: 'Fr',
+  AUD: 'A$',
+  NZD: 'NZ$',
+  CAD: 'C$',
+  SGD: 'S$',
+  HKD: 'HK$',
+  SEK: 'kr',
+  MXN: 'M$',
+  BRL: 'R$',
+  TRY: '₺',
+  IDR: 'Rp',
+  PHP: '₱',
+  ARS: 'AR$',
+  INR: '₹',
+  XAU: 'Au',
+  XAG: 'Ag',
 };
 
 /** "tUSD" -> { base: TUSD, test }, "USDC.eth" -> { base: USDC, remote }, "USDG" -> { base: USDG }. */

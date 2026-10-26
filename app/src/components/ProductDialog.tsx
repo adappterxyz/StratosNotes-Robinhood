@@ -14,6 +14,7 @@ import {
   economicsOf,
   EXAMPLE_PRODUCTS,
   FEEDS,
+  isCatalogueSymbol,
   MAX_COLLATERAL,
   MAX_GRACE_DAYS,
   MAX_UNDERLYINGS,
@@ -30,6 +31,7 @@ import {
   type ProductType,
 } from '@sn/core';
 import PayoffChart from './PayoffChart';
+import { UnderlyingPicker } from './UnderlyingPicker';
 
 type Num = (v: number) => void;
 function NumField({
@@ -88,7 +90,8 @@ export function ProductForm({ p, set }: { p: ProductParams; set: (patch: Partial
       set({ collateral: [...eco.collateral, { symbol: c, haircutPct: DEFAULT_HAIRCUT[c] }] });
   };
   const symbols = p.underlyings.map((u) => u.symbol);
-  const toggleUnd = (k: keyof typeof FEEDS) => {
+  const toggleUnd = (k: string) => {
+    if (!isCatalogueSymbol(k)) return;
     if (symbols.includes(k)) {
       if (symbols.length > 1) set({ underlyings: p.underlyings.filter((u) => u.symbol !== k) });
     } else if (symbols.length < MAX_UNDERLYINGS) set({ underlyings: [...p.underlyings, FEEDS[k]] });
@@ -111,36 +114,17 @@ export function ProductForm({ p, set }: { p: ProductParams; set: (patch: Partial
       </div>
       <div className="field wide">
         <span className="lbl">Underlying{symbols.length > 1 ? 's: worst of' : ''}</span>
-        <div className="row" role="group" aria-label="Underlyings">
-          {(Object.keys(FEEDS) as Array<keyof typeof FEEDS>).map((k) => (
-            <button
-              key={k}
-              type="button"
-              className={`chip ${symbols.includes(k) ? 'on' : ''}`}
-              aria-pressed={symbols.includes(k)}
-              onClick={() => toggleUnd(k)}
-              disabled={!symbols.includes(k) && symbols.length >= MAX_UNDERLYINGS}
-            >
-              {k}/USD
-            </button>
-          ))}
-          {UNPRICED_STOCKS.map((k) => (
-            <button
-              key={k}
-              type="button"
-              className="chip"
-              disabled
-              title={`${k}: a Robinhood Chain stock token, no Chainlink price yet`}
-            >
-              {k}/USD
-            </button>
-          ))}
-        </div>
+        <UnderlyingPicker
+          selected={symbols}
+          onToggle={toggleUnd}
+          canAdd={symbols.length < MAX_UNDERLYINGS}
+          deliverable={(sym) => deliverableToken(p, sym)?.token ?? null}
+          idPrefix="pd-und"
+        />
         <span className="hint">
           {symbols.length > 1
             ? `Worst-of: every barrier, autocall and the redemption use the weakest of ${symbols.join(', ')} against its own strike. Up to ${MAX_UNDERLYINGS}.`
-            : "Pick more than one for a worst-of basket. Chainlink price feeds on each asset's own chain (crypto: Ethereum; stocks: Robinhood Chain), read by CRE."}{' '}
-          {UNPRICED_STOCKS.join(', ')}: held only, no feed yet.
+            : "Pick more than one for a worst-of basket. Any Chainlink price (stocks, crypto, forex, commodities), each on its asset's own oracle (stocks: Robinhood Chain; crypto, forex, commodities: Ethereum), read by CRE."}
         </span>
       </div>
       <NumField

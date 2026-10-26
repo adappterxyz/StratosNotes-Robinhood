@@ -5,7 +5,15 @@
  * gateway, its condition and whether it is the default.
  */
 import { useEffect, useState } from 'react';
-import { FEEDS, type AssetOperation, type FieldType, type NodeProps, type TemplateField } from '@sn/core';
+import {
+  ASSET_CLASSES,
+  FEED_CATALOGUE,
+  FEEDS,
+  type AssetOperation,
+  type FieldType,
+  type NodeProps,
+  type TemplateField,
+} from '@sn/core';
 import { readProps, setDefaultFlow, writeCondition, writeProps } from '../lib/bpmnProps';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -239,14 +247,19 @@ export default function PropertiesPanel({
                           feedChain: FEEDS[k].feedChain,
                           min: String(FEEDS[k].minPrice),
                           max: String(FEEDS[k].maxPrice),
+                          staleness: FEEDS[k].staleness,
                         },
                       });
                     }}
                   >
-                    {(Object.keys(FEEDS) as Array<keyof typeof FEEDS>).map((k) => (
-                      <option key={k} value={FEEDS[k].feed}>
-                        {k}/USD
-                      </option>
+                    {ASSET_CLASSES.map((c) => (
+                      <optgroup key={c} label={c}>
+                        {FEED_CATALOGUE.filter((x) => x.assetClass === c).map((x) => (
+                          <option key={x.symbol} value={x.feed}>
+                            {x.symbol}/USD
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                 )}

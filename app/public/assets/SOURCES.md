@@ -17,6 +17,10 @@ Shown small, next to the ticker, to identify an asset (nominative use). Trademar
 | GOOGL | Google | simple-icons 16.35.0 (`siGoogle`) | CC0-1.0 |
 | COIN | Coinbase | simple-icons 16.35.0 (`siCoinbase`) | CC0-1.0 |
 | WETH | Ethereum (the same mark as ETH) | simple-icons 16.35.0 (`siEthereum`) | CC0-1.0 |
+| LINK, DOGE, LTC, XRP, ADA, DOT, BNB, POL, OP, XMR, TON, SUI, NEAR, ZEC, ENS, GMX, INTC, BABA, DELL, CRCL | Chainlink, Dogecoin, Litecoin, XRP, Cardano, Polkadot, BNB Chain, Polygon, Optimism, Monero, TON, Sui, NEAR, Zcash, ENS, GMX, Intel, Alibaba.com, Dell, Circle | simple-icons 16.35.0 (`siChainlink`, `siDogecoin`, `siLitecoin`, `siXrp`, `siCardano`, `siPolkadot`, `siBnbchain`, `siPolygon`, `siOptimism`, `siMonero`, `siTon`, `siSui`, `siNear`, `siZcash`, `siEns`, `siGmx`, `siIntel`, `siAlibabadotcom`, `siDell`, `siCircle`) | CC0-1.0 |
+| Forex (EUR, GBP, JPY…) | text badge with the currency sign (€, £, ¥…) | no mark used | — |
+| XAU, XAG | text badge "Au", "Ag" (the element) | no mark used | — |
+| Other catalogue underlyings | text badge with the ticker's first letters | no openly licensed mark | — |
 | AMZN | text badge "AMZN" | no openly licensed mark (simple-icons removed Amazon) | — |
 | SPY | text badge "S&P" | an index fund; no mark used | — |
 | MSFT | text badge "MSFT" | no openly licensed mark (simple-icons removed Microsoft) | — |
