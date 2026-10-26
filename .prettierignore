@@ -13,6 +13,7 @@ bun.lock
 
 # Generated sources (rewritten by tooling; formatting them would churn on every regen)
 packages/sdk/src/evm/generated.ts
+packages/core/src/products/feeds-catalogue.ts
 landing/src/proof.json
 cre/notes-keeper-evm/config.*.json
 cre/notes-keeper-evm/.cre_build_tmp.js

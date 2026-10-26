@@ -253,10 +253,10 @@ describe('AI pipeline (scripted models)', () => {
     const ai = fake({ intent: { choice: 'product', confidence: 0.9 }, product: { choice: 'fcn', confidence: 0.9 } }, [
       {
         productType: 'fcn',
-        name: 'FCN on DOGE',
+        name: 'FCN on NFLX',
         size: null,
         issuePricePct: null,
-        underlyingSymbols: ['DOGE'],
+        underlyingSymbols: ['NFLX'],
         observationEveryMonths: 3,
         observationCount: 4,
         couponRatePct: 2,
@@ -276,9 +276,10 @@ describe('AI pipeline (scripted models)', () => {
         gracePeriodDays: null,
       },
     ]);
-    const r = await runAi(ai, { prompt: 'FCN on DOGE, 2% quarterly, autocall 100, KI 60, 1y', today: '2026-10-06' });
+    const r = await runAi(ai, { prompt: 'FCN on NFLX, 2% quarterly, autocall 100, KI 60, 1y', today: '2026-10-06' });
     expect(r.kind).toBe('clarify');
-    if (r.kind === 'clarify') expect(r.reply).toMatch(/no Chainlink price feed for DOGE.*ETH, BTC, SOL, TSLA/);
+    if (r.kind === 'clarify')
+      expect(r.reply).toMatch(/no Chainlink price feed for NFLX in the catalogue.*Stocks: .*TSLA.*Forex: .*EUR/);
   });
   it('edits the open workflow with a patch, repairing what the validator rejects', async () => {
     const draft = productDraft('fcn');

@@ -10,7 +10,14 @@
  */
 import type { AiRunner, ChatMessage, DecisionQuestion } from './runner';
 import { extractProduct, type Schedule } from './extract';
-import { PRODUCT_LABELS, productUses, type ProductParams, type ProductType } from '../products/params';
+import {
+  catalogueSummary,
+  FEED_CATALOGUE,
+  PRODUCT_LABELS,
+  productUses,
+  type ProductParams,
+  type ProductType,
+} from '../products/params';
 import { applyPatch, draftToIR, irToBpmn, type DraftPatch, type WorkflowDraft } from '../draft';
 import { check } from '../validate';
 
@@ -91,7 +98,7 @@ StratosNotes issues structured notes on Robinhood Chain testnet (EVM, an Arbitru
 - Investor (open to anyone): subscribes with USDG until the strike date; the USDG goes to the issuer (the funds raised) and the investor receives note units in one atomic swap.
 - Escrow: an account the engine holds for the note; nobody can withdraw from it. On default, everything in escrow (collateral in kind and any partial funding) goes to the holders pro rata; after the final payment, the collateral is released to the issuer.
 Chainlink CRE delivers each observation from a Chainlink price feed as a signed report through Chainlink's forwarder.
-Products: fixed coupon note, reverse convertible, phoenix (optional memory), snowball, principal-protected note. Underlyings with feeds here: ETH, BTC, SOL (Chainlink on Ethereum), TSLA, AMZN, AMD, PLTR, NVDA, AAPL, SPY, META, MSFT, GOOGL, COIN (Chainlink on Robinhood Chain). Settlement in cash, or physical delivery below the knock-in barrier of the underlying's real token on Robinhood Chain: Robinhood's TSLA, AMZN, AMD and PLTR stock tokens and WETH for ETH; BTC, SOL and the other stocks are cash-settled. Collateral: USDG, WETH, TSLA, AMZN, AMD or PLTR, pledged into the note on Robinhood Chain (nothing is bridged).
+Products: fixed coupon note, reverse convertible, phoenix (optional memory), snowball, principal-protected note. Underlyings: any price in the Chainlink catalogue (${FEED_CATALOGUE.length} USD prices, each from its native oracle: US stocks and ETFs on Robinhood Chain, crypto, forex and commodities on Ethereum, a few on Arbitrum One): ${catalogueSummary(12)}. Barriers are % of the strike, so forex (EUR/USD as EUR) and commodities (gold as XAU) work in every payoff. Settlement in cash, or physical delivery below the knock-in barrier of the underlying's real token on Robinhood Chain: Robinhood's TSLA, AMZN, AMD and PLTR stock tokens and WETH for ETH; every other underlying (BTC, SOL, the other stocks, forex, commodities) is cash-settled. Collateral: USDG, WETH, TSLA, AMZN, AMD or PLTR, pledged into the note on Robinhood Chain (nothing is bridged).
 Issuers can also edit a note's workflow in the studio (steps, fields, gateway conditions such as "obs2 >= initialLevel * 100 / 100", timers, payments) before publishing it; every payment stays funded from escrow.`;
 
 const EDIT_RULES = `You edit a StratosNotes workflow (it runs on an EVM engine). The workflow is JSON: parties (pools), assets, steps.

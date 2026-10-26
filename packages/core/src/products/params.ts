@@ -25,6 +25,13 @@
  * final payment the collateral is released to the issuer.
  */
 
+import { ASSET_CLASSES } from './feed-directory';
+import { FEED_CATALOGUE, type CatalogueFeed, type CatalogueSymbol } from './feeds-catalogue';
+
+export type { AssetClass, CatalogueChain } from './feed-directory';
+export { ASSET_CLASSES } from './feed-directory';
+export { FEED_CATALOGUE, type CatalogueFeed, type CatalogueSymbol } from './feeds-catalogue';
+
 export type ProductType = 'fcn' | 'reverse-convertible' | 'phoenix' | 'snowball' | 'ppn';
 
 export interface Underlying {
@@ -436,7 +443,16 @@ export function validateTermSheet(p: ProductParams): string[] {
     if (!/^[A-Z][A-Z0-9]{0,9}$/.test(u.symbol ?? ''))
       e.push(`'${u.symbol}' is not a ticker (capital letters and digits).`);
     if (!EVM_ADDR.test(u.feed || '')) e.push(`The ${u.symbol} price feed must be a Chainlink feed address (0x…).`);
-    if (!(u.minPrice >= 0 && u.maxPrice > u.minPrice)) e.push(`${u.symbol}: price bounds need 0 <= min < max.`);
+    if (!(u.minPrice >= 0 && u.maxPrice > u.minPrice && Number.isFinite(u.maxPrice)))
+      e.push(`${u.symbol}: price bounds need 0 <= min < max.`);
+    else if (![u.minPrice, u.maxPrice].every((x) => /^\d+(\.\d{1,10})?$/.test(String(x))))
+      e.push(`${u.symbol}: price bounds must be plain decimals with at most 10 decimal places.`);
+    if (!(Number.isInteger(u.staleness) && u.staleness! > 0))
+      e.push(`${u.symbol}: set how old a Chainlink round may be (staleness, whole seconds).`);
+    if (!FEED_CHAIN_LABELS[u.feedChain])
+      e.push(
+        `${u.symbol}: the keeper reads prices on ${Object.keys(FEED_CHAIN_LABELS).join(', ')}, not '${u.feedChain}'.`,
+      );
   }
   if (!(Number.isInteger(p.observations) && p.observations >= 1 && p.observations <= MAX_OBSERVATIONS))
     e.push(`Between 1 and ${MAX_OBSERVATIONS} observations.`);
@@ -565,73 +581,72 @@ function deliverableList(p: Pick<ProductParams, 'chain'>): string {
 }
 
 /**
- * Chainlink price feeds (8 decimals) the CRE workflow reads: each asset's fixing comes from its native chain's oracle.
- * Crypto: Ethereum mainnet (ETH/USD and BTC/USD update at least hourly, SOL/USD at least daily).
- * US equities: Robinhood Chain mainnet (CRE chain 'robinhood-mainnet'), Robinhood's own stock feeds. They follow
- * market hours with a 24 h heartbeat, so they do not move from Friday's close to Monday's open: the staleness
- * allowance is 4 days, which spans a weekend. Checked on 2026-10-24 with eth_call on https://rpc.mainnet.chain.robinhood.com:
- * description ("RHTSLA / USD", "Robinhood AMZN / USD"…), 8 decimals, latestRoundData updated within the last day.
- * There is no NFLX feed there.
+ * Every Chainlink price a note can be fixed on, by symbol: the generated catalogue (feeds-catalogue.ts,
+ * scripts/feeds-catalogue.ts; rules in docs/UNDERLYINGS.md) as Underlyings. Stocks, crypto, forex and commodities,
+ * each from its native oracle: US equities from Robinhood Chain mainnet (CRE chain 'robinhood-mainnet', read over CRE's
+ * HTTP capability), crypto, forex and commodities from Ethereum mainnet, the rest from Arbitrum One (CRE EVM reads).
+ * Equity, forex and commodity feeds follow market hours, so their staleness allowance spans a weekend.
+ *
+ * An Underlying carries only what the engine and the keeper read (feed, chain, bounds, staleness): a definition
+ * compiled from one stays the same whatever else the catalogue learns. FEEDS.TSLA, FEEDS.ETH… keep the exact values
+ * notes used before the catalogue. Being an underlying is not being collateral: COLLATERAL_SYMBOLS is a separate
+ * whitelist of the tokens a note can actually lock.
  */
-type FeedSymbol =
-  | 'ETH'
-  | 'BTC'
-  | 'SOL'
-  | 'TSLA'
-  | 'AMZN'
-  | 'AMD'
-  | 'PLTR'
-  | 'NVDA'
-  | 'AAPL'
-  | 'SPY'
-  | 'META'
-  | 'MSFT'
-  | 'GOOGL'
-  | 'COIN';
-const equity = (symbol: FeedSymbol, feed: string): Underlying => ({
-  symbol,
-  feed,
-  feedChain: 'robinhood-mainnet',
-  minPrice: 1,
-  maxPrice: 100_000,
-  staleness: 345_600,
-});
-export const FEEDS: Record<FeedSymbol, Underlying> = {
-  ETH: {
-    symbol: 'ETH',
-    feed: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419',
-    feedChain: 'ethereum-mainnet',
-    minPrice: 1,
-    maxPrice: 1_000_000,
-    staleness: 3600,
-  },
-  BTC: {
-    symbol: 'BTC',
-    feed: '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c',
-    feedChain: 'ethereum-mainnet',
-    minPrice: 1,
-    maxPrice: 10_000_000,
-    staleness: 3600,
-  },
-  SOL: {
-    symbol: 'SOL',
-    feed: '0x4ffC43a60e009B551865A93d232E33Fce9f01507',
-    feedChain: 'ethereum-mainnet',
-    minPrice: 0.01,
-    maxPrice: 100_000,
-    staleness: 86400,
-  },
-  TSLA: equity('TSLA', '0x4A1166a659A55625345e9515b32adECea5547C38'),
-  AMZN: equity('AMZN', '0xD5a1508ceD74c084eBf3cBe853e2C968fB2a651C'),
-  AMD: equity('AMD', '0x943A29E7ae51A4798823ca9eEd2ed533B2A22C72'),
-  PLTR: equity('PLTR', '0x820ABedFF239034956B7A9d2F0a331f9F075eB4c'),
-  NVDA: equity('NVDA', '0x379EC4f7C378F34a1B47E4F3cbeBCbAC3E8E9F15'),
-  AAPL: equity('AAPL', '0x6B22A786bAa607d76728168703a39Ea9C99f2cD0'),
-  SPY: equity('SPY', '0x319724394D3A0e3669269846abE664Cd621f9f6A'),
-  META: equity('META', '0x7C38C00C30BEe9378381E7B6135d7283356D71b1'),
-  MSFT: equity('MSFT', '0x45C3C877C15E6BA2EBB19eA114Ea508d14C1Af2E'),
-  GOOGL: equity('GOOGL', '0xF6f373a037c30F0e5010d854385cA89185AE638b'),
-  COIN: equity('COIN', '0xA3a468A452940B7D6b69991207B508c609a98Ef2'),
+export const FEEDS = Object.fromEntries(
+  FEED_CATALOGUE.map((f) => [
+    f.symbol,
+    {
+      symbol: f.symbol,
+      feed: f.feed,
+      feedChain: f.feedChain,
+      minPrice: f.minPrice,
+      maxPrice: f.maxPrice,
+      staleness: f.staleness,
+    } satisfies Underlying,
+  ]),
+) as Record<CatalogueSymbol, Underlying>;
+
+/** The catalogue entry for a symbol (class, name, source), if it has one. */
+const CATALOGUE_BY_SYMBOL = new Map(FEED_CATALOGUE.map((f) => [f.symbol as string, f]));
+export const catalogueFeed = (symbol: string): CatalogueFeed | undefined => CATALOGUE_BY_SYMBOL.get(symbol);
+/** Whether `symbol` has a Chainlink feed in the catalogue. */
+export const isCatalogueSymbol = (symbol: string): symbol is CatalogueSymbol => CATALOGUE_BY_SYMBOL.has(symbol);
+
+/** The underlyings shown first in pickers: the ones notes are most often written on. */
+export const POPULAR_UNDERLYINGS: readonly CatalogueSymbol[] = [
+  'ETH',
+  'BTC',
+  'SOL',
+  'TSLA',
+  'NVDA',
+  'AAPL',
+  'AMZN',
+  'SPY',
+  'EUR',
+  'XAU',
+];
+
+/**
+ * The catalogue by class, for prompts and messages: "Stocks: AAPL, AMD, …; Crypto: …". `max` caps the symbols listed
+ * per class (the rest summarised as "and N more").
+ */
+export function catalogueSummary(max = Infinity): string {
+  return ASSET_CLASSES.map((c) => {
+    const all = FEED_CATALOGUE.filter((f) => f.assetClass === c).map((f) => f.symbol);
+    const syms = [
+      ...POPULAR_UNDERLYINGS.filter((s) => all.includes(s)),
+      ...all.filter((s) => !POPULAR_UNDERLYINGS.includes(s)),
+    ];
+    const shown = syms.slice(0, max);
+    return `${c}: ${shown.join(', ')}${syms.length > shown.length ? ` and ${syms.length - shown.length} more` : ''}`;
+  }).join('; ');
+}
+
+/** Where a feed chain's prices come from, for labels ("Chainlink · Robinhood Chain"). */
+export const FEED_CHAIN_LABELS: Record<string, string> = {
+  'ethereum-mainnet': 'Ethereum',
+  'ethereum-mainnet-arbitrum-1': 'Arbitrum One',
+  'robinhood-mainnet': 'Robinhood Chain',
 };
 
 const base = { issuePricePct: 100, underlyings: [FEEDS.ETH], observations: 4 };

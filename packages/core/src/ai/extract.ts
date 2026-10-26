@@ -8,6 +8,7 @@
  */
 import type { AiRunner, ChatMessage } from './runner';
 import {
+  catalogueSummary,
   COLLATERAL_SYMBOLS,
   DEFAULT_HAIRCUT,
   FEEDS,
@@ -70,7 +71,8 @@ const SCHEMA = {
     underlyingSymbols: {
       type: ['array', 'null'],
       items: { type: 'string' },
-      description: 'Tickers, e.g. ["ETH"]; several for a worst-of basket, e.g. ["ETH", "BTC"]',
+      description:
+        'Tickers from the catalogue, e.g. ["ETH"], ["TSLA"], ["EUR"] for EUR/USD, ["XAU"] for gold; several for a worst-of basket, e.g. ["ETH", "BTC"]',
     },
     observationEveryMonths: { type: ['integer', 'null'] },
     observationCount: { type: ['integer', 'null'], description: 'Number of observations; the last one is maturity' },
@@ -142,11 +144,14 @@ Rules:
 - Schedule: a 12-month note observed quarterly has 4 observations every 3 months.
 - Barrier and autocall levels are % of the initial (strike) level.
 - Several underlyings ("worst of ETH and BTC", "on a basket of BTC, ETH, SOL") make a worst-of note: list every ticker.
+- Underlyings: any symbol of the Chainlink price catalogue is allowed (each priced in USD). Forex as the currency ("EUR/USD" -> "EUR"), gold "XAU", silver "XAG". ${catalogueSummary()}.
+- Underlyings are not collateral: collateral stays ${COLLATERAL_SYMBOLS.join(', ')} (USD = the stablecoin), whatever the underlying.
 - Collateral: the assets the issuer pledges ("secured by USDG" or "USDC" -> ["USD"]; "ETH collateral" -> ["ETH"]) and the share of the notional it must cover; haircuts, settlement lag and grace period only if stated.
 - Name: short, e.g. "12M Phoenix on ETH".`;
 }
 
 const ANNUAL = /\bp\.?\s?a\b|per\s+annum|(?<!semi-?\s?)annual|a\s+year|per\s+year|yearly/i;
+/** Every symbol a note can be written on: the Chainlink price catalogue. */
 export const SUPPORTED_UNDERLYINGS = Object.keys(FEEDS);
 
 function toParams(d: Draft, prompt: string, notes: string[]): { params: ProductParams; schedule: Schedule } {
@@ -246,7 +251,7 @@ export async function extractProduct(
     if (bad)
       return {
         errors: [
-          `There is no Chainlink price feed for ${bad} set up here yet; notes can be issued on ${SUPPORTED_UNDERLYINGS.join(', ')}.`,
+          `There is no Chainlink price feed for ${bad} in the catalogue; notes can be issued on any of its ${SUPPORTED_UNDERLYINGS.length} prices. ${catalogueSummary(8)}.`,
         ],
       };
     const notes: string[] = [];
@@ -263,8 +268,18 @@ export async function extractProduct(
   return { errors };
 }
 
-/** An underlying named in the request that has no Chainlink feed configured here, if any. */
-const cleanSymbol = (s: string | null | undefined) => (s ?? '').toUpperCase().replace(/[^A-Z]/g, '');
+/** Names people use for catalogue symbols. */
+const ALIASES: Record<string, string> = { GOLD: 'XAU', SILVER: 'XAG', BITCOIN: 'BTC', ETHER: 'ETH', ETHEREUM: 'ETH' };
+/** A ticker as the catalogue spells it: "eur/usd" -> EUR, "XAU-USD" -> XAU, "gold" -> XAU. */
+const cleanSymbol = (raw: string | null | undefined) => {
+  const s = (raw ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (s in FEEDS) return s;
+  if (ALIASES[s]) return ALIASES[s];
+  const base = s.replace(/USD$/, '');
+  return base && base in FEEDS ? base : s;
+};
+
+/** An underlying named in the request that has no Chainlink feed in the catalogue, if any. */
 
 export function unsupportedUnderlying(symbol: string | null | undefined): string | null {
   const s = cleanSymbol(symbol);
