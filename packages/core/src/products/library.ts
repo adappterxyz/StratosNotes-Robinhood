@@ -141,7 +141,7 @@ export const SEED_TEMPLATES: Array<{ name: string; description: string; source: 
   {
     name: '12M Phoenix on EUR/USD',
     description:
-      '1.25% quarterly while the euro holds 97% of its strike against the dollar, with memory; autocalls at 101% from Q2; below the 92% knock-in at maturity, holders are repaid final ÷ strike in USDG. Prices: Chainlink EUR/USD on Ethereum. Forex works in every payoff: barriers are % of the strike.',
+      '1.25% quarterly while the euro holds 97% of its strike against the dollar, with memory; autocalls at 101% from Q2; below the 92% knock-in, repaid final ÷ strike in USDG. Prices: Chainlink EUR/USD on Ethereum.',
     source: { product: eurPhoenix },
   },
   {
