@@ -1,8 +1,16 @@
 # @sn/app
 
-The StratosNotes web app: Marketplace, note pages, Portfolio, and the Issue workspace (BPMN canvas, Validate,
-Payoff, Template, Issue, AI assistant). It is a port of the hackathon UI from Solana to Robinhood Chain (EVM), with the
-same Flow-like dark design.
+The StratosNotes web app: Marketplace, note pages, Portfolio, and Issue. It is a port of the hackathon UI from Solana
+to Robinhood Chain (EVM), with the same Flow-like design.
+
+- **Note page diagram** ("How this note runs", `NoteFlow.tsx` / `FlowMap.tsx`): the note's BPMN workflow, read-only,
+  at a readable scale in its own scrolling box, with zoom, full screen, the current step lit and the steps already run
+  marked. Picking a step (click, tap or keyboard) shows what it does, who acts, its date and the values it recorded for
+  this note (`lib/stepFacts.ts`: the definition, the note's view, and its history's StepRun / FieldSet events).
+- **Issue** (`/issue`): three ways in, start from a note (recently issued on the current engine, or ready-made), the
+  product wizard, or describe it to the AI. Each ends on a review with the workflow diagram; custom workflows (saved or
+  from the AI) review at `/issue?custom=<definition|ai>`. The advanced editor (`/issue/advanced`: BPMN canvas,
+  Validate, Payoff, Template, Issue, AI assistant) opens only with a workflow loaded; empty, it points back to Issue.
 
 - **Reads** come from the API (`services/api`): notes, portfolios, templates, and live updates over SSE. The app
   never scans chains itself.

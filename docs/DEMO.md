@@ -36,12 +36,13 @@ TSLA can back the note and be delivered at maturity on the same chain, and Chain
 belong here."
 
 **0:50 Marketplace and subscribe (50 s).** Tab 2, then tab 3: underlyings and feeds, the schedule, the collateral
-panel (ratio, coverage, the payment schedule), the workflow with its current step lit. Subscribe 100 units and
+panel (ratio, coverage, the payment schedule), "How this note runs" with its current step lit (click Fix Strike or a
+coupon barrier to show the values it recorded). Subscribe 100 units and
 approve in the wallet: one transaction, USDG for units. "That USDG goes to the issuer: a note raises money. The
 issuer's collateral sits in escrow, and it must fund every payment before its date."
 
-**1:40 Issue (60 s).** Tab 4: open **12M Worst-of Phoenix on TSLA, NVDA** under Published templates: the BPMN
-canvas with the issuer's "Fund Payment" windows and each period's "Funded?" gateway, its default branch to "Default:
+**1:40 Issue (60 s).** Tab 4: open **12M Worst-of Phoenix on TSLA, NVDA** under Start from a note, then Open in advanced
+editor on its review: the BPMN canvas with the issuer's "Fund Payment" windows and each period's "Funded?" gateway, its default branch to "Default:
 Collateral to Holders"; Validate. Payoff: the issuer's funding calls along a what-if path, and what holders get on a
 default. Issue stage: Robinhood Chain testnet (the only network), TSLA collateral pledged straight into the note, ratio and
 pledge, lag and grace, strike in 5 minutes, observations every 3 minutes. Publish only if time allows (approvals).

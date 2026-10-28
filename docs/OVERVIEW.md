@@ -44,10 +44,12 @@ holders of tokenized stocks can't raise money against them without selling.
 
 ## What it does
 
-1. **Design** (Issue workspace): a template (ten seeded, four of them on stocks), a term sheet (fixed coupon note,
-   reverse convertible, phoenix with memory, snowball, principal-protected; one underlying or a worst-of basket; cash
-   settlement, or physical delivery of the stock token or WETH), a sentence to the AI, or a blank BPMN canvas. Every
-   edit passes the validator and compiler.
+1. **Design** (Issue): three ways in. Start from a note (one issued recently on the current engine, or a ready-made
+   one: ten seeded, four of them on stocks), the product wizard (fixed coupon note, reverse convertible, phoenix with
+   memory, snowball, principal-protected; one underlying or a worst-of basket; cash settlement, or physical delivery of
+   the stock token or WETH), or a sentence to the AI. Each ends on a review that draws the note's BPMN workflow, the
+   source of truth the compiler turns into the on-chain definition. The advanced BPMN editor opens from a review with
+   that workflow loaded, never blank. Every edit passes the validator and compiler.
 2. **Issue**: this issuance's size, dates, settlement lag and grace period (0-7 days), the collateral ratio and
    haircuts, and the collateral itself: USDG, WETH, TSLA, AMZN, AMD or PLTR, pledged straight into the note's escrow
    on Robinhood Chain. The book opens on the marketplace.
