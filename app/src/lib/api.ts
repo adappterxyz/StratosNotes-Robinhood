@@ -134,7 +134,8 @@ export const api = {
     return call<{ notes: NoteItem[]; next: string | null }>(`/api/notes?${qs}`);
   },
   note: (id: string) => call<NoteDetail>(`/api/notes/${encodeURIComponent(id)}`),
-  history: (id: string) => call<{ events: HistoryEvent[] }>(`/api/notes/${encodeURIComponent(id)}/history`),
+  history: (id: string, limit?: number) =>
+    call<{ events: HistoryEvent[] }>(`/api/notes/${encodeURIComponent(id)}/history${limit ? `?limit=${limit}` : ''}`),
   definition: (chain: string, id: string) =>
     call<{ id: string; bytes: `0x${string}` }>(`/api/definitions/${chain}/${id}`),
   portfolio: (address: string) =>

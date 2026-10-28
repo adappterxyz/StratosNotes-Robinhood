@@ -7,7 +7,7 @@ import { CASH_ASSET, NOTE_ASSET, noteView, PHASE_LABEL, positionOf } from '@sn/s
 import TasksPanel from '../components/TasksPanel';
 import EconomicsPanel from '../components/EconomicsPanel';
 import HoldersPanel from '../components/HoldersPanel';
-import BpmnView from '../components/BpmnView';
+import NoteFlow from '../components/NoteFlow';
 import { useVerifiedEmail } from '../components/VerifiedEmail';
 import PayoffChart from '../components/PayoffChart';
 import { Addr, Steps, When, type StepState } from '../components/ui';
@@ -382,15 +382,7 @@ export default function OfferingPage() {
             </section>
           )}
 
-          {xml && (
-            <details className="adv">
-              <summary>Advanced: the note's workflow diagram</summary>
-              <div className="adv-body">
-                <p className="xs muted">Every step of this note as it runs on-chain. Highlighted: where it is now.</p>
-                <BpmnView xml={xml} active={o.activeSteps} />
-              </div>
-            </details>
-          )}
+          {xml && def && <NoteFlow xml={xml} def={def} state={s} view={o} sym={sym} explorer={explorer} />}
         </div>
 
         <aside className="stack">

@@ -1829,17 +1829,23 @@ tr.link:focus-visible {
   margin: 0;
   font-size: 20px;
 }
-.iw-adv {
-  margin: 30px 0 0;
-  padding-top: 16px;
-  border-top: 1px solid hsl(var(--border));
+.iw-sub {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
 }
-.iw-adv a {
+.iw-adv {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   font-size: 14px;
   font-weight: 500;
+}
+.iw-flow {
+  margin-top: 18px;
 }
 .iw-from {
   margin-bottom: 14px;
@@ -2886,5 +2892,303 @@ svg.i.issue-ic {
     width: 100%;
     justify-content: flex-start;
     padding-left: 32px;
+  }
+}
+
+/* ---- How this note runs: the note's workflow, read-only (components/NoteFlow.tsx, FlowMap.tsx) ---- */
+.noteflow {
+  gap: 10px;
+}
+.nf-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.nf-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.nf-toggle h3 {
+  margin: 0;
+}
+.nf-sh {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: hsl(var(--accent-text));
+}
+.nf-sh .i.flip {
+  transform: rotate(180deg);
+}
+.nf-body {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.nf-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.nf-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.nf-legend .sw {
+  width: 14px;
+  height: 10px;
+  border-radius: 3px;
+  border: 2px solid hsl(var(--border-strong));
+  background: hsl(var(--card));
+}
+.nf-legend .sw.now {
+  border-color: hsl(var(--accent));
+  background: hsl(var(--accent) / 0.25);
+}
+.nf-legend .sw.ran {
+  border-color: hsl(var(--accent-text) / 0.7);
+  background: hsl(var(--accent) / 0.08);
+}
+.nf-legend .sw.picked {
+  border-color: hsl(var(--warning));
+}
+.nf-now {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.flowmap {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.fm-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.fm-tools .btn.icon {
+  min-width: 32px;
+  padding: 5px;
+  justify-content: center;
+}
+.fm-scale {
+  min-width: 44px;
+  text-align: center;
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+}
+/* The diagram scrolls inside its own box; the page never scrolls sideways. */
+.fm-scroll {
+  overflow: auto;
+  overscroll-behavior: contain;
+  height: 460px;
+  max-height: 70vh;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background: hsl(var(--background));
+}
+@media (max-width: 600px) {
+  .fm-scroll {
+    height: 380px;
+  }
+}
+.bpmn.fm-canvas {
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+}
+.fm-canvas .djs-element[tabindex] {
+  cursor: pointer;
+  outline: none;
+}
+.fm-canvas .djs-element[tabindex]:hover .djs-visual > :nth-child(1) {
+  stroke: hsl(var(--accent)) !important;
+}
+.fm-canvas .djs-element:focus-visible .djs-outline {
+  visibility: visible;
+  stroke: hsl(var(--accent)) !important;
+  stroke-width: 3px !important;
+  stroke-dasharray: 5 3;
+}
+.bpmn .ran-step:not(.djs-connection) .djs-visual > :nth-child(1) {
+  stroke: hsl(var(--accent-text) / 0.75) !important;
+  fill: hsl(var(--accent) / 0.08) !important;
+}
+.bpmn .active-step:not(.djs-connection) .djs-visual > :nth-child(1) {
+  stroke: hsl(var(--accent)) !important;
+  stroke-width: 4px !important;
+  fill: hsl(var(--accent) / 0.25) !important;
+}
+.bpmn .picked-step:not(.djs-connection):not(.t-pool) .djs-visual > :nth-child(1) {
+  stroke: hsl(var(--warning)) !important;
+  stroke-width: 3px !important;
+}
+.bpmn .t-pool.picked-step .djs-visual > rect {
+  stroke: hsl(var(--warning)) !important;
+  stroke-width: 2px !important;
+}
+.fm-canvas .djs-visual text,
+.fm-canvas .djs-label {
+  font-family: var(--font);
+}
+/* The step panel. */
+.nf-panel {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background: hsl(var(--surface-elevated));
+  min-width: 0;
+}
+.nf-panel.empty {
+  border-style: dashed;
+}
+.nf-panel-h {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.nf-panel-h h4 {
+  margin: 0;
+  font-size: 16px;
+  margin-right: auto;
+}
+.pill.nf-status {
+  white-space: normal;
+}
+.pill.nf-status.now {
+  color: hsl(var(--accent-text));
+  background: hsl(var(--accent) / 0.12);
+  border-color: hsl(var(--accent) / 0.4);
+}
+.pill.nf-status.done {
+  color: hsl(var(--success));
+  background: hsl(var(--accent) / 0.06);
+  border-color: hsl(var(--accent) / 0.25);
+}
+.pill.nf-status.later {
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--muted));
+  border-color: hsl(var(--border));
+}
+.nf-facts {
+  display: grid;
+  grid-template-columns: minmax(0, 11em) minmax(0, 1fr);
+  gap: 6px 14px;
+  margin: 0;
+  font-size: 14px;
+}
+.nf-facts .nf-fact {
+  display: contents;
+}
+.nf-facts dt {
+  color: hsl(var(--muted-foreground));
+}
+.nf-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.nf-facts dd.good {
+  color: hsl(var(--success));
+}
+.nf-facts dd.bad {
+  color: hsl(var(--destructive));
+}
+.nf-run {
+  display: block;
+}
+@media (max-width: 480px) {
+  .nf-facts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+  .nf-facts dd {
+    margin-bottom: 6px;
+  }
+}
+.nf-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 14px;
+}
+/* Full screen: a modal dialog filling the viewport. */
+.nf-dialog {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+.nf-dialog::backdrop {
+  background: hsl(var(--foreground) / 0.4);
+}
+.nf-full {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 10px;
+  padding: max(14px, env(safe-area-inset-top, 0px)) 16px max(14px, env(safe-area-inset-bottom, 0px));
+}
+.nf-full-h {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.nf-full-h h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.nf-full-name {
+  margin-right: auto;
+  min-width: 0;
+}
+.nf-full-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: 14px;
+  min-height: 0;
+}
+.nf-full-body .flowmap {
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+}
+.nf-full-body .fm-scroll {
+  height: auto;
+  max-height: none;
+  min-height: 0;
+}
+.nf-full-body .nf-panel {
+  overflow: auto;
+  align-content: start;
+}
+@media (max-width: 760px) {
+  .nf-full-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1.4fr) minmax(0, 1fr);
   }
 }
