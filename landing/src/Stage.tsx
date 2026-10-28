@@ -162,27 +162,26 @@ export default function Stage() {
             </span>
             <h1>A bespoke instrument for every market.</h1>
             <p className="sub">
-              Structured notes built to your terms, on stocks, crypto, forex or gold: any of 141 Chainlink prices. Terms
-              are fixed at subscription, the issuer's collateral is pledged onchain, and Chainlink CRE reads every price
-              and runs each payment step on schedule.
+              Issue notes on stocks, crypto, FX or gold in minutes. Pledge collateral, raise USDG, and let Chainlink run
+              every fixing and payment.
             </p>
-            <ul className="outcomes" aria-label="How the terms are run">
+            <ul className="outcomes" aria-label="For issuers">
               <li>
-                <b>Prices and schedule by Chainlink</b>
+                <b>141 Chainlink underlyings</b>
               </li>
               <li>
-                <b>Collateral visible onchain</b>
+                <b>No calculation or paying agent to hire</b>
               </li>
               <li>
-                <b>Earlier build: Best Use of Chainlink CRE, TOKEN2049</b>
+                <b>Best Use of Chainlink CRE, TOKEN2049 (earlier build)</b>
               </li>
             </ul>
             <div className="hero-cta">
-              <a href={APP_URL} className="btn btn-primary btn-lg">
-                Browse live notes
-              </a>
-              <a href={ISSUE_URL} className="btn btn-ghost btn-lg">
+              <a href={ISSUE_URL} className="btn btn-primary btn-lg">
                 Issue a note
+              </a>
+              <a href={APP_URL} className="btn btn-ghost btn-lg">
+                Browse live notes
               </a>
             </div>
             <div className="built-on">
