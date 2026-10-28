@@ -160,10 +160,11 @@ export default function Stage() {
               <i />
               Structured notes · Robinhood Chain
             </span>
-            <h1>See every term before you invest.</h1>
+            <h1>A bespoke instrument for every market.</h1>
             <p className="sub">
-              Fixed-coupon and autocallable notes on stocks and crypto. Terms are fixed at subscription, the issuer's
-              collateral is pledged onchain, and Chainlink CRE reads every price and runs each payment step on schedule.
+              Structured notes built to your terms, on stocks, crypto, forex or gold: any of 141 Chainlink prices. Terms
+              are fixed at subscription, the issuer's collateral is pledged onchain, and Chainlink CRE reads every price
+              and runs each payment step on schedule.
             </p>
             <ul className="outcomes" aria-label="How the terms are run">
               <li>
