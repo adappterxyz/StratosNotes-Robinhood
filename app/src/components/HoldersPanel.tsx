@@ -21,6 +21,12 @@ export default function HoldersPanel({
     (a, b) => Number(a === issuer) - Number(b === issuer),
   );
   if (!owners.length) return null;
+  // The engine's escrow account holds the pledged collateral and funded payments for the note: not an investor.
+  const escrow = new Set(
+    state.roles.filter((_, i) => ((def.roleFlags?.[i] ?? 0) & 1) === 1).map((a) => a.toLowerCase()),
+  );
+  const who = (o: string) =>
+    escrow.has(o.toLowerCase()) ? 'Escrow: held by the engine for this note' : o === issuer ? 'Issuer' : 'Investor';
   const label = (asset: number) => (asset === NOTE_ASSET ? 'units' : (def.assets[asset]?.name ?? `asset ${asset}`));
   return (
     <section className="card">
@@ -50,7 +56,7 @@ export default function HoldersPanel({
                     <span className="num">{short(o)}</span>
                   )}
                   <div className="xs muted">
-                    {o === issuer ? 'Issuer' : 'Investor'}
+                    {who(o)}
                     {me === o ? ' · you' : ''}
                   </div>
                 </td>
