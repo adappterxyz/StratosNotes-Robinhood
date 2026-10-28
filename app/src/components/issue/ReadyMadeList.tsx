@@ -1,14 +1,18 @@
 /**
- * "Start from a ready-made note": the built-in examples and the notes issuers saved, as the marketplace shows a
- * note (the annual rate, the assets, term, protection, collateral), with the marketplace's filters.
+ * "Start from a note": the notes issued recently on the current engine (RecentList), and the ready-made notes (the
+ * built-in examples and the ones issuers saved), as the marketplace shows a note (the annual rate, the assets, term,
+ * protection, collateral), with the marketplace's filters.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CalendarClock, LifeBuoy, ShieldCheck, Undo2, Workflow } from 'lucide-react';
 import { collateralTokenOf, economicsOf, isRemoteCollateral, NOTE_CHAIN_LABELS, noteChainOf } from '@sn/core';
+import { parseNoteId } from '@sn/sdk';
+import type { NoteItem } from '../../lib/api';
+import { useChains } from '../../lib/chains';
 import { listingOf } from '../../lib/listing';
-import { BUILT_IN, libraryReadyMade, type ReadyMade } from '../../lib/readymade';
-import { short } from '../../lib/format';
+import { BUILT_IN, libraryReadyMade, recentReadyMade, type ReadyMade } from '../../lib/readymade';
+import { fmtDate, short } from '../../lib/format';
 import { AssetStack } from '../AssetIcon';
 
 const FIRST = 6;
@@ -33,7 +37,7 @@ function collateralLine(r: ReadyMade) {
   return `Backed by ${e.collateralRatioPct}% collateral (${names.join(' + ')}, ${where})`;
 }
 
-function Card({ r, onPick }: { r: ReadyMade; onPick: (r: ReadyMade) => void }) {
+function Card({ r, onPick, recent = false }: { r: ReadyMade; onPick: (r: ReadyMade) => void; recent?: boolean }) {
   const l = listingOf(r.params);
   const inner = (
     <>
@@ -82,36 +86,84 @@ function Card({ r, onPick }: { r: ReadyMade; onPick: (r: ReadyMade) => void }) {
       </ul>
       {r.description && <p className="xs muted rm-desc">{r.description}</p>}
       <div className="rm-foot">
-        <span className={`rm-by ${r.author ? '' : 'house'}`}>
-          {r.author ? `by ${short(r.author)}` : 'notes.markets'}
+        <span className={`rm-by ${r.author || r.issuedAt ? '' : 'house'}`}>
+          {r.issuedAt ? `Issued ${fmtDate(r.issuedAt)}` : r.author ? `by ${short(r.author)}` : 'notes.markets'}
         </span>
         {r.custom ? (
           <span className="ls-go">
             <Workflow className="i" />
-            Customise the workflow
+            See the workflow
           </span>
         ) : (
           <span className="ls-go">
-            Use this note
+            {r.issuedAt ? 'Issue again' : 'Use this note'}
             <ArrowRight className="i" />
           </span>
         )}
       </div>
       {r.custom && (
         <p className="xs muted">
-          A custom workflow: it adds steps beyond the standard payoff, so you set it up and issue it in the studio.
+          A custom workflow: it adds steps beyond the standard payoff. You see its diagram, then issue it.
         </p>
       )}
     </>
   );
   return r.custom ? (
-    <Link to={`/issue/advanced?template=${r.id}`} className="rm-card" data-ready={r.id}>
+    <Link to={`/issue?custom=${r.id}`} className="rm-card" data-ready={r.id} data-recent={recent || undefined}>
       {inner}
     </Link>
   ) : (
-    <button type="button" className="rm-card" data-ready={r.id} onClick={() => onPick(r)}>
+    <button
+      type="button"
+      className="rm-card"
+      data-ready={r.id}
+      data-recent={recent || undefined}
+      onClick={() => onPick(r)}
+    >
       {inner}
     </button>
+  );
+}
+
+/** The notes issued most recently on the current engine: issue one again with its terms and a fresh schedule. */
+export function RecentList({ onPick }: { onPick: (r: ReadyMade) => void }) {
+  const { config } = useChains();
+  const [recent, setRecent] = useState<Array<{ note: NoteItem; ready: ReadyMade }> | null>(null);
+  const [error, setError] = useState('');
+  const engines = config.chains.map((c) => `${c.key}:${c.engine.toLowerCase()}`).join(',');
+  useEffect(() => {
+    if (!engines) return;
+    let live = true;
+    const current = new Set(engines.split(','));
+    recentReadyMade((n) => {
+      const id = parseNoteId(n.id);
+      return !!id && current.has(`${id.chain}:${id.engine.toLowerCase()}`);
+    })
+      .then((x) => live && setRecent(x))
+      .catch((e) => {
+        if (live) {
+          setRecent([]);
+          setError(e instanceof Error ? e.message : String(e));
+        }
+      });
+    return () => {
+      live = false;
+    };
+  }, [engines]);
+  if (recent === null) return <p className="xs muted">Loading the notes issued recently…</p>;
+  if (error)
+    return (
+      <div className="notice warn" role="status">
+        {error}
+      </div>
+    );
+  if (!recent.length) return <p className="xs muted">No notes issued on this engine yet.</p>;
+  return (
+    <div className="rm-grid" data-recent-list>
+      {recent.map(({ note, ready }) => (
+        <Card key={note.id} r={ready} onPick={onPick} recent />
+      ))}
+    </div>
   );
 }
 

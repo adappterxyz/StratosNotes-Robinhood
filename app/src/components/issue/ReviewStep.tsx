@@ -2,6 +2,7 @@ import { PRODUCT_LABELS, type CollateralSymbol, type economicsOf, type ProductPa
 import { fmtMoney, lockedAsset } from '../../lib/format';
 import { AssetStack } from '../AssetIcon';
 import { IssuePanel, TemplatePanel, type Built, type DocInfo, type IssuePreset } from '../Stages';
+import { FlowPreview } from '../StepPanel';
 import type { Every, Timing } from './schedule';
 
 /** Step 5, Review & issue: what investors get and what the issuer commits to, then the issue panel. */
@@ -20,6 +21,7 @@ export function ReviewStep({
   built,
   doc,
   preset,
+  xml,
 }: {
   p: ProductParams;
   eco: ReturnType<typeof economicsOf>;
@@ -35,6 +37,8 @@ export function ReviewStep({
   built: Built | null;
   doc: DocInfo;
   preset: IssuePreset;
+  /** The workflow the note is compiled from (BPMN), drawn for review. */
+  xml: string;
 }) {
   const syms = p.underlyings.map((u) => u.symbol);
   return (
@@ -87,6 +91,17 @@ export function ReviewStep({
           </ul>
         </dd>
       </dl>
+      {xml && (
+        <details className="adv iw-flow" open data-review-flow>
+          <summary>How this note runs</summary>
+          <div className="adv-body">
+            <p className="xs muted m-0">
+              The note's workflow, step by step, as it will run on-chain. This diagram is what gets compiled and issued.
+            </p>
+            <FlowPreview xml={xml} params={p} label="How this note runs" />
+          </div>
+        </details>
+      )}
       {built ? (
         <IssuePanel key={JSON.stringify(preset) + p.name} doc={doc} built={built} preset={preset} compact />
       ) : (

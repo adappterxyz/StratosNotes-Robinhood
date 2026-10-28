@@ -1,10 +1,9 @@
 /**
- * The workflow studio (/issue/advanced): Flow's workspace, for structured notes.
- * Canvas only: notes are picked on /issue and opened here by deep link (or a
- * blank workflow, an imported file, the AI); with a workflow open it is the AI
- * assistant, the BPMN canvas and the stages in
- * order: Overview | Properties -> Validate -> Payoff -> Ready-made note -> Issue.
- * Ready-made notes and edited workflows are issued from the same place. Picking a note happens on /issue.
+ * The advanced editor (/issue/advanced): Flow's workspace, for structured notes. It always opens FROM an existing
+ * workflow, by deep link from /issue: a note's terms (?params=, ?product=), a saved workflow (?template=), or the AI's
+ * draft (?draft=ai). With nothing loaded it points back to the three ways in on /issue; there is no blank canvas.
+ * With a workflow open it is the AI assistant, the BPMN canvas and the stages in order:
+ * Overview | Properties -> Validate -> Payoff -> Ready-made note -> Issue.
  */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -18,24 +17,22 @@ import {
   AlertCircle,
   ChevronRight,
   Download,
-  FilePlus2,
   FileUp,
   LayoutList,
   LineChart,
   Rocket,
   Sparkles,
+  MessageSquareText,
+  Shapes,
   TrendingUp,
   Workflow,
   X,
 } from 'lucide-react';
 import {
-  buildWorkflow,
-  chain,
   check,
   compileTemplate,
   EXAMPLE_PRODUCTS,
   EXAMPLE_WORST_OF,
-  field,
   instantiateProduct,
   irToDraft,
   normalizeParams,
@@ -70,42 +67,9 @@ import { flowModdle } from '../lib/bpmnProps';
 import { fitReadable } from '../lib/fit';
 import { tagTypes } from '../lib/bpmnTheme';
 import { short } from '../lib/format';
-import { AI_DRAFT_KEY } from '../lib/readymade';
+import { AI_DRAFT_KEY, NOTE_ASSETS } from '../lib/readymade';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const NOTE_ASSETS: AssetDefinition[] = [
-  { id: 'note', name: 'Note', kind: 'issued' },
-  { id: 'cash', name: 'USDG', kind: 'cash', decimals: 6, token: 'USDG' },
-];
-
-/** A blank note: an Issuer pool with a pre-trade step, to build on. */
-function blankWorkflow() {
-  return buildWorkflow({
-    key: 'BL',
-    name: 'Untitled note',
-    pools: [
-      {
-        id: 'Part_Issuer',
-        name: 'Issuer',
-        proc: 'Proc_Issuer',
-        nodes: [
-          { id: 'Start_Issuer', type: 'startEvent', name: 'Offer Drafted', col: 0 },
-          {
-            id: 'Task_ApproveTerms',
-            type: 'userTask',
-            name: 'Approve Terms',
-            col: 1,
-            props: { templateFields: [field('isin', 'Text'), field('notional', 'Decimal')] },
-          },
-          { id: 'End_Issuer', type: 'endEvent', name: 'Done', col: 2 },
-        ],
-        flows: chain('I_F', 'Start_Issuer', 'Task_ApproveTerms', 'End_Issuer'),
-      },
-    ],
-    messages: [],
-    assets: NOTE_ASSETS,
-  });
-}
 
 interface Doc extends DocInfo {
   assets: AssetDefinition[];
@@ -226,11 +190,6 @@ export default function Workspace() {
       setNotice(err instanceof Error ? err.message : String(err));
     }
   };
-  const openBlank = async () => {
-    const b = blankWorkflow();
-    await load(b.bpmnXml, { name: 'Untitled note', origin: 'custom', basis: null, assets: b.assets });
-    setStage('design');
-  };
   const close = () => {
     setDoc(null);
     setBuilt(null);
@@ -247,7 +206,6 @@ export default function Workspace() {
     const t = setTimeout(() => {
       if (linked.current || modeler.current !== m) return;
       linked.current = true;
-      if (search.get('ai')) setAiOpen(true);
       const tpl = search.get('template');
       const p = search.get('product') as ProductType | 'worst-of' | null;
       const terms = search.get('params');
@@ -259,6 +217,8 @@ export default function Workspace() {
           /* storage blocked */
         }
       }
+      // ?ai=1 opens the assistant on the workflow loaded, never on an empty canvas.
+      if (search.get('ai') && (aiXml || terms || tpl || p)) setAiOpen(true);
       if (aiXml)
         load(aiXml, { name: 'AI workflow', origin: 'custom', basis: null, assets: NOTE_ASSETS }).then(
           () => setStage('design'),
@@ -436,7 +396,7 @@ export default function Workspace() {
           <nav className="crumbs ws-crumbs" aria-label="Breadcrumb">
             <Link to="/issue">Issue</Link>
             <span aria-hidden="true">/</span>
-            <span aria-current="page">Advanced studio</span>
+            <span aria-current="page">Advanced editor</span>
           </nav>
           <input
             ref={fileInput}
@@ -455,10 +415,16 @@ export default function Workspace() {
               Close
             </button>
           )}
-          <button className="btn" onClick={() => fileInput.current?.click()}>
-            <FileUp className="i" />
-            Import
-          </button>
+          {doc && (
+            <button
+              className="btn"
+              onClick={() => fileInput.current?.click()}
+              title="Replace this workflow with a .bpmn file"
+            >
+              <FileUp className="i" />
+              Import
+            </button>
+          )}
           {doc && (
             <button className="btn" onClick={exportFile}>
               <Download className="i" />
@@ -473,10 +439,12 @@ export default function Workspace() {
               </span>
             </span>
           )}
-          <button className={`btn ${aiOpen ? 'on' : ''}`} onClick={() => setAiOpen((o) => !o)}>
-            <Sparkles className="i" />
-            AI
-          </button>
+          {doc && (
+            <button className={`btn ${aiOpen ? 'on' : ''}`} onClick={() => setAiOpen((o) => !o)}>
+              <Sparkles className="i" />
+              AI
+            </button>
+          )}
           {doc && (
             <nav className="seg ml-auto" aria-label="Stages">
               {stages.map((s, i) => (
@@ -511,30 +479,35 @@ export default function Workspace() {
               <div className="ws-start">
                 <div className="ws-start-inner">
                   <div>
-                    <h1>Workflow studio</h1>
-                    <p className="small muted mt-6 maxw-64ch">
-                      Edit a note's workflow on the BPMN canvas: add steps, change who does what, connect services.
-                      Check the payoff, then issue it, or save it as a ready-made note for others. Import a .bpmn file,
-                      or ask the AI for a change.
+                    <h1>Advanced editor</h1>
+                    <p className="small muted mt-6 maxw-64ch" data-advanced-empty>
+                      Nothing is open. The advanced editor changes a note's workflow on the BPMN canvas, so it opens
+                      from a workflow you already have: a recent note, a ready-made note, a product from the wizard, or
+                      the AI's draft. Pick one on Issue, then choose Open in advanced editor on its review.
                     </p>
                   </div>
                   <div className="start-cards">
-                    <Link to="/issue" className="start-card primary">
+                    <Link to="/issue#from" className="start-card primary">
                       <span className="t">
                         <TrendingUp className="i" />
-                        Start from a note type or ready-made note
+                        Start from a note
                       </span>
-                      <span className="d">
-                        The guided issue flow: pick one, then open it here to change the workflow.
-                      </span>
+                      <span className="d">One issued recently, or a ready-made note: its terms filled in.</span>
                     </Link>
-                    <button className="start-card" onClick={openBlank}>
+                    <Link to="/issue#wizard" className="start-card">
                       <span className="t">
-                        <FilePlus2 className="i" />
-                        Blank workflow
+                        <Shapes className="i" />
+                        Product wizard
                       </span>
-                      <span className="d">An Issuer pool with a pre-trade step: draw the rest on the canvas.</span>
-                    </button>
+                      <span className="d">Pick a note type and set every term, one step at a time.</span>
+                    </Link>
+                    <Link to="/issue#describe" className="start-card">
+                      <span className="t">
+                        <MessageSquareText className="i" />
+                        Describe it
+                      </span>
+                      <span className="d">The AI writes the terms and the workflow from your words.</span>
+                    </Link>
                   </div>
                   {notice && (
                     <div className="notice err" role="alert">

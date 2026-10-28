@@ -1,9 +1,11 @@
 /**
- * Issue, guided. Three ways in, all leading to the same steps (Product → Terms → Schedule → Collateral → Review &
- * issue): start from a ready-made note (its terms filled in, opened at the schedule), build your own from a note
- * type, or describe it to the AI. Each step asks only what it needs, with defaults; the rest sits under "More
- * options". The review spells out what the issuer commits to, then the same issue panel the studio uses publishes
- * the note; it can also be saved as a ready-made note. The BPMN canvas is the studio (/issue/advanced).
+ * Issue, guided. Three ways in, all leading to a review that shows the note's workflow diagram (the BPMN the note is
+ * compiled from) before anything is issued: start from a note (one issued recently on this engine, or a ready-made
+ * one: its terms filled in, opened at the schedule), the product wizard (a note type, Product → Terms → Schedule →
+ * Collateral → Review & issue), or describe it to the AI. Each step asks only what it needs, with defaults; the rest
+ * sits under "More options". A custom workflow (a saved one, or the AI's) opens on its own review (?custom=<definition>
+ * or ?custom=ai): the diagram, the checks and the issue panel. The advanced editor (/issue/advanced) opens from a
+ * review, with that workflow loaded.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
@@ -46,6 +48,8 @@ import {
   type ReadyMade,
 } from '../lib/readymade';
 import { issueChains, NOTE_CHAIN, useChains } from '../lib/chains';
+import { fmtDate } from '../lib/format';
+import { CustomReview } from '../components/issue/CustomReview';
 
 const start = exampleOf;
 
@@ -137,12 +141,13 @@ export default function IssueWizard() {
         return;
       }
       if (r.custom) {
-        nav(`/issue/advanced?template=${r.id}`, { replace: true });
+        nav(`/issue?custom=${r.id}`, { replace: true });
         return;
       }
       setP(r.params);
       setFrom(r);
       setAiNotes([]);
+      if (r.size) setSize(r.size);
       setShown(key);
     };
     if (hit instanceof Promise) hit.then(use);
@@ -174,9 +179,21 @@ export default function IssueWizard() {
       return null;
     }
   }, [step, p]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The workflow the note is compiled from, drawn on the review.
+  const reviewXml = useMemo(() => {
+    if (step !== 4 || validateProductParams(p).length) return '';
+    try {
+      return instantiateProduct(p).bpmnXml;
+    } catch {
+      return '';
+    }
+  }, [step, p]);
 
   // A template link belongs to the studio.
   if (search.get('template')) return <Navigate to={`/issue/advanced?${search.toString()}`} replace />;
+  // A custom workflow (saved, or the AI's): its own review, with the diagram.
+  const custom = search.get('custom');
+  if (custom) return <CustomReview key={custom} source={custom} />;
 
   const choose = (k: Kind) => {
     setP(start(k));
@@ -186,9 +203,14 @@ export default function IssueWizard() {
     setSearch({ product: k, step: '0' });
   };
   const pick = (r: ReadyMade) => {
+    if (r.custom) {
+      nav(`/issue?custom=${r.id}`);
+      return;
+    }
     setP(r.params);
     setFrom(r);
     setAiNotes([]);
+    if (r.size) setSize(r.size);
     setShown(`r:${r.id}`);
     setSearch({ ready: r.id, product: kindOf(r.params), step: '2' });
   };
@@ -204,7 +226,7 @@ export default function IssueWizard() {
     } catch {
       /* storage blocked */
     }
-    nav('/issue/advanced?draft=ai&ai=1');
+    nav('/issue?custom=ai');
   };
   // The studio opens these exact terms (?params=), or the saved note itself when they are unchanged.
   const customise = () =>
@@ -276,9 +298,18 @@ export default function IssueWizard() {
       />
 
       {from && step < 4 && (
-        <div className="notice info iw-from">
-          Started from the ready-made note <strong>{from.name}</strong>
-          {from.author ? '' : ' by notes.markets'}: its terms are filled in. Change anything on the earlier steps.
+        <div className="notice info iw-from" data-started-from={from.id}>
+          {from.issuedAt ? (
+            <>
+              Started from <strong>{from.name}</strong>, issued {fmtDate(from.issuedAt)}: its terms are filled in and
+              the schedule starts fresh. Change anything on the earlier steps.
+            </>
+          ) : (
+            <>
+              Started from the ready-made note <strong>{from.name}</strong>
+              {from.author ? '' : ' by notes.markets'}: its terms are filled in. Change anything on the earlier steps.
+            </>
+          )}
         </div>
       )}
       {ready === 'ai' && step < 4 && (
@@ -353,6 +384,7 @@ export default function IssueWizard() {
               built={built}
               doc={doc}
               preset={preset}
+              xml={reviewXml}
             />
           )}
 
@@ -375,9 +407,9 @@ export default function IssueWizard() {
               </button>
             )}
             {step === 4 && (
-              <button className="btn" onClick={customise}>
+              <button className="btn" onClick={customise} data-open-advanced>
                 <Workflow className="i" />
-                Customise the workflow
+                Open in advanced editor
               </button>
             )}
           </div>
