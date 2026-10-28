@@ -14,16 +14,16 @@ export const BEAT_COPY: ReadonlyArray<{ k: string; t: string; n?: string }> = [
   { k: 'Issue', t: 'The issuer pledges collateral into the note.' },
   { k: 'Subscribe', t: 'USDG in, note units out, in one transaction on Robinhood Chain.' },
   { k: 'Fix and observe', t: 'Chainlink fixes the strike, then prices every observation date.' },
-  { k: 'Pay', t: 'Coupons paid in USDG on the payment date, ready to claim.' },
+  { k: 'Pay', t: 'When the issuer has funded it, each coupon is paid in USDG on its date, ready to claim.' },
   {
     k: 'Held to maturity',
-    t: 'Every coupon, then full principal back in USDG.',
+    t: 'If it stays in range: every coupon, then principal back in USDG.',
     n: 'Paid in full: CRE releases the collateral to the issuer.',
   },
   {
     k: 'Barrier breached',
     t: 'Below the knock-in, holders are repaid final ÷ strike in USDG: the loss follows TSLA.',
-    n: 'Missed payment: CRE triggers the default and the collateral in the note, TSLA included, goes to the holders.',
+    n: 'Missed payment: CRE triggers the default and the collateral in the note, TSLA included, goes to the holders, up to its value.',
   },
 ];
 
@@ -160,20 +160,20 @@ export default function Stage() {
               <i />
               Structured notes · Robinhood Chain
             </span>
-            <h1>Know the outcome before you invest.</h1>
+            <h1>See every term before you invest.</h1>
             <p className="sub">
-              Fixed-coupon and autocallable notes on stocks and crypto. Terms lock at subscription, collateral is
-              pledged onchain, and Chainlink prices every observation and executes every payment.
+              Fixed-coupon and autocallable notes on stocks and crypto. Terms are fixed at subscription, the issuer's
+              collateral is pledged onchain, and Chainlink CRE reads every price and runs each payment step on schedule.
             </p>
-            <ul className="outcomes" aria-label="Why you can trust the terms">
+            <ul className="outcomes" aria-label="How the terms are run">
               <li>
-                <b>Prices and payments by Chainlink</b>
+                <b>Prices and schedule by Chainlink</b>
               </li>
               <li>
                 <b>Collateral visible onchain</b>
               </li>
               <li>
-                <b>Winner, Chainlink CRE track · TOKEN2049</b>
+                <b>Earlier build: Best Use of Chainlink CRE, TOKEN2049</b>
               </li>
             </ul>
             <div className="hero-cta">

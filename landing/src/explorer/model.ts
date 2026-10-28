@@ -70,26 +70,37 @@ export const GOALS: Record<Role, Goal[]> = {
   investor: [
     {
       id: 'yield',
-      label: 'Earn yield',
+      label: 'Aim for income',
       detail: 'Income above a USDG savings rate, in exchange for taking some market risk.',
       picks: [
         { t: 'phoenix', why: 'Coupons while the market holds above a barrier; memory catches up missed ones.' },
-        { t: 'fcn', why: 'A fixed coupon every period, whatever the market does, until it is called.' },
-        { t: 'reverse-convertible', why: 'The highest fixed coupon, if you accept the downside below the knock-in.' },
+        {
+          t: 'fcn',
+          why: 'A fixed coupon due every period, whatever the market does, until it is called; the barrier still applies.',
+        },
+        {
+          t: 'reverse-convertible',
+          why: 'Usually a higher fixed coupon, in exchange for the downside below the knock-in.',
+        },
       ],
     },
     {
       id: 'protect',
-      label: 'Protect capital',
+      label: 'Principal protection',
       detail: 'Get your money back at maturity and keep some upside.',
-      picks: [{ t: 'ppn', why: 'Principal protected at maturity, plus a share of any rise.' }],
+      picks: [
+        {
+          t: 'ppn',
+          why: 'Principal due back at maturity, plus a share of any rise; repayment relies on the issuer and collateral.',
+        },
+      ],
     },
     {
       id: 'exposure',
       label: 'Get exposure',
       detail: 'A defined position on a stock, an index or a basket of crypto.',
       picks: [
-        { t: 'ppn', why: 'Upside on TSLA, NVDA or a basket, without the downside.' },
+        { t: 'ppn', why: 'A share of the upside on TSLA, NVDA or a basket, with principal due back at maturity.' },
         { t: 'snowball', why: 'A larger payout the longer the underlying stays up.' },
         { t: 'phoenix', why: 'A worst-of basket: higher coupons for exposure to several names.' },
       ],
@@ -101,9 +112,9 @@ export const GOALS: Record<Role, Goal[]> = {
       picks: [
         {
           t: 'reverse-convertible',
-          why: 'On a stock you hold: earn a coupon, and take delivery of the stock below the barrier.',
+          why: 'On a stock you hold: a coupon, and delivery of the stock below the barrier.',
         },
-        { t: 'ppn', why: 'Keep the upside of a position while principal is protected.' },
+        { t: 'ppn', why: 'Keep part of the upside, with principal due back at maturity.' },
       ],
     },
   ],
@@ -124,7 +135,7 @@ export const GOALS: Record<Role, Goal[]> = {
       picks: [
         { t: 'phoenix', why: 'The most common autocallable: coupons with a barrier, memory and early call.' },
         { t: 'snowball', why: 'One payout at call: simple to explain, and nothing to fund until it calls.' },
-        { t: 'ppn', why: 'For clients who need their principal back.' },
+        { t: 'ppn', why: 'For clients who want principal due back at maturity.' },
       ],
     },
     {

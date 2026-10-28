@@ -504,7 +504,8 @@ export default function Explorer({ start = DEFAULT_START }: { start?: ExplorerSt
           <p className="xs-explain">{explain(terms, o)}</p>
           <p className="xs-note">
             Backed by collateral the issuer pledged and cannot withdraw. If the issuer misses a payment, holders take
-            what they are owed from that collateral: see the issuer view.
+            what they are owed from that collateral, up to its value: see the issuer view. A simulation of how the terms
+            work, not a forecast or a recommendation.
           </p>
         </div>
       ) : (

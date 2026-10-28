@@ -155,7 +155,7 @@ export default function Landing() {
               <SideTabs side={side} onChange={setSide} />
               <p className="side-sub" aria-live="polite">
                 {side === 'Investors'
-                  ? 'A result agreed before you buy: income, protection, exposure or a hedge, paid in USDG.'
+                  ? 'Terms set before you buy, built for income, partial protection, exposure or a hedge. Paid in USDG; you can lose money.'
                   : 'Raise USDG against collateral you lock, and pay each coupon when it falls due.'}
               </p>
             </div>
@@ -209,8 +209,8 @@ export default function Landing() {
               <h2>Notes run where the stocks live.</h2>
               <p>
                 Every note is issued, collateralised and paid on Robinhood Chain, next to Robinhood&apos;s tokenized
-                stocks. TSLA and AMZN can back a note and be delivered at maturity in the same chain, with no bridge and
-                no wait. Chainlink prices every observation and pays every payment.
+                stocks. TSLA and AMZN can back a note and be delivered at maturity on the same chain, with no bridge.
+                Chainlink reads every observation and Chainlink CRE runs each payment step the issuer has funded.
               </p>
             </div>
             <div className="cards3">
@@ -256,9 +256,9 @@ export default function Landing() {
           <div className="wrap">
             <div className="cta-final" data-reveal>
               <h2>
-                Terms agreed.
+                Terms set upfront.
                 <br />
-                Payments enforced.
+                Every payment step onchain.
               </h2>
               <div className="hero-cta">
                 <a href={APP_URL} className="btn btn-primary btn-lg">
@@ -290,8 +290,12 @@ export default function Landing() {
             notes.markets by StratosLab · Built on Robinhood Chain and Chainlink
           </small>
           <small className="disclaimer">
-            Structured notes carry risk, including loss of principal. Nothing on this site is an offer or investment
-            advice. Testnet only. Trademarks belong to their owners; no endorsement implied.
+            notes.markets is software running on a test network: notes here use test tokens with no value. Nothing on
+            this site is an offer to sell, a solicitation to buy, or a recommendation of any security, and nothing here
+            is investment, legal or tax advice. Structured notes are complex: you can lose some or all of what you
+            invest, payments depend on the issuer and on the collateral pledged, and examples and simulations do not
+            predict results. Any future offering will be subject to eligibility and jurisdiction rules. Robinhood Chain
+            and Chainlink are trademarks of their owners; notes.markets is not affiliated with or endorsed by them.
           </small>
         </div>
       </footer>

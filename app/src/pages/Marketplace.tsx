@@ -13,7 +13,7 @@ import { ListingRow } from '../components/Listing';
 
 type Filter = 'yield' | 'protect' | 'stocks' | 'crypto';
 const FILTERS: Array<{ id: Filter; label: string }> = [
-  { id: 'yield', label: 'Earn yield' },
+  { id: 'yield', label: 'Income' },
   { id: 'protect', label: 'Protect capital' },
   { id: 'stocks', label: 'Stocks' },
   { id: 'crypto', label: 'Crypto' },

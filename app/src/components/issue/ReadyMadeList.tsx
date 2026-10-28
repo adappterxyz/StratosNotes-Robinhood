@@ -20,7 +20,7 @@ type Filter = 'stocks' | 'crypto' | 'yield' | 'protect';
 const FILTERS: Array<{ id: Filter; label: string }> = [
   { id: 'stocks', label: 'Stocks' },
   { id: 'crypto', label: 'Crypto' },
-  { id: 'yield', label: 'Earn yield' },
+  { id: 'yield', label: 'Income' },
   { id: 'protect', label: 'Protect capital' },
 ];
 

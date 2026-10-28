@@ -44,9 +44,9 @@ const baseline = <path d="M14 86H190" stroke="var(--c-axis)" {...thin} />;
 const CARDS: Card[] = [
   {
     side: 'Investors',
-    title: 'Earn yield',
+    title: 'Aim for income',
     note: 'Phoenix on ETH',
-    body: 'A USDG coupon each quarter while the price stays in range.',
+    body: 'A USDG coupon each quarter while the price stays in range. Below the floor, you share the loss.',
     chart: {
       aria: 'A price path that stays between a floor at 70% and an early-repayment level at 100%, with a coupon paid at each of four dates.',
       shapes: (
@@ -82,9 +82,9 @@ const CARDS: Card[] = [
   },
   {
     side: 'Investors',
-    title: 'Protect your capital',
+    title: 'Principal protection',
     note: 'Protected note on BTC',
-    body: 'Your money back at maturity, plus a share of any rise.',
+    body: 'Principal due back at maturity, plus a share of any rise. Repayment relies on the issuer and collateral.',
     chart: {
       aria: "Payout at maturity against the final price: flat at 100% below the starting price, rising at half the stock's rate above it; the stock alone falls below 100%.",
       shapes: (
@@ -141,7 +141,7 @@ const CARDS: Card[] = [
     side: 'Investors',
     title: 'Hedge what you hold',
     note: 'Reverse convertible on AAPL',
-    body: 'Coupons offset part of a slow decline in shares you hold.',
+    body: 'Coupons can offset part of a slow decline in shares you hold.',
     chart: {
       aria: "Shares you hold fall from 100 to 80; adding the note's coupons, the combined value falls only to about 90.",
       shapes: (
@@ -263,9 +263,9 @@ const CARDS: Card[] = [
   },
   {
     side: 'Issuers',
-    title: 'Offer clients a product',
+    title: 'Structure a product',
     note: 'Fixed coupon note on TSLA',
-    body: 'Package one note with a set outcome and sell it to your clients or community.',
+    body: 'Package one note with set terms, for clients you are permitted to offer it to.',
     chart: {
       aria: 'One note on the left fans out to five holders on the right; each holder receives the same terms.',
       shapes: (

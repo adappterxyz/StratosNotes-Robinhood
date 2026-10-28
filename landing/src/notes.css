@@ -2012,7 +2012,7 @@ header.nav.open {
   max-width: 80ch;
 }
 
-/* The hero headline is a sentence now ("Know the outcome before you invest."): four lines at a slightly smaller size
+/* The hero headline is a sentence now ("See every term before you invest."): four lines at a slightly smaller size
    keep the copy in the same column and height as the three-line headline before it. */
 .stage-hero h1 {
   font-size: clamp(40px, 5.6vw, 80px);

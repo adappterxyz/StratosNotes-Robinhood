@@ -9,11 +9,19 @@ const ISSUE_URL = '/app/issue';
 
 export function WhyOnchain() {
   const rows: Array<[string, string, string]> = [
-    ['Your exposure', "The issuer's balance sheet", 'Collateral pledged to the note, at a ratio shown on every note'],
-    ['Who calculates', "The issuer's own calculation agent", 'Chainlink, from public price feeds'],
-    ["When you're paid", 'Days later, through a custodian', 'On the payment date; claim any time, with a receipt'],
+    [
+      'Your exposure',
+      "The issuer's balance sheet",
+      'The issuer, backed by collateral pledged to the note at the ratio shown',
+    ],
+    ['Where fixings come from', "The issuer's own calculation agent", 'Public Chainlink price feeds'],
+    [
+      "When you're paid",
+      'Days later, through a custodian',
+      'On the payment date once funded; claim any time, with a receipt',
+    ],
     ['What you can check', 'A PDF term sheet', 'Every term, fixing and payment'],
-    ['Who can buy', 'Private-bank clients, six-figure tickets', 'Any wallet with a verified email · from 1 USDG'],
+    ['Who can take part', 'Private-bank clients, six-figure tickets', 'Testnet: any wallet with a verified email'],
   ];
   return (
     <section id="why" className="why-band">
@@ -23,12 +31,12 @@ export function WhyOnchain() {
           <h2>
             A private-bank product.
             <br />
-            Public-chain guarantees.
+            Public-chain transparency.
           </h2>
           <p>
             Structured notes have paid defined coupons to private-bank clients for decades. The payoff was never the
-            problem. The plumbing was: issuer credit risk, opaque fixings, slow payments, high minimums. We kept the
-            payoff and rebuilt the plumbing.
+            problem. The plumbing was: unsecured issuer credit risk, opaque fixings, slow payments, high minimums. We
+            kept the payoff and rebuilt the plumbing. The market risk of the payoff stays with you.
           </p>
         </div>
         <div className="why-table" data-reveal>
@@ -78,7 +86,7 @@ const ENDINGS: Ending[] = [
     id: 'called',
     tab: 'Called early',
     tag: 'Ending 1 · Called early',
-    h: 'Principal back early, plus the coupon.',
+    h: 'Called early: principal plus the coupon.',
     p: "The underlying closes at or above the autocall level on an observation date. You receive your principal and that period's coupon, and the note closes.",
     path: [
       [30, 100],
@@ -102,8 +110,8 @@ const ENDINGS: Ending[] = [
     id: 'held',
     tab: 'Held to maturity',
     tag: 'Ending 2 · Held to maturity',
-    h: 'Every coupon, then full principal.',
-    p: 'The underlying stays between the barrier and the autocall level. Coupons pay on every observation, and principal returns in full at maturity.',
+    h: 'Held to maturity: every coupon, then principal.',
+    p: 'The underlying stays between the barrier and the autocall level. A coupon is due on every observation, and principal is due in full at maturity.',
     path: [
       [30, 100],
       [90, 93],
@@ -238,10 +246,14 @@ export function Outcomes() {
         <div className="section-head" data-reveal>
           <span className="eyebrow">Defined outcomes</span>
           <h2>
-            Three possible endings.
+            Three ways an autocallable can end.
             <br />
-            All written down on day one.
+            All set out in the terms on day one.
           </h2>
+          <p>
+            Illustrations of how the terms work, not forecasts. Every payment depends on the issuer funding it, or
+            failing that, on the collateral pledged.
+          </p>
         </div>
         <div className="oc" data-reveal>
           <div className="side-tabs oc-tabs" role="tablist" aria-label="How a note can end">
@@ -298,21 +310,21 @@ export function Shelf() {
   const cards = [
     {
       label: 'FCN · Fixed coupon note',
-      t: 'Highest income',
-      p: 'A fixed coupon on every observation, whatever the market does. Principal is protected down to the knock-in barrier.',
-      best: 'Best for: sideways or mildly bullish views',
+      t: 'Higher coupon, more risk',
+      p: 'A fixed coupon is due on every observation, whatever the underlying does. Principal is repaid in full unless the knock-in barrier is breached; below it, you take the loss.',
+      best: 'Built around: a flat or slightly rising market',
     },
     {
       label: 'Autocallable',
       t: 'Income with an exit',
-      p: 'Ends early when the underlying closes at or above its autocall level on an observation date. Principal and coupon come back early, ready to redeploy.',
-      best: 'Best for: bullish views on a short horizon',
+      p: 'Ends early when the underlying closes at or above its autocall level on an observation date, repaying principal and that coupon. If it never calls, the barrier still applies at maturity.',
+      best: 'Built around: a rising market over a short horizon',
     },
     {
       label: 'Custom',
       t: 'Your payoff, your terms',
       p: 'Issuers set the barrier, coupon and observation schedule on reverse convertibles, phoenix, snowball, principal-protected and worst-of notes. The term sheet fills in as they build.',
-      best: 'Best for: desks with a specific view to sell',
+      best: 'Built around: the issuer’s own view and terms',
     },
   ];
   return (
@@ -322,8 +334,8 @@ export function Shelf() {
           <span className="eyebrow">The shelf</span>
           <h2>Pick the trade-off you want.</h2>
           <p>
-            Every note trades some upside for something you value more: income, a buffer, an early exit. You choose
-            which.
+            Every note gives up some upside in exchange for something else: a coupon, a buffer, an early exit. Read each
+            note's terms and risks before you decide.
           </p>
         </div>
         <div className="cards3">
@@ -363,7 +375,7 @@ export function HowItWorks() {
     ],
     [
       'Pay',
-      'The issuer funds each coupon, autocall and redemption, and Chainlink CRE pays it into the note automatically on the payment date. Holders claim from their portfolio whenever they like, with a receipt per claim. If the issuer misses a payment, the pledged collateral pays holders instead. No calculation dispute.',
+      'The issuer funds each coupon, autocall and redemption, and Chainlink CRE pays it into the note automatically on the payment date. Holders claim from their portfolio whenever they like, with a receipt per claim. If the issuer misses a payment, the pledged collateral pays holders instead, up to its value. Every holder sees the same fixings from the same public feed.',
     ],
   ];
   return (
@@ -397,10 +409,10 @@ export function ForIssuers() {
       'Start from a template or design the payoff on a visual canvas. The term sheet writes itself.',
     ],
     ['Fund against collateral', 'Pledge collateral, raise USDG, keep your market view.'],
-    ['Zero back office', 'Chainlink is your calculation agent and paying agent, on every note.'],
+    ['Automated operations', 'Chainlink CRE reads the fixings and runs each payment step on schedule, on every note.'],
     [
       'Onchain distribution',
-      'Any wallet with a verified email can subscribe on Robinhood Chain, next to the stock tokens your note pays or pledges.',
+      'During testnet, any wallet with a verified email can subscribe on Robinhood Chain. You remain responsible for where and to whom you offer a note.',
     ],
   ];
   return (
@@ -410,7 +422,7 @@ export function ForIssuers() {
           <span className="eyebrow">For issuers</span>
           <h2>Raise funding against collateral you already hold.</h2>
           <p>
-            Turn inventory into term funding, priced through the coupon you set. Distribution, fixings and payments run
+            Turn inventory into term funding, priced through the coupon you set. Subscriptions, fixings and payments run
             onchain.
           </p>
           <div className="hero-cta">
@@ -436,7 +448,7 @@ export function Faq() {
   const qa: Array<[string, string]> = [
     [
       'What happens if the issuer disappears?',
-      "Each note shows its collateral ratio. If the issuer misses a payment, Chainlink CRE triggers a default and holders are paid what they're owed from the pledged collateral, up to its value. You can inspect it onchain at any time.",
+      "Each note shows its collateral ratio. If the issuer misses a payment, Chainlink CRE triggers a default and holders are paid what they're owed from the pledged collateral, up to its value. If the collateral is worth less than what's owed, holders take the shortfall. You can inspect the collateral onchain at any time.",
     ],
     [
       'Where do the prices come from?',
@@ -444,7 +456,7 @@ export function Faq() {
     ],
     [
       'Can I lose money?',
-      'Yes. If the barrier is breached and the underlying ends below strike, principal comes back as the underlying, or its value, at the final price. Coupons already paid are yours to keep.',
+      'Yes, some or all of it. If the barrier is breached and the underlying ends below strike, principal comes back as the underlying, or its value, at the final price. If the issuer defaults, you are limited to the pledged collateral. Coupons already paid are yours to keep.',
     ],
     [
       'Can I exit before maturity?',
@@ -452,7 +464,7 @@ export function Faq() {
     ],
     [
       'Who can invest?',
-      'During testnet, anyone with a verified email. Eligibility and jurisdiction rules will be published before mainnet.',
+      'During testnet, anyone with a verified email, using test tokens with no value. Any live offering will apply eligibility and jurisdiction rules, and may not be open to you.',
     ],
   ];
   return (
