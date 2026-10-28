@@ -162,8 +162,8 @@ export default function Stage() {
             </span>
             <h1>A bespoke instrument for every market.</h1>
             <p className="sub">
-              Issue notes on stocks, crypto, FX or gold in minutes. Pledge collateral, raise USDG, and let Chainlink run
-              every fixing and payment.
+              On-chain structured notes, live in minutes. Collateralize, mint, raise USDG, and let Chainlink oracles and
+              automation handle every fixing and coupon.
             </p>
             <ul className="outcomes" aria-label="For issuers">
               <li>
