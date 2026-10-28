@@ -82,6 +82,23 @@ check(
 await page.getByRole('button', { name: 'Zoom in' }).first().click();
 const zoomed = Number((await page.locator('.fm-scale').first().innerText()).replace('%', ''));
 check(zoomed > scale, `zoom in (${scale}% -> ${zoomed}%)`);
+// Drag with the mouse moves the diagram, starting on a step, and does not pick that step.
+{
+  const sc = page.locator('.fm-scroll').first();
+  const before = await sc.evaluate((e) => [e.scrollLeft, e.scrollTop]);
+  const title = await panel.locator('[data-step-title]').innerText();
+  const st = await page.locator('.fm-canvas [data-element-id="Task_IssueNote"]').first().boundingBox();
+  const sb = (await sc.boundingBox())!;
+  const x = st ? st.x + st.width / 2 : sb.x + sb.width / 2,
+    y = st ? st.y + st.height / 2 : sb.y + sb.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x - 120, y - 40, { steps: 8 });
+  await page.mouse.up();
+  const after = await sc.evaluate((e) => [e.scrollLeft, e.scrollTop]);
+  check(after[0] !== before[0] || after[1] !== before[1], `dragging moves the diagram (${before} -> ${after})`);
+  check((await panel.locator('[data-step-title]').innerText()) === title, 'a drag does not pick a step');
+}
 await page.getByRole('button', { name: 'Fit to width' }).first().click();
 await shot('note-diagram-desktop');
 // Full screen, closed with Esc.

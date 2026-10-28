@@ -1,10 +1,10 @@
 /**
  * A note's workflow, read-only and legible: bpmn-js draws it at a readable scale inside its own scrolling box (wide
- * workflows scroll sideways; the page never does), with zoom in / out / fit, the step where the note is now
+ * workflows scroll sideways; the page never does; drag with a mouse to move it, Ctrl/Cmd + wheel to zoom), with zoom in / out / fit, the step where the note is now
  * highlighted, the steps that already ran marked, and every step clickable and keyboard-focusable. Picking a step
  * reports it (onPick); nothing on the diagram can be edited.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
 import Viewer from 'bpmn-js/lib/Viewer';
 import 'bpmn-js/dist/assets/diagram-js.css';
 import 'bpmn-js/dist/assets/bpmn-js.css';
@@ -70,6 +70,7 @@ export default function FlowMap({
   const [failed, setFailed] = useState('');
   const pickRef = useRef(onPick);
   pickRef.current = onPick;
+  const zoomRef = useRef<(f: number, anchor?: { ax: number; ay: number }) => void>(() => {});
 
   /** Draw at `next`, keeping the point at (ax, ay) of the visible box where it was (default: the centre). */
   const apply = useCallback((next: number, anchor?: { ax: number; ay: number }) => {
@@ -228,7 +229,65 @@ export default function FlowMap({
     return true;
   };
 
-  const zoomBy = (f: number) => apply(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, scaleRef.current * f)));
+  const zoomBy = (f: number, anchor?: { ax: number; ay: number }) =>
+    apply(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, scaleRef.current * f)), anchor);
+
+  // Drag to move the diagram (mouse and pen; touch already pans natively). A drag never counts as a click on a step.
+  const drag = useRef<{ id: number; x: number; y: number; left: number; top: number; moved: boolean } | null>(null);
+  const dragged = useRef(false);
+  const [grabbing, setGrabbing] = useState(false);
+  const onPointerDown = (e: RPointerEvent<HTMLDivElement>) => {
+    const sc = scroller.current;
+    if (!sc || e.pointerType === 'touch' || e.button !== 0) return;
+    drag.current = {
+      id: e.pointerId,
+      x: e.clientX,
+      y: e.clientY,
+      left: sc.scrollLeft,
+      top: sc.scrollTop,
+      moved: false,
+    };
+    dragged.current = false;
+  };
+  const onPointerMove = (e: RPointerEvent<HTMLDivElement>) => {
+    const d = drag.current,
+      sc = scroller.current;
+    if (!d || !sc || d.id !== e.pointerId) return;
+    const dx = e.clientX - d.x,
+      dy = e.clientY - d.y;
+    if (!d.moved && Math.hypot(dx, dy) < 4) return;
+    if (!d.moved) {
+      d.moved = true;
+      sc.setPointerCapture(e.pointerId);
+      setGrabbing(true);
+    }
+    sc.scrollLeft = d.left - dx;
+    sc.scrollTop = d.top - dy;
+    e.preventDefault();
+  };
+  const endDrag = (e: RPointerEvent<HTMLDivElement>) => {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    dragged.current = d.moved;
+    drag.current = null;
+    setGrabbing(false);
+  };
+
+  // Ctrl / Cmd + wheel (and trackpad pinch) zooms at the pointer; a plain wheel scrolls as usual.
+  useEffect(() => {
+    const sc = scroller.current;
+    if (!sc) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const r = sc.getBoundingClientRect();
+      zoomRef.current(Math.exp(-e.deltaY * 0.0025), { ax: e.clientX - r.left, ay: e.clientY - r.top });
+    };
+    sc.addEventListener('wheel', onWheel, { passive: false });
+    return () => sc.removeEventListener('wheel', onWheel);
+  }, []);
+
+  zoomRef.current = zoomBy;
 
   return (
     <div className={`flowmap ${variant}`} data-flowmap={variant}>
@@ -248,12 +307,22 @@ export default function FlowMap({
         </button>
       </div>
       <div
-        className="fm-scroll"
+        className={`fm-scroll${grabbing ? ' grabbing' : ''}`}
         ref={scroller}
         role="region"
-        aria-label={`${label}: scroll to see all of it`}
+        aria-label={`${label}: drag or scroll to see all of it`}
         tabIndex={-1}
-        onClick={(e) => pickFrom(e.target)}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onClick={(e) => {
+          if (dragged.current) {
+            dragged.current = false;
+            return;
+          }
+          pickFrom(e.target);
+        }}
         onFocus={(e) => {
           if (e.target !== scroller.current) pickFrom(e.target);
         }}

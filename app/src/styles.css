@@ -3002,6 +3002,13 @@ svg.i.issue-ic {
   border: 1px solid hsl(var(--border));
   border-radius: var(--radius);
   background: hsl(var(--background));
+  cursor: grab;
+  scrollbar-width: thin;
+}
+.fm-scroll.grabbing,
+.fm-scroll.grabbing .fm-canvas .djs-element[tabindex] {
+  cursor: grabbing;
+  user-select: none;
 }
 @media (max-width: 600px) {
   .fm-scroll {
