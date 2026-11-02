@@ -1,0 +1,1148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>notes.markets Investor Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: one 1600x900 stage, scaled to fit and letterboxed on Paper; each slide is a full-stage composition in the
+   landing's language (white ground, Ink type, one Signal accent, mono labels, 1px lines, no glows).
+   Deliberately light only, like the landing and its WebGL scene: every colour below is set explicitly. */
+:root {
+  --ink: #0E1116;
+  --signal: #12A971;
+  --signal-ink: #0B7A52;
+  --slate: #4A5060;
+  --paper: #F4F5F7;
+  --white: #FFFFFF;
+  --muted: #646B78;
+  --border: #E3E5EA;
+  --border-strong: #CBD0D8;
+  --down: #C9363B;
+  --amber: #9A6200;
+  --font-display: "Geist", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  color-scheme: light;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--paper); color: var(--ink); font-family: var(--font-display); -webkit-font-smoothing: antialiased; overflow: hidden; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; border-radius: 4px; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* ---- the deck frame ---- */
+.deck { position: fixed; inset: 0; display: grid; place-items: center; padding: 16px 16px 64px; }
+.present .deck { padding: 0; }
+.fit { position: relative; }
+.stage { position: absolute; left: 0; top: 0; width: 1600px; height: 900px; transform-origin: 0 0; background: var(--white); overflow: hidden; border: 1px solid var(--border); }
+.present .stage { border: 0; }
+
+.slide { position: absolute; inset: 0; padding: 56px 80px 88px; display: grid; align-content: start; gap: 28px; visibility: hidden; opacity: 0; transition: opacity .45s ease, visibility 0s linear .45s; }
+.slide.on { visibility: visible; opacity: 1; transition: opacity .45s ease, visibility 0s; z-index: 1; }
+
+/* chrome inside the stage */
+.chrome { position: absolute; left: 80px; right: 80px; bottom: 30px; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 16px; pointer-events: none; }
+.counter { font-family: var(--font-mono); font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+.progress { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--border); z-index: 3; }
+.progress i { display: block; height: 100%; width: 0; background: var(--signal); transition: width .5s var(--ease); }
+
+/* the wordmark (docs/brand/logo-guide.pdf) */
+.wordmark { display: inline-flex; align-items: center; gap: .42em; font-family: var(--font-display); font-size: 20px; letter-spacing: -0.035em; line-height: 1; white-space: nowrap; }
+.wordmark svg { height: 1.22em; width: auto; flex: none; }
+.wordmark .wm-text { display: inline-flex; align-items: baseline; }
+.wordmark b { font-weight: 700; color: var(--ink); }
+.wordmark i { display: inline-block; width: .2em; height: .2em; margin: 0 .04em 0 .05em; background: var(--signal); }
+.wordmark .wm-text > span { font-weight: 400; color: var(--slate); }
+.wordmark.xl { font-size: 52px; }
+
+/* controls under the stage */
+.controls { position: fixed; left: 0; right: 0; bottom: 0; height: 56px; padding: 0 16px calc(env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; justify-content: center; gap: 10px; z-index: 10; transition: opacity .3s; }
+.present .controls { opacity: 0; }
+.present.pointer .controls { opacity: 1; }
+.ctl { min-width: 44px; height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--white); color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 500; }
+.ctl:hover { border-color: var(--ink); }
+.ctl[aria-pressed="true"] { background: var(--ink); color: var(--white); border-color: var(--ink); }
+.ctl kbd { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.ctl[aria-pressed="true"] kbd { color: #B4BAC5; }
+.ctl-count { font-family: var(--font-mono); font-size: 13px; color: var(--muted); min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* speaker notes overlay */
+.notes { position: fixed; left: 50%; bottom: 72px; transform: translateX(-50%); width: min(880px, calc(100% - 32px)); max-height: 44vh; overflow: auto; z-index: 12; background: var(--ink); color: var(--white); border-radius: 12px; padding: 18px 22px 20px; display: grid; gap: 8px; }
+.notes .n-k { font-family: var(--font-mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #6FD6A9; }
+.notes p { font-size: 19px; line-height: 1.5; color: #F4F5F7; max-width: 70ch; }
+.notes small { font-family: var(--font-mono); font-size: 12px; color: #9AA1AD; }
+.present .notes { bottom: 24px; }
+
+/* ---- shared slide type ---- */
+.eyebrow { font-family: var(--font-mono); font-size: 14px; letter-spacing: .14em; text-transform: uppercase; color: var(--signal-ink); display: flex; gap: 14px; align-items: center; }
+.eyebrow b { color: var(--muted); font-weight: 500; }
+h1, h2, h3 { text-wrap: balance; color: var(--ink); }
+.h1 { font-size: 92px; line-height: .98; letter-spacing: -0.04em; font-weight: 700; }
+.h2 { font-size: 60px; line-height: 1.04; letter-spacing: -0.03em; font-weight: 700; max-width: 22ch; }
+.sub { font-size: 24px; line-height: 1.4; color: var(--slate); max-width: 40ch; }
+.k { font-family: var(--font-mono); font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--signal-ink); }
+.k.slate { color: var(--muted); }
+.k.risk { color: var(--down); }
+.badge { justify-self: start; display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border-strong); background: rgba(255, 255, 255, .92); color: var(--slate); font-size: 15px; }
+.badge i { width: 8px; height: 8px; border-radius: 50%; background: var(--signal); flex: none; }
+.tag { justify-self: start; font-family: var(--font-mono); font-size: 13px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 3px 11px; white-space: nowrap; }
+.tag.ok { color: var(--signal-ink); border-color: rgba(11, 122, 82, .45); }
+svg text { font-family: var(--font-mono); }
+
+/* ---- reveals: the resting state is complete; .pre is the brief start of an entrance ---- */
+.js [data-r] { transition: opacity .75s var(--ease) var(--d, 0ms), transform .75s var(--ease) var(--d, 0ms); }
+.js .slide.pre [data-r] { opacity: 0; transform: translateY(16px); transition: none; }
+.draw { stroke-dasharray: 1 1; stroke-dashoffset: 0; }
+.js .draw { transition: stroke-dashoffset 1.6s var(--ease) var(--d, 0ms); }
+.js .slide.pre .draw { stroke-dashoffset: 1; transition: none; }
+.js [data-pop] { transition: opacity .4s ease var(--d, 0ms), transform .5s var(--ease) var(--d, 0ms); transform-box: fill-box; transform-origin: center; }
+.js .slide.pre [data-pop] { opacity: 0; transform: scale(.4); transition: none; }
+
+/* ---- the scene ---- */
+.scene-slot { position: relative; overflow: hidden; background: var(--white); }
+.scene-slot canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.scene-slot.panel { border: 1px solid var(--border-strong); border-radius: 12px; }
+.panel-cap { position: absolute; left: 16px; top: 14px; z-index: 1; font-family: var(--font-mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); background: rgba(255, 255, 255, .9); padding: 2px 6px; border-radius: 4px; }
+
+/* 1 · Problem: the hero over the full scene */
+.s1 { padding: 0; }
+.s1 .scene-slot { position: absolute; inset: 0; }
+.s1 .veil { position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  background: linear-gradient(to right, rgba(255, 255, 255, .97) 0%, rgba(255, 255, 255, .94) 40%, rgba(255, 255, 255, .5) 54%, rgba(255, 255, 255, 0) 66%),
+              linear-gradient(to top, rgba(255, 255, 255, .95) 0%, rgba(255, 255, 255, 0) 34%); }
+.s1 .hero { position: relative; z-index: 2; height: 100%; padding: 56px 80px 96px; display: grid; grid-template-rows: auto 1fr auto; gap: 28px; }
+.s1 .hero-copy { align-self: center; display: grid; gap: 26px; max-width: 780px; }
+.s1 .h1 { max-width: 11ch; }
+.pains { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 300px)); gap: 28px; }
+.pains li { border-top: 2px solid var(--ink); padding-top: 14px; display: grid; gap: 6px; align-content: start; }
+.pains h3 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+.pains p { font-size: 17px; line-height: 1.45; color: var(--slate); }
+
+/* 2 · Why it matters */
+.sides { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--border); margin-top: 12px; }
+.side { padding: 32px 48px 0 0; display: grid; gap: 16px; align-content: start; }
+.side + .side { padding: 32px 0 0 48px; border-left: 1px solid var(--border); }
+.side h3 { font-size: 36px; line-height: 1.1; letter-spacing: -0.02em; font-weight: 700; max-width: 18ch; }
+.side p { font-size: 19px; line-height: 1.5; color: var(--slate); max-width: 40ch; }
+.side svg { width: 100%; max-width: 620px; height: auto; display: block; }
+
+/* 3 · Solution */
+.sol-mid { display: grid; grid-template-columns: 700px 1fr; gap: 40px; }
+.sol-mid .scene-slot { height: 360px; }
+.chains { width: 100%; height: 360px; display: block; }
+.flow { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.flow li { background: var(--paper); padding: 18px 22px 20px; display: grid; gap: 6px; align-content: start; }
+.flow h3 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+.flow p { font-size: 16px; line-height: 1.45; color: var(--slate); }
+.flow li.end { background: var(--white); }
+.sol-head { display: grid; gap: 14px; }
+.sol-head .h2 { max-width: 26ch; }
+
+/* 4 · Demo */
+.demo { display: grid; grid-template-columns: 1fr 520px; gap: 64px; align-items: start; }
+.dsteps { list-style: none; display: grid; gap: 0; counter-reset: d; border-top: 1px solid var(--border); }
+.dsteps li { counter-increment: d; display: grid; grid-template-columns: 44px 1fr; align-items: baseline; padding: 11px 0; border-bottom: 1px solid var(--border); font-size: 21px; line-height: 1.35; }
+.dsteps li::before { content: counter(d, decimal-leading-zero); font-family: var(--font-mono); font-size: 14px; color: var(--muted); }
+.dsteps .who { display: block; font-family: var(--font-mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--signal-ink); margin-bottom: 2px; }
+.ts-card { border: 1px solid var(--border-strong); border-radius: 12px; background: var(--white); padding: 26px 28px; display: grid; gap: 14px; }
+.ts-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ts-label { font-family: var(--font-mono); font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--signal-ink); }
+.ts-card h3 { font-size: 28px; letter-spacing: -0.015em; font-weight: 600; }
+.ts-rows { display: grid; border-top: 1px solid var(--border); }
+.ts-rows > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.ts-rows dt { color: var(--slate); font-size: 16px; }
+.ts-rows dd { font-size: 16px; text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.ts-foot { font-family: var(--font-mono); font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; gap: 12px; }
+.proof { display: grid; gap: 14px; }
+.proof svg { width: 100%; height: auto; display: block; }
+
+/* 5 · Smart contracts */
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 2px solid var(--ink); margin-top: 20px; }
+.stat { padding: 26px 32px 0 0; display: grid; gap: 12px; align-content: start; }
+.stat + .stat { padding-left: 32px; border-left: 1px solid var(--border); }
+.big { font-size: 96px; line-height: .95; letter-spacing: -0.045em; font-weight: 700; font-variant-numeric: tabular-nums; }
+.big.word { font-size: 56px; line-height: 1.02; letter-spacing: -0.03em; padding-block: 10px 9px; }
+.stat p { font-size: 18px; line-height: 1.45; color: var(--slate); }
+.stat svg { width: 100%; height: auto; display: block; }
+.engine { margin-top: 8px; }
+.engine svg { width: 100%; height: auto; display: block; }
+
+/* 6 · Canvas */
+.canvas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.cell { background: var(--paper); padding: 22px 24px 24px; display: grid; gap: 10px; align-content: start; }
+.cell p { font-size: 18px; line-height: 1.45; color: var(--ink); }
+.cell.price { background: var(--white); grid-column: span 2; grid-template-columns: auto 1fr; column-gap: 36px; row-gap: 12px; }
+.cell.price .k, .cell.price .pfoot { grid-column: 1 / -1; }
+.cell.price .fees { display: grid; gap: 16px; align-content: start; }
+.cell.price .fee { font-size: 48px; line-height: 1; letter-spacing: -0.035em; font-weight: 700; }
+.cell.price .fee small { display: block; font-family: var(--font-mono); font-size: 13px; letter-spacing: .04em; font-weight: 500; color: var(--slate); margin-top: 6px; }
+.cell.price svg { width: 100%; height: auto; display: block; }
+.cell.price .pfoot { font-size: 16px; color: var(--slate); }
+.cell.risks { grid-column: 1 / -1; grid-template-columns: 160px 1fr; align-items: baseline; padding-block: 18px; }
+.s6 .h2 { max-width: 28ch; font-size: 52px; }
+
+/* 7 · Team and raise */
+.raise { display: grid; grid-template-columns: 1fr 560px; gap: 56px; align-items: start; }
+.raise-l { display: grid; gap: 28px; }
+.raise-l .h2 { font-size: 72px; }
+.facts { display: grid; grid-template-columns: 1fr 1fr; gap: 26px 40px; }
+.fact { display: grid; gap: 8px; border-top: 1px solid var(--border-strong); padding-top: 14px; align-content: start; }
+.fact p { font-size: 18px; line-height: 1.45; color: var(--ink); }
+.fact p + p { color: var(--slate); }
+.raise .scene-slot { height: 440px; }
+.close { position: absolute; left: 80px; right: 80px; bottom: 84px; display: flex; align-items: center; gap: 28px; flex-wrap: wrap; border-top: 1px solid var(--border); padding-top: 26px; }
+.close .live { font-size: 20px; color: var(--slate); display: inline-flex; align-items: center; gap: 12px; }
+.close .live i { width: 9px; height: 9px; border-radius: 50%; background: var(--signal); }
+
+/* ---- phone and narrow windows: no scaling, slides stack in the page ---- */
+@media (max-width: 760px) {
+  body { overflow: auto; }
+  .deck { position: static; display: block; padding: 0 0 calc(72px + env(safe-area-inset-bottom, 0px)); }
+  .fit { width: auto !important; height: auto !important; }
+  .stage { position: relative; width: auto; height: auto; transform: none !important; border: 0; overflow: visible; background: var(--white); min-height: 100%; }
+  .slide { position: relative; inset: auto; padding: 28px 18px 40px; gap: 20px; display: none; }
+  .slide.on { display: grid; }
+  .chrome { position: static; padding: 0 18px 20px; }
+  .progress { position: fixed; top: 0; bottom: auto; z-index: 11; }
+  .controls { background: rgba(255, 255, 255, .96); border-top: 1px solid var(--border); height: calc(60px + env(safe-area-inset-bottom, 0px)); }
+  .ctl-hide-sm { display: none; }
+  .notes { bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+  .h1 { font-size: 40px; }
+  .h2, .s6 .h2, .raise-l .h2 { font-size: 32px; }
+  .sub { font-size: 18px; }
+  .eyebrow { font-size: 12px; }
+  .s1 { padding: 0; }
+  .s1 .scene-slot { position: relative; height: 260px; }
+  .s1 .veil { display: none; }
+  .s1 .hero { padding: 24px 18px 32px; height: auto; display: grid; grid-template-rows: none; gap: 22px; }
+  .pains { grid-template-columns: 1fr; gap: 18px; }
+  .sides { grid-template-columns: 1fr; }
+  .side, .side + .side { padding: 24px 0 0; border-left: 0; }
+  .side + .side { border-top: 1px solid var(--border); margin-top: 24px; }
+  .side h3 { font-size: 26px; }
+  .side p { font-size: 17px; }
+  .sol-mid, .demo, .raise { grid-template-columns: 1fr; gap: 24px; }
+  .sol-mid .scene-slot, .raise .scene-slot { height: 240px; }
+  .chains { height: auto; }
+  .flow, .stats, .canvas, .facts { grid-template-columns: 1fr; }
+  .cell.price, .cell.risks { grid-column: auto; grid-template-columns: 1fr; }
+  .stat, .stat + .stat { padding: 20px 0; border-left: 0; }
+  .stat + .stat { border-top: 1px solid var(--border); }
+  .big { font-size: 64px; }
+  .big.word { font-size: 40px; }
+  .dsteps li { font-size: 18px; }
+  .ts-card { padding: 20px; }
+  .ts-rows > div { display: grid; gap: 2px; }
+  .ts-rows dd { text-align: left; }
+  .engine { display: none; }
+  .proof-wide { display: none; }
+  .close { position: static; }
+  .wordmark.xl { font-size: 36px; }
+}
+.proof-list { list-style: none; display: grid; gap: 10px; border-left: 2px solid var(--signal); padding-left: 14px; }
+.proof-list li { font-size: 16px; color: var(--slate); }
+.proof-list b { font-family: var(--font-mono); color: var(--ink); font-weight: 500; margin-right: 8px; }
+@media (min-width: 761px) { .proof-list { display: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .slide, .slide.on, .progress i { transition: none; }
+  .js [data-r], .js .draw, .js [data-pop] { transition: none; }
+}
+/* ---- investor deck additions ---- */
+.brandrow { display: flex; align-items: center; }
+.brandrow .wordmark { font-size: 24px; }
+.livebar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-top: 28px; }
+.livebar > div { background: var(--paper); padding: 22px 26px; display: grid; gap: 6px; }
+.livebar b { font-size: 26px; letter-spacing: -0.015em; }
+.livebar span:last-child { font-size: 16px; color: var(--slate); }
+.s1 .h1 { max-width: 13ch; font-size: 86px; }
+.s1 .sub { max-width: 34ch; }
+.pains.hook li { border-top-color: var(--signal); }
+.probs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 2px solid var(--ink); margin-top: 8px; }
+.prob { padding: 24px 28px 0 0; display: grid; gap: 10px; align-content: start; }
+.prob + .prob { padding-left: 28px; border-left: 1px solid var(--border); }
+.prob h3 { font-size: 28px; line-height: 1.1; letter-spacing: -0.02em; font-weight: 700; }
+.prob p { font-size: 18px; line-height: 1.45; color: var(--slate); }
+.callout { margin-top: 24px; display: grid; grid-template-columns: 200px 1fr; gap: 24px; align-items: baseline; background: var(--paper); border-radius: 12px; padding: 24px 28px; }
+.callout p { font-size: 22px; line-height: 1.45; color: var(--ink); max-width: 60ch; }
+.sol-mid.one { grid-template-columns: 1fr; }
+.sol-mid.one .scene-slot { height: 400px; }
+.prod { display: grid; grid-template-columns: 520px 1fr; gap: 48px; align-items: start; }
+.ways { list-style: none; display: grid; gap: 0; border-top: 1px solid var(--border); }
+.ways li { padding: 18px 0; border-bottom: 1px solid var(--border); display: grid; gap: 6px; }
+.ways p { font-size: 19px; line-height: 1.45; color: var(--slate); }
+.diag { display: grid; gap: 10px; }
+.diag svg { width: 100%; height: auto; display: block; }
+.diag figcaption { font-size: 16px; color: var(--slate); line-height: 1.45; }
+.fams { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin-top: 4px; }
+.fams .k { margin-right: 8px; }
+.chip { display: inline-flex; align-items: center; border: 1px solid var(--border-strong); border-radius: 999px; padding: 6px 14px; font-size: 16px; color: var(--ink); background: var(--white); white-space: nowrap; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
+.chips .k { width: 100%; }
+.now { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--border); }
+.nowcol { padding: 28px 48px 0 0; display: grid; gap: 14px; align-content: start; }
+.nowcol + .nowcol { padding: 28px 0 0 48px; border-left: 1px solid var(--border); }
+.nowcol h3 { font-size: 34px; line-height: 1.1; letter-spacing: -0.02em; font-weight: 700; }
+.nowcol p { font-size: 19px; line-height: 1.5; color: var(--slate); max-width: 44ch; }
+.bars { width: 100%; max-width: 600px; height: auto; display: block; }
+.tech-list { list-style: none; display: grid; gap: 10px; margin-top: 8px; }
+.tech-list li { font-size: 19px; color: var(--slate); padding-left: 22px; position: relative; }
+.tech-list li::before { content: ""; position: absolute; left: 0; top: .55em; width: 8px; height: 8px; background: var(--signal); }
+.tech-list li.warn { color: var(--down); }
+.tech-list li.warn::before { background: var(--down); }
+.tl { list-style: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; border-top: 2px solid var(--ink); margin-top: 16px; }
+.tl li { padding: 22px 22px 0 0; display: grid; gap: 8px; align-content: start; position: relative; }
+.tl li + li { padding-left: 22px; border-left: 1px solid var(--border); }
+.tl li::before { content: ""; position: absolute; top: -7px; left: 0; width: 12px; height: 12px; border-radius: 50%; background: var(--signal); }
+.tl li + li::before { left: 22px; }
+.tl h3 { font-size: 26px; line-height: 1.15; letter-spacing: -0.01em; font-weight: 700; }
+.tl p { font-size: 17px; line-height: 1.45; color: var(--slate); }
+.honest { font-family: var(--font-mono); font-size: 15px; color: var(--muted); margin-top: 18px; }
+.bm { display: grid; grid-template-columns: 460px 1fr; gap: 64px; align-items: center; margin-top: 12px; }
+.bm .fees { display: grid; gap: 28px; }
+.bm .fee { font-size: 72px; line-height: 1; letter-spacing: -0.035em; font-weight: 700; }
+.bm .fee small { display: block; font-family: var(--font-mono); font-size: 15px; letter-spacing: .02em; font-weight: 500; color: var(--slate); margin-top: 10px; }
+.bmchart svg { width: 100%; height: auto; display: block; }
+.foot-note { font-size: 16px; color: var(--muted); margin-top: 12px; }
+.gtm { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.gtm li { background: var(--paper); padding: 22px 24px 24px; display: grid; gap: 10px; align-content: start; }
+.gtm h3 { font-size: 24px; line-height: 1.15; letter-spacing: -0.01em; font-weight: 700; }
+.gtm p { font-size: 17px; line-height: 1.45; color: var(--slate); }
+.metrics { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: baseline; font-size: 18px; color: var(--ink); border-top: 1px solid var(--border); padding-top: 18px; }
+.venn { display: grid; justify-items: center; }
+.venn svg { width: 100%; max-width: 860px; height: auto; display: block; }
+.road { list-style: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; margin-top: 24px; }
+.road li { border: 1px solid var(--border-strong); border-radius: 12px; padding: 22px 22px 26px; display: grid; gap: 10px; align-content: start; background: var(--white); }
+.road li.done { background: var(--ink); border-color: var(--ink); }
+.road li.done h3 { color: var(--white); }
+.road li.done p { color: #B4BAC5; }
+.road li.done .k { color: #6FD6A9; }
+.road h3 { font-size: 26px; line-height: 1.12; letter-spacing: -0.015em; font-weight: 700; }
+.road p { font-size: 17px; line-height: 1.45; color: var(--slate); }
+.s12 .facts { grid-template-columns: 1fr 1fr; }
+@media (max-width: 760px) {
+  .s1 .h1 { font-size: 40px; }
+  .probs, .now, .prod, .bm, .tl, .gtm, .road, .callout, .livebar { grid-template-columns: 1fr; }
+  .prob, .prob + .prob, .nowcol, .nowcol + .nowcol, .tl li, .tl li + li { padding: 18px 0; border-left: 0; }
+  .prob + .prob, .nowcol + .nowcol, .tl li + li { border-top: 1px solid var(--border); }
+  .tl li::before, .tl li + li::before { display: none; }
+  .prob h3, .nowcol h3 { font-size: 24px; }
+  .callout p { font-size: 18px; }
+  .bm .fee { font-size: 48px; }
+  .sol-mid.one .scene-slot { height: 240px; }
+  .chip { white-space: normal; }
+  .s12 .facts { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+  <div class="fit" id="fit">
+    <main class="stage" id="stage" aria-roledescription="slide deck" aria-label="notes.markets investor deck">
+
+      <!-- 1 · Title -->
+      <section class="slide s1" aria-label="notes.markets" data-scene="hero"
+        data-time="Opening"
+        data-notes="notes.markets lets anyone issue a structured note on-chain in minutes, on any of 141 Chainlink prices. The issuer pledges collateral, mints the note, raises USDG from investors, and Chainlink runs every fixing and coupon on schedule.">
+        <div class="scene-slot" data-slot></div>
+        <div class="veil" aria-hidden="true"></div>
+        <div class="hero">
+          <div class="brandrow" data-r><span class="wordmark" aria-label="notes.markets"><svg viewBox="0 0 100 108" aria-hidden="true"><path d="M14 0H72L100 28V94a14 14 0 0 1-14 14H14A14 14 0 0 1 0 94V14A14 14 0 0 1 14 0Z" fill="#0E1116"/><path d="M72 0V20a8 8 0 0 0 8 8H100Z" fill="#4A5060"/><polyline points="17,82 37,82 55,52 80,52" fill="none" stroke="#12A971" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="wm-text" aria-hidden="true"><b>notes</b><i></i><span>markets</span></span></span></div>
+          <div class="hero-copy">
+            <span class="badge" data-r style="--d:80ms"><i></i>Investor deck · pre-seed · Robinhood Chain</span>
+            <h1 class="h1" data-r style="--d:160ms">A bespoke instrument for every market.</h1>
+            <p class="sub" data-r style="--d:260ms">On-chain structured notes, live in minutes. Collateralize, mint, raise USDG, and let Chainlink oracles and automation handle every fixing and coupon.</p>
+          </div>
+          <ul class="pains hook">
+            <li data-r style="--d:520ms"><h3>141 underlyings</h3><p>Stocks, crypto, FX and gold, priced by Chainlink.</p></li>
+            <li data-r style="--d:640ms"><h3>One engine</h3><p>Every product is data on one contract, not a new deploy.</p></li>
+            <li data-r style="--d:760ms"><h3>Live on testnet</h3><p>Robinhood Chain testnet. Not audited yet.</p></li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 2 · Problem -->
+      <section class="slide s2" aria-label="Problem"
+        data-time="Problem"
+        data-notes="Structured notes are a large, established product, but issuing one is a bank's job: weeks of structuring, a calculation agent the investor has to trust, unsecured issuer credit, and tickets sized for private-bank clients. Meanwhile tokenized stocks are now on-chain, and their holders have no way to raise money against them without selling.">
+        <div class="eyebrow" data-r><b>02</b>The problem</div>
+        <h2 class="h2" data-r style="--d:100ms">Structured notes are a bank-only product.</h2>
+        <div class="probs">
+          <div class="prob" data-r style="--d:240ms"><span class="k slate">Issuance</span><h3>Weeks to structure</h3><p>Every note is a legal, operations and distribution project at a bank.</p></div>
+          <div class="prob" data-r style="--d:340ms"><span class="k slate">Fixings</span><h3>Trust the calculator</h3><p>The bank's own calculation agent decides what each investor is owed.</p></div>
+          <div class="prob" data-r style="--d:440ms"><span class="k slate">Credit</span><h3>Unsecured issuer risk</h3><p>Investors rely on the issuer's balance sheet, with nothing pledged to the note.</p></div>
+          <div class="prob" data-r style="--d:540ms"><span class="k slate">Access</span><h3>Six-figure tickets</h3><p>Sold to private-bank clients, only where the bank distributes.</p></div>
+        </div>
+        <div class="callout" data-r style="--d:700ms">
+          <span class="k">And on-chain</span>
+          <p>Tokenized stocks now live on Robinhood Chain. Their holders can't raise against them without selling, and on-chain investors mostly get variable vault yields, not a term sheet.</p>
+        </div>
+      </section>
+
+      <!-- 3 · Solution -->
+      <section class="slide s3" aria-label="Solution" data-scene="story"
+        data-time="Solution"
+        data-notes="On notes.markets the issuer does the work a bank desk used to do, in minutes. They set the terms, pledge collateral into the note and mint it. Investors subscribe in USDG. Chainlink CRE fixes the strike, reads every observation and runs each payment step on schedule. The issuer funds each payment; if they miss one, the pledged collateral goes to holders, up to its value.">
+        <div class="sol-head">
+          <div class="eyebrow" data-r><b>03</b>The solution</div>
+          <h2 class="h2" data-r style="--d:100ms">Issuers raise in minutes. Chainlink runs the note.</h2>
+        </div>
+        <div class="sol-mid one">
+          <div class="scene-slot panel" data-slot data-r style="--d:240ms"><span class="panel-cap">One note's life · Chainlink checks each date</span></div>
+        </div>
+        <ol class="flow">
+          <li data-r style="--d:700ms"><span class="k slate">Issuer</span><h3>Collateralize &amp; mint</h3><p>Set the terms, pledge collateral into the note, mint the units.</p></li>
+          <li data-r style="--d:850ms"><span class="k slate">Investors</span><h3>Subscribe</h3><p>USDG in, ERC-20 note units out. Proceeds fund the issuer.</p></li>
+          <li data-r style="--d:1000ms"><span class="k">Chainlink CRE</span><h3>Fix &amp; pay</h3><p>Strike, every observation and each payment step, on schedule.</p></li>
+          <li class="end" data-r style="--d:1150ms"><span class="k risk">If a payment is missed</span><h3>Collateral pays</h3><p>Holders take the pledged collateral, up to its value.</p></li>
+        </ol>
+      </section>
+
+      <!-- 4 · Product -->
+      <section class="slide s4" aria-label="Product"
+        data-time="Product"
+        data-notes="There are three ways to issue: start from a recent note or a ready-made template, use the product wizard, or describe the note to the AI. Every note is a workflow diagram, BPMN, that a non-programmer can read: it's the source of truth, compiled to the on-chain definition. Investors see the same diagram, with each step's live values, read-only.">
+        <div class="eyebrow" data-r><b>04</b>The product</div>
+        <h2 class="h2" data-r style="--d:100ms">Three ways to a term sheet. One readable workflow.</h2>
+        <div class="prod">
+          <ol class="ways">
+            <li data-r style="--d:240ms"><span class="k">Start from a note</span><p>Reuse a recent issuance or a ready-made template; fresh dates, same terms.</p></li>
+            <li data-r style="--d:340ms"><span class="k">Product wizard</span><p>Pick a product type and set coupon, barriers, schedule and collateral.</p></li>
+            <li data-r style="--d:440ms"><span class="k">Describe it</span><p>The AI drafts the terms and the workflow; missing terms come back as questions.</p></li>
+          </ol>
+          <figure class="diag" data-r style="--d:360ms">
+            <svg viewBox="0 0 760 300" role="img" aria-label="A note's workflow diagram: issue and pledge, subscribe, fix strike, observe on each date, then pay a coupon, call early, or at maturity repay; a missed payment leads to default and the collateral pays holders.">
+              <rect x="0" y="0" width="760" height="300" rx="12" fill="#F4F5F7"/>
+              <text x="20" y="28" fill="#646B78" font-size="12" letter-spacing="1.5">WORKFLOW · THE SOURCE OF TRUTH</text>
+              <g font-size="13">
+                <rect x="20" y="96" width="110" height="52" rx="8" fill="#FFFFFF" stroke="#0E1116" stroke-width="1.5"/><text x="75" y="118" text-anchor="middle" fill="#0E1116">Issue &amp;</text><text x="75" y="136" text-anchor="middle" fill="#0E1116">pledge</text>
+                <rect x="160" y="96" width="110" height="52" rx="8" fill="#FFFFFF" stroke="#0E1116" stroke-width="1.5"/><text x="215" y="127" text-anchor="middle" fill="#0E1116">Subscribe</text>
+                <rect x="300" y="96" width="110" height="52" rx="8" fill="#E7F6EF" stroke="#12A971" stroke-width="2.5"/><text x="355" y="118" text-anchor="middle" fill="#0B7A52">Fix strike</text><text x="355" y="136" text-anchor="middle" fill="#0B7A52" font-size="11">Chainlink</text>
+                <rect x="440" y="96" width="110" height="52" rx="8" fill="#FFFFFF" stroke="#0E1116" stroke-width="1.5"/><text x="495" y="118" text-anchor="middle" fill="#0E1116">Observe</text><text x="495" y="136" text-anchor="middle" fill="#646B78" font-size="11">each date</text>
+                <polygon points="605,122 627,100 649,122 627,144" fill="#FFFFFF" stroke="#0E1116" stroke-width="1.5"/>
+                <rect x="660" y="40" width="88" height="40" rx="8" fill="#FFFFFF" stroke="#0E1116" stroke-width="1.5"/><text x="704" y="65" text-anchor="middle" fill="#0E1116">Coupon</text>
+                <rect x="660" y="102" width="88" height="40" rx="8" fill="#FFFFFF" stroke="#0E1116" stroke-width="1.5"/><text x="704" y="127" text-anchor="middle" fill="#0E1116" font-size="12">Call early</text>
+                <rect x="660" y="164" width="88" height="40" rx="8" fill="#FFFFFF" stroke="#0E1116" stroke-width="1.5"/><text x="704" y="189" text-anchor="middle" fill="#0E1116">Maturity</text>
+                <rect x="560" y="236" width="188" height="40" rx="8" fill="#FFFFFF" stroke="#C9363B" stroke-width="1.5"/><text x="654" y="261" text-anchor="middle" fill="#C9363B">Missed: collateral pays</text>
+              </g>
+              <g stroke="#4A5060" stroke-width="1.5" fill="none">
+                <path d="M130 122 H160"/><path d="M270 122 H300"/><path d="M410 122 H440"/><path d="M550 122 H605"/>
+                <path d="M627 100 V60 H660"/><path d="M649 122 H660"/><path d="M627 144 V184 H660"/>
+                <path d="M495 148 V256 H560" stroke-dasharray="5 4" stroke="#C9363B"/>
+              </g>
+              <path d="M540 32 C 520 60, 470 70, 495 96" stroke="#12A971" stroke-width="1.5" fill="none" stroke-dasharray="4 4"/>
+              <text x="520" y="26" fill="#0B7A52" font-size="12">repeats per date</text>
+            </svg>
+            <figcaption>Readable by non-programmers, compiled to the on-chain definition. Investors see it read-only, with each step's live values.</figcaption>
+          </figure>
+        </div>
+        <div class="fams" data-r style="--d:600ms">
+          <span class="k slate">Product families</span>
+          <span class="chip">Phoenix · autocall</span><span class="chip">Fixed coupon · reverse convertible</span><span class="chip">Snowball</span><span class="chip">Principal-protected</span><span class="chip">Worst-of baskets</span>
+        </div>
+      </section>
+
+      <!-- 5 · Why now -->
+      <section class="slide s5" aria-label="Why now"
+        data-time="Why now"
+        data-notes="Two things changed. Robinhood's tokenized stocks now live on Robinhood Chain, so a note can take TSLA as collateral and deliver it at maturity on the same chain, with no bridge. And Chainlink CRE makes the calculation and paying agent automatable: it reads the prices and runs each payment step. Any of 141 Chainlink USD prices can be an underlying. Collateral is a separate whitelist, limited to what we can lock up today.">
+        <div class="eyebrow" data-r><b>05</b>Why now</div>
+        <h2 class="h2" data-r style="--d:100ms">The stocks are on-chain. The back office can be automated.</h2>
+        <div class="now">
+          <div class="nowcol" data-r style="--d:240ms">
+            <span class="k">Robinhood Chain</span>
+            <h3>Collateral and delivery on one chain</h3>
+            <p>Robinhood's tokenized stocks live where the note runs. TSLA can back a note and be delivered at maturity, with no bridge.</p>
+            <div class="chips"><span class="k slate">Collateral whitelist</span><span class="chip">USDG</span><span class="chip">WETH</span><span class="chip">TSLA</span><span class="chip">AMZN</span><span class="chip">AMD</span><span class="chip">PLTR</span></div>
+          </div>
+          <div class="nowcol" data-r style="--d:360ms">
+            <span class="k">Chainlink</span>
+            <h3>141 USD prices as underlyings</h3>
+            <svg class="bars" viewBox="0 0 600 196" role="img" aria-label="Underlyings by class: crypto 87, stocks 34, FX 18, metals 2.">
+              <g font-size="14">
+                <text x="0" y="30" fill="#0E1116">Crypto</text><rect x="110" y="14" width="420" height="22" fill="#12A971"/><text x="540" y="31" fill="#0E1116" font-weight="600">87</text>
+                <text x="0" y="80" fill="#0E1116">Stocks</text><rect x="110" y="64" width="164" height="22" fill="#12A971"/><text x="284" y="81" fill="#0E1116" font-weight="600">34</text>
+                <text x="0" y="130" fill="#0E1116">FX</text><rect x="110" y="114" width="87" height="22" fill="#12A971"/><text x="207" y="131" fill="#0E1116" font-weight="600">18</text>
+                <text x="0" y="180" fill="#0E1116">Metals</text><rect x="110" y="164" width="10" height="22" fill="#12A971"/><text x="130" y="181" fill="#0E1116" font-weight="600">2</text>
+              </g>
+            </svg>
+            <p>Chainlink CRE reads the prices and runs each payment step: the calculation and paying-agent work, automated.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6 · Technology -->
+      <section class="slide s6t" aria-label="Technology"
+        data-time="Technology"
+        data-notes="The moat is the engine. One contract runs every note from a content-addressed definition, so a new product or a new underlying ships as data, without a new contract. Note units are ERC-20 tokens that move only between wallets with a verified email. Payouts are one accumulator per note, so the cost of a coupon doesn't grow with the number of holders. Every product is checked against a reference payoff. The same workflow also compiles to Daml for Canton, our institutional path. It's not audited yet; that's the first use of the round.">
+        <div class="eyebrow" data-r><b>06</b>Technology</div>
+        <h2 class="h2" data-r style="--d:100ms">One engine runs every note. Products are data.</h2>
+        <div class="stats">
+          <div class="stat" data-r style="--d:300ms"><span class="k">Tests</span><div class="big">391</div><span class="tag">299 unit · 92 contract</span><p>Every product checked against its reference payoff.</p></div>
+          <div class="stat" data-r style="--d:420ms"><span class="k">Gas per coupon</span><div class="big">393k</div><span class="tag">10 or 1,000 holders</span><p>One accumulator per note; holders claim with a receipt.</p></div>
+          <div class="stat" data-r style="--d:540ms"><span class="k">New product</span><div class="big word">No redeploy</div><p>A content-addressed definition on the same audited-to-be contract.</p></div>
+          <div class="stat" data-r style="--d:660ms"><span class="k">Institutions</span><div class="big word">Daml too</div><p>The same workflow compiles to Daml for Canton.</p></div>
+        </div>
+        <ul class="tech-list" data-r style="--d:800ms">
+          <li>ERC-20 note units; transfers only to wallets with a verified email (salted hash on-chain)</li>
+          <li>Reports accepted only from the Chainlink forwarder; every price bounds-checked</li>
+          <li class="warn">Not audited yet: the audit is the first use of the round</li>
+        </ul>
+      </section>
+
+      <!-- 7 · Traction -->
+      <section class="slide s7t" aria-label="Traction"
+        data-time="Traction"
+        data-notes="What's real today: the full product is live on Robinhood Chain testnet. Notes have been issued, subscribed, fixed by Chainlink and run through their schedule, including the missed-payment path, where the note defaults on-chain as designed. An earlier build ran a TSLA note to paid in full. Earlier still, a Solana build of this engine won Best Use of Chainlink CRE at TOKEN2049. No users or revenue yet: this round funds the audit and the first real notes.">
+        <div class="eyebrow" data-r><b>07</b>Traction</div>
+        <h2 class="h2" data-r style="--d:100ms">Built, live on testnet, and run end to end.</h2>
+        <ol class="tl" data-r style="--d:240ms">
+          <li><span class="k">TOKEN2049</span><h3>Best Use of Chainlink CRE</h3><p>Earlier Solana build of the same engine.</p></li>
+          <li><span class="k">24 Oct 2026</span><h3>TSLA note, paid in full</h3><p>Earlier build: strike $372.07 fixed by Chainlink CRE, collateral released.</p></li>
+          <li><span class="k">Oct 2026</span><h3>Robinhood Chain only</h3><p>Engine 0xCba1…D4eE live on testnet; collateral and delivery on one chain.</p></li>
+          <li><span class="k">Oct 2026</span><h3>Default path run</h3><p>Demo notes ran their schedule to a missed payment and defaulted on-chain, as designed.</p></li>
+          <li><span class="k">Now</span><h3>141 underlyings</h3><p>Stocks, crypto, FX and gold; the readable workflow and AI issuance.</p></li>
+        </ol>
+        <div class="livebar" data-r style="--d:600ms">
+          <div><span class="k slate">App</span><b>notes.markets</b><span>live, open to any verified wallet</span></div>
+          <div><span class="k slate">Chain</span><b>Robinhood Chain testnet</b><span>chain id 46630</span></div>
+          <div><span class="k slate">Library</span><b>8 ready-made notes</b><span>plus the wizard and AI issuance</span></div>
+        </div>
+        <p class="honest" data-r style="--d:700ms">No users, volume or revenue yet. Testnet only, not audited.</p>
+      </section>
+
+      <!-- 8 · Business model -->
+      <section class="slide s8" aria-label="Business model"
+        data-time="Business model"
+        data-notes="We charge 50 basis points of the notional sold to issue, and 25 basis points a year on outstanding notional to service. Every fee is on the term sheet, against roughly one to three percent embedded in a typical bank note; that range is an approximate industry figure. Our own in-house notes pay no platform fee.">
+        <div class="eyebrow" data-r><b>08</b>Business model</div>
+        <h2 class="h2" data-r style="--d:100ms">Transparent fees, on every term sheet.</h2>
+        <div class="bm">
+          <div class="fees" data-r style="--d:240ms">
+            <div class="fee mono">50 bps<small>of notional sold, to issue</small></div>
+            <div class="fee mono">25 bps / yr<small>of outstanding notional, to service (min USD 50 a period)</small></div>
+          </div>
+          <div class="bmchart" data-r style="--d:360ms">
+            <svg viewBox="0 0 660 230" role="img" aria-label="Fees on a scale of 0 to 3 percent: notes.markets 0.50 percent to issue plus 0.25 percent a year; a bank note embeds roughly 1 to 3 percent.">
+              <g stroke="#E3E5EA"><line x1="40" y1="30" x2="40" y2="180"/><line x1="240" y1="30" x2="240" y2="180"/><line x1="440" y1="30" x2="440" y2="180"/><line x1="640" y1="30" x2="640" y2="180"/></g>
+              <text x="40" y="22" fill="#0E1116" font-size="15">notes.markets</text>
+              <rect x="40" y="36" width="100" height="32" fill="#12A971"/>
+              <rect x="140" y="36" width="50" height="32" fill="#FFFFFF" stroke="#12A971" stroke-width="2"/>
+              <text x="200" y="58" fill="#4A5060" font-size="14">issue + 1 year</text>
+              <text x="40" y="104" fill="#0E1116" font-size="15">Bank note, embedded (approx.)</text>
+              <rect x="240" y="116" width="400" height="32" fill="#CBD0D8"/>
+              <text x="230" y="138" fill="#4A5060" font-size="14" text-anchor="end">~1–3%</text>
+              <g fill="#646B78" font-size="14" text-anchor="middle"><text x="40" y="206">0%</text><text x="240" y="206">1%</text><text x="440" y="206">2%</text><text x="640" y="206" text-anchor="end">3%</text></g>
+            </svg>
+          </div>
+        </div>
+        <p class="foot-note" data-r style="--d:500ms">In-house issuance pays no platform fee. Bank range is an approximate industry figure.</p>
+      </section>
+
+      <!-- 9 · Go-to-market -->
+      <section class="slide s9" aria-label="Go-to-market"
+        data-time="Go-to-market"
+        data-notes="We start with crypto-native issuers: treasuries, market makers, funds and tokenized-stock holders who want to raise against what they hold. We issue the first notes in-house so the marketplace opens with supply. Next, desks and communities structuring notes for their own clients, where they're permitted to. Retail comes later, only through licensed partners, and Canton is the path to institutions.">
+        <div class="eyebrow" data-r><b>09</b>Go-to-market</div>
+        <h2 class="h2" data-r style="--d:100ms">Issuers first. Supply brings the investors.</h2>
+        <ol class="gtm">
+          <li data-r style="--d:240ms"><span class="k">Now</span><h3>Crypto-native issuers</h3><p>Treasuries, market makers, funds and tokenized-stock holders raising USDG against what they hold.</p><span class="tag ok">In-house notes bootstrap supply</span></li>
+          <li data-r style="--d:360ms"><span class="k">Next</span><h3>Desks and communities</h3><p>Structuring notes for their own clients, where they are permitted to offer them.</p><span class="tag">Embedded in wallets and frontends</span></li>
+          <li data-r style="--d:480ms"><span class="k">Later</span><h3>Retail via licensed partners</h3><p>Eligibility and jurisdiction rules applied by a regulated partner.</p><span class="tag">Partner-led</span></li>
+          <li data-r style="--d:600ms"><span class="k">Institutions</span><h3>Canton Network</h3><p>The same workflow compiles to Daml; we're Canton validators already.</p><span class="tag">Parallel track</span></li>
+        </ol>
+        <div class="metrics" data-r style="--d:760ms"><span class="k slate">We'll measure</span><span>Notional issued</span><span>Repeat issuers</span><span>Subscribers per note</span><span>On-time funding rate</span><span>CRE report success</span></div>
+      </section>
+
+      <!-- 10 · Market -->
+      <section class="slide s10" aria-label="Market"
+        data-time="Market"
+        data-notes="Structured notes are an established, large product line at banks worldwide, but they've never been issued on-chain at scale. Our market is where three things meet: the structured note format itself, tokenized stocks and real-world assets moving on-chain, and on-chain investors who want defined terms instead of variable yield. [Add a sourced market-size figure before using this deck.]">
+        <div class="eyebrow" data-r><b>10</b>Market</div>
+        <h2 class="h2" data-r style="--d:100ms">A bank product line, meeting on-chain assets.</h2>
+        <div class="venn" data-r style="--d:240ms">
+          <svg viewBox="0 0 900 420" role="img" aria-label="Three overlapping circles: structured notes, tokenized stocks and real-world assets, and on-chain investors; notes.markets sits where they meet.">
+            <circle cx="330" cy="160" r="150" fill="#12A971" fill-opacity=".10" stroke="#12A971" stroke-width="2"/>
+            <circle cx="570" cy="160" r="150" fill="#0E1116" fill-opacity=".05" stroke="#0E1116" stroke-width="2"/>
+            <circle cx="450" cy="290" r="150" fill="#9A6200" fill-opacity=".07" stroke="#9A6200" stroke-width="2"/>
+            <text x="250" y="110" fill="#0B7A52" font-size="18" font-weight="600" text-anchor="middle">Structured notes</text>
+            <text x="250" y="134" fill="#4A5060" font-size="14" text-anchor="middle">an established bank product</text>
+            <text x="650" y="110" fill="#0E1116" font-size="18" font-weight="600" text-anchor="middle">Tokenized assets</text>
+            <text x="650" y="134" fill="#4A5060" font-size="14" text-anchor="middle">stocks and RWAs on-chain</text>
+            <text x="450" y="380" fill="#9A6200" font-size="18" font-weight="600" text-anchor="middle">On-chain investors</text>
+            <text x="450" y="404" fill="#4A5060" font-size="14" text-anchor="middle">wanting terms, not vault yield</text>
+            <rect x="380" y="186" width="140" height="40" rx="20" fill="#0E1116"/>
+            <text x="450" y="211" fill="#FFFFFF" font-size="15" font-weight="600" text-anchor="middle">notes.markets</text>
+          </svg>
+        </div>
+        <p class="foot-note" data-r style="--d:500ms">Market-size figures to be added with sources.</p>
+      </section>
+
+      <!-- 11 · Roadmap -->
+      <section class="slide s11" aria-label="Roadmap"
+        data-time="Roadmap"
+        data-notes="The roadmap is short. First the independent audit. Then mainnet on Robinhood Chain with our own notes as the first supply. Then collateral on other chains, as a future extension. And in parallel, the institutional path on Canton, where the same workflow already compiles to Daml.">
+        <div class="eyebrow" data-r><b>11</b>Roadmap</div>
+        <h2 class="h2" data-r style="--d:100ms">Audit, mainnet, then wider collateral.</h2>
+        <ol class="road" data-r style="--d:240ms">
+          <li class="done"><span class="k">Done</span><h3>Testnet product</h3><p>Engine, app, CRE automation, 141 underlyings, AI issuance.</p></li>
+          <li><span class="k">1</span><h3>Independent audit</h3><p>The engine and the note token.</p></li>
+          <li><span class="k">2</span><h3>Mainnet, Robinhood Chain</h3><p>In-house notes first, then outside issuers.</p></li>
+          <li><span class="k">3</span><h3>Collateral on other chains</h3><p>A future extension; Robinhood Chain stays home.</p></li>
+          <li><span class="k">Parallel</span><h3>Institutions on Canton</h3><p>The same workflows, compiled to Daml.</p></li>
+        </ol>
+      </section>
+
+      <!-- 12 · Team & ask -->
+      <section class="slide s12" aria-label="Team and ask" data-scene="close"
+        data-time="Team &amp; ask"
+        data-notes="I'm Kwang, the solo founder. I was involved in the MAS Project Guardian tokenized structured note pilot at Marketnode, built the earlier version that won Best Use of Chainlink CRE at TOKEN2049, and run a Canton Network validator from the Canton accelerator. I'm raising a 500 thousand dollar pre-seed for the audit, the mainnet launch, and in-house issuance to bootstrap liquidity.">
+        <div class="eyebrow" data-r><b>12</b>Team &amp; ask</div>
+        <div class="raise">
+          <div class="raise-l">
+            <h2 class="h2" data-r style="--d:100ms">Raising a $500k pre-seed.</h2>
+            <div class="facts">
+              <div class="fact" data-r style="--d:260ms"><span class="k">Kwang · solo founder</span><p>Involved in the MAS Project Guardian tokenized structured note pilot at Marketnode.</p></div>
+              <div class="fact" data-r style="--d:340ms"><span class="k">Built it</span><p>Best Use of Chainlink CRE, TOKEN2049 (earlier build). Every line of this product.</p></div>
+              <div class="fact" data-r style="--d:420ms"><span class="k">Institutional path</span><p>Canton Network validator, from the Canton accelerator.</p></div>
+              <div class="fact" data-r style="--d:500ms"><span class="k">Use of funds</span><p>Independent audit, mainnet launch, and in-house issuance to bootstrap liquidity.</p></div>
+            </div>
+          </div>
+          <div class="scene-slot panel" data-slot data-r style="--d:300ms"><span class="panel-cap">Paid in full · collateral released</span></div>
+        </div>
+        <div class="close" data-r style="--d:800ms">
+          <span class="wordmark xl" aria-label="notes.markets"><svg viewBox="0 0 100 108" aria-hidden="true"><path d="M14 0H72L100 28V94a14 14 0 0 1-14 14H14A14 14 0 0 1 0 94V14A14 14 0 0 1 14 0Z" fill="#0E1116"/><path d="M72 0V20a8 8 0 0 0 8 8H100Z" fill="#4A5060"/><polyline points="17,82 37,82 55,52 80,52" fill="none" stroke="#12A971" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="wm-text" aria-hidden="true"><b>notes</b><i></i><span>markets</span></span></span>
+          <span class="live"><i></i>notes.markets · live on Robinhood Chain testnet · not audited</span>
+        </div>
+      </section>
+
+      <div class="chrome" aria-hidden="true">
+        <span class="wordmark" id="chrome-mark"><svg viewBox="0 0 100 108"><path d="M14 0H72L100 28V94a14 14 0 0 1-14 14H14A14 14 0 0 1 0 94V14A14 14 0 0 1 14 0Z" fill="#0E1116"/><path d="M72 0V20a8 8 0 0 0 8 8H100Z" fill="#4A5060"/><polyline points="17,82 37,82 55,52 80,52" fill="none" stroke="#12A971" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="wm-text"><b>notes</b><i></i><span>markets</span></span></span>
+        <span class="counter" id="counter">1 / 12</span>
+      </div>
+      <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+    </main>
+  </div>
+</div>
+
+<nav class="controls" aria-label="Slide controls">
+  <button class="ctl" id="prev" type="button" aria-label="Previous slide">←</button>
+  <span class="ctl-count" id="ctl-count" aria-live="polite">1 / 12</span>
+  <button class="ctl" id="next" type="button" aria-label="Next slide">→</button>
+  <button class="ctl" id="notes-btn" type="button" aria-pressed="false">Notes <kbd>N</kbd></button>
+  <button class="ctl ctl-hide-sm" id="present-btn" type="button" aria-pressed="false">Present <kbd>F</kbd></button>
+</nav>
+
+<aside class="notes" id="notes" hidden aria-live="polite">
+  <span class="n-k" id="notes-k"></span>
+  <p id="notes-p"></p>
+  <small>← → space to move · N notes · F present</small>
+</aside>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  var reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var narrow = function () { return window.matchMedia('(max-width: 760px)').matches; };
+
+  /* =========================================================================================
+     The landing's NoteScene (landing/src/scene/NoteScene.ts), ported to the THREE global.
+     A worst-of phoenix: strike, four observations, three barrier sheets, the issuer's collateral,
+     investors, coupons to holders. `q` is the landing's story progress; each slide picks a shot.
+     ========================================================================================= */
+  var T = window.THREE;
+  var C = { bg: 0xffffff, line: 0xe3e5ea, lineStrong: 0xc3c8d1, text: 0x0e1116, soft: 0x4a5060, muted: 0x6b7280,
+    blue: 0x0b7a52, blueHi: 0x12a971, green: 0x12a971, red: 0xc9363b, amber: 0x9a6200, panel: 0x0e1116,
+    ink: 0x0e1116, signal: 0x12a971, signalInk: 0x0b7a52 };
+  var STORY_END = 0.68, ENDING_SPLIT = 0.84;
+  var X0 = -20, X1 = 20, OBS_X = [-10, 0, 10, 20];
+  var LEVEL = function (p) { return (p - 0.6) * 20; };
+  var PERFS = [1.0, 0.93, 0.78, 0.95, 1.04];
+  var FLOOR_Y = -1.6, HOLDERS_Z = 9;
+  var clamp = function (v, a, b) { a = a === undefined ? 0 : a; b = b === undefined ? 1 : b; return Math.min(b, Math.max(a, v)); };
+  var smooth = function (t) { return t * t * (3 - 2 * t); };
+  var smoother = function (t) { return t * t * t * (t * (t * 6 - 15) + 10); };
+  var span = function (p, a, b) { return clamp((p - a) / (b - a)); };
+  var frac = function (v) { return v - Math.floor(v); };
+  var mix = function (a, b, t) { return a + (b - a) * t; };
+  var pathAt = function (p) { return smooth(span(p, 0.47, 0.8)); };
+  var hex = function (n) { return '#' + n.toString(16).padStart(6, '0'); };
+
+  function pathY(x) {
+    var knots = [X0].concat(OBS_X), i = 0;
+    while (i < knots.length - 2 && x > knots[i + 1]) i++;
+    var t = clamp((x - knots[i]) / (knots[i + 1] - knots[i]));
+    var y0 = LEVEL(PERFS[Math.max(0, i - 1)]), y1 = LEVEL(PERFS[i]), y2 = LEVEL(PERFS[i + 1]), y3 = LEVEL(PERFS[Math.min(PERFS.length - 1, i + 2)]);
+    var t2 = t * t, t3 = t2 * t;
+    var base = 0.5 * (2 * y1 + (-y0 + y2) * t + (2 * y0 - 5 * y1 + 4 * y2 - y3) * t2 + (-y0 + 3 * y1 - 3 * y2 + y3) * t3);
+    var wiggle = Math.sin(Math.PI * t) * (0.55 * Math.sin(x * 1.7 + 0.6) + 0.35 * Math.sin(x * 3.1 + 2.1) + 0.2 * Math.sin(x * 5.3));
+    return base + wiggle;
+  }
+  function label(text, color, height, weight) {
+    height = height || 0.9; weight = weight || 500;
+    var pad = 18, fontPx = 64, cv = document.createElement('canvas'), ctx = cv.getContext('2d');
+    var font = weight + ' ' + fontPx + 'px "Geist Mono", ui-monospace, Menlo, monospace';
+    ctx.font = font;
+    var w = Math.ceil(ctx.measureText(text).width) + pad * 2;
+    cv.width = w; cv.height = fontPx + pad * 2;
+    ctx.font = font; ctx.fillStyle = color; ctx.textBaseline = 'middle';
+    ctx.fillText(text, pad, cv.height / 2 + 2);
+    var tex = new T.CanvasTexture(cv); tex.colorSpace = T.SRGBColorSpace; tex.minFilter = T.LinearFilter;
+    var s = new T.Sprite(new T.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: true }));
+    s.scale.set(height * (cv.width / cv.height), height, 1);
+    s.center.set(0, 0.5);
+    return s;
+  }
+  function usdgFace() {
+    var cv = document.createElement('canvas'); cv.width = cv.height = 128;
+    var ctx = cv.getContext('2d');
+    ctx.fillStyle = hex(C.green); ctx.fillRect(0, 0, 128, 128);
+    ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.arc(64, 64, 52, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#ffffff'; ctx.font = '600 34px "Geist Mono", ui-monospace, Menlo, monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('USDG', 64, 66);
+    var tex = new T.CanvasTexture(cv); tex.colorSpace = T.SRGBColorSpace; return tex;
+  }
+  function coinMaterials() { var face = new T.MeshBasicMaterial({ map: usdgFace() }); return [new T.MeshBasicMaterial({ color: C.green }), face, face]; }
+
+  function NoteScene(canvas, opts) {
+    this.opts = opts;
+    this.scene = new T.Scene();
+    this.camera = new T.PerspectiveCamera(42, 1, 0.1, 200);
+    this.v = new T.Vector3(); this.look = new T.Vector3(); this.tmp = new T.Object3D();
+    this.obs = []; this.coinFrom = []; this.coinTo = []; this.coinAt = []; this.couponTags = []; this.bands = [];
+    this.principalFrom = []; this.principalTo = []; this.tslaFrom = []; this.tslaTo = [];
+    this.q = 0; this.draw = 1; this.mode = { lens: true, shot: null };
+    this.renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false, preserveDrawingBuffer: true });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, opts.lowPower ? 1.5 : 2));
+    this.renderer.setClearColor(C.bg, 1);
+    this.renderer.outputColorSpace = T.SRGBColorSpace;
+    this.scene.fog = new T.Fog(C.bg, 28, 86);
+    this.build();
+  }
+  NoteScene.SHOTS = [
+    { p: 0.0, pos: [16, 13, 31], at: [-1, 3.2, 0] },
+    { p: 0.12, pos: [12, 11, 27], at: [-4, 2.6, 0] },
+    { p: 0.22, pos: [-9, 5.5, 9], at: [-22, 1, -6] },
+    { p: 0.38, pos: [-7, 8.5, 22], at: [-22, 0.6, 1] },
+    { p: 0.47, pos: [-16, 10, 18], at: [-12, 4, 0] },
+    { p: 0.6, pos: [4, 9, 19], at: [3, 3.4, 0] },
+    { p: 0.74, pos: [17, 6.5, 22], at: [10, 1.4, 5] },
+    { p: 0.86, pos: [-6, 7, 13], at: [-21, 1.2, -5] },
+    { p: 1.0, pos: [20, 17, 38], at: [-1, 2.8, 0] }
+  ];
+  NoteScene.prototype.build = function () {
+    var s = this.scene, low = this.opts.lowPower, self = this, V = T.Vector3;
+    (function () {
+      var pts = [];
+      for (var x = -48; x <= 48; x += 2) pts.push(x, FLOOR_Y, -40, x, FLOOR_Y, 24);
+      for (var z = -40; z <= 24; z += 2) pts.push(-48, FLOOR_Y, z, 48, FLOOR_Y, z);
+      var g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(new Float32Array(pts), 3));
+      s.add(new T.LineSegments(g, new T.LineBasicMaterial({ color: C.line, transparent: true, opacity: 0.9 })));
+    })();
+    [[LEVEL(1.0), C.ink, 'EARLY REPAYMENT 100%', 0.05], [LEVEL(0.7), C.amber, 'COUPON FLOOR 70%', 0.04], [LEVEL(0.6), C.red, 'KNOCK-IN 60%', 0.05]].forEach(function (a) {
+      var y = a[0], color = a[1];
+      var plane = new T.Mesh(new T.PlaneGeometry(X1 - X0 + 8, 12), new T.MeshBasicMaterial({ color: color, transparent: true, opacity: a[3], side: T.DoubleSide, depthWrite: false }));
+      plane.rotation.x = -Math.PI / 2; plane.position.set(0, y, -1); s.add(plane);
+      var edge = new T.BufferGeometry().setFromPoints([new V(X0 - 4, y, 5), new V(X1 + 4, y, 5), new V(X1 + 4, y, -7), new V(X0 - 4, y, -7)]);
+      s.add(new T.LineLoop(edge, new T.LineBasicMaterial({ color: color, transparent: true, opacity: 0.8 })));
+      var l = label(a[2], hex(color), 0.62); l.position.set(X1 + 4.6, y, 5); s.add(l);
+    });
+    var pts = [], N = low ? 160 : 320;
+    for (var i = 0; i <= N; i++) { var x = X0 + (X1 - X0) * (i / N); pts.push(new V(x, pathY(x), 0)); }
+    this.curve = new T.CatmullRomCurve3(pts);
+    var ghost = new T.Line(new T.BufferGeometry().setFromPoints(this.curve.getPoints(N)), new T.LineDashedMaterial({ color: C.soft, dashSize: 0.35, gapSize: 0.25, transparent: true, opacity: 0.4 }));
+    ghost.computeLineDistances(); s.add(ghost);
+    s.add(new T.Line(new T.BufferGeometry().setFromPoints(pts.map(function (p) { return new V(p.x, FLOOR_Y + 0.02, p.z); })), new T.LineBasicMaterial({ color: C.lineStrong, transparent: true, opacity: 0.8 })));
+    this.pathSegs = low ? 220 : 480; this.pathRadial = low ? 5 : 8;
+    this.pathGeo = new T.TubeGeometry(this.curve, this.pathSegs, 0.11, this.pathRadial, false);
+    s.add(new T.Mesh(this.pathGeo, new T.MeshBasicMaterial({ color: C.blueHi })));
+    this.head = new T.Mesh(new T.SphereGeometry(0.26, 16, 12), new T.MeshBasicMaterial({ color: C.text })); s.add(this.head);
+    this.previewGeo = new T.TubeGeometry(this.curve, this.pathSegs, 0.06, this.pathRadial, false);
+    this.preview = new T.Mesh(this.previewGeo, new T.MeshBasicMaterial({ color: C.soft, transparent: true, depthWrite: false })); s.add(this.preview);
+    // A bright copy of the opening path, drawn in on the hero slide.
+    this.heroGeo = new T.TubeGeometry(this.curve, this.pathSegs, 0.1, this.pathRadial, false);
+    this.heroPath = new T.Mesh(this.heroGeo, new T.MeshBasicMaterial({ color: C.signal })); s.add(this.heroPath);
+    this.heroHead = new T.Mesh(new T.SphereGeometry(0.24, 16, 12), new T.MeshBasicMaterial({ color: C.text })); s.add(this.heroHead);
+
+    this.strikeMark = new T.Group();
+    var sy = pathY(X0);
+    this.strikeMark.add(new T.Line(new T.BufferGeometry().setFromPoints([new V(X0, FLOOR_Y, 0), new V(X0, sy, 0)]), new T.LineBasicMaterial({ color: C.lineStrong })));
+    var sl = label('STRIKE', hex(C.muted), 0.55); sl.position.set(X0 - 1.4, FLOOR_Y - 0.9, 0.6); this.strikeMark.add(sl);
+    this.strikeCre = label('CRE · STRIKE FIXED', hex(C.blue), 0.48, 600); this.strikeCre.position.set(X0 - 2.2, sy + 1.6, 0);
+    this.strikeCre.material.opacity = 0; this.strikeMark.add(this.strikeCre); s.add(this.strikeMark);
+
+    var ringGeo = new T.RingGeometry(0.42, 0.52, 40);
+    var hexPts = []; for (var k = 0; k < 6; k++) hexPts.push(new V(Math.cos(k * Math.PI / 3 + Math.PI / 6) * 0.9, Math.sin(k * Math.PI / 3 + Math.PI / 6) * 0.9, 0));
+    OBS_X.forEach(function (x, k) {
+      var y = pathY(x);
+      var stem = new T.Line(new T.BufferGeometry().setFromPoints([new V(x, FLOOR_Y, 0), new V(x, y, 0)]), new T.LineBasicMaterial({ color: C.lineStrong, transparent: true, opacity: 0.9 }));
+      var ring = new T.Mesh(ringGeo, new T.MeshBasicMaterial({ color: C.text, transparent: true, side: T.DoubleSide, depthWrite: false })); ring.position.set(x, y, 0);
+      var pulse = new T.Mesh(ringGeo, new T.MeshBasicMaterial({ color: C.signal, transparent: true, side: T.DoubleSide, depthWrite: false })); pulse.position.copy(ring.position);
+      var hexMark = new T.LineLoop(new T.BufferGeometry().setFromPoints(hexPts), new T.LineBasicMaterial({ color: C.signal, transparent: true })); hexMark.position.set(x, y + 2.1, 0);
+      var l = label(k === OBS_X.length - 1 ? 'MATURITY' : 'OBSERVATION ' + (k + 1), hex(C.muted), 0.5); l.position.set(x - 1.6, FLOOR_Y - 0.9, 0.6);
+      var cre = label('CHAINLINK CRE', hex(C.blue), 0.42, 600); cre.position.set(x - 1.9, y + 3.35, 0); cre.material.opacity = 0;
+      s.add(stem, ring, pulse, hexMark, l, cre);
+      self.obs.push({ ring: ring, pulse: pulse, hexMark: hexMark, stem: stem, x: x, at: (x - X0) / (X1 - X0), cre: cre });
+    });
+    s.add(new T.Line(new T.BufferGeometry().setFromPoints([new V(X0 - 4, FLOOR_Y + 0.01, HOLDERS_Z), new V(X1 + 4, FLOOR_Y + 0.01, HOLDERS_Z)]), new T.LineBasicMaterial({ color: C.green, transparent: true, opacity: 0.5 })));
+    var hl = label('HOLDERS · COUPONS IN USDG', hex(C.signalInk), 0.6); hl.position.set(X1 + 4.6, FLOOR_Y + 0.2, HOLDERS_Z); s.add(hl);
+
+    var perObs = low ? 5 : 8;
+    this.coins = new T.InstancedMesh(new T.CylinderGeometry(0.5, 0.5, 0.1, 32), coinMaterials(), OBS_X.length * perObs);
+    var ci = 0;
+    OBS_X.forEach(function (x, k) {
+      var y = pathY(x);
+      for (var j = 0; j < perObs; j++) {
+        var jitter = (j - (perObs - 1) / 2) * 0.55;
+        self.coinFrom.push(new V(x + jitter * 0.3, y, 0));
+        self.coinTo.push(new V(x + jitter * 1.6, FLOOR_Y + 0.5 + (j % 3) * 0.12, HOLDERS_Z + (Math.floor(j / 3) - 1) * 0.7));
+        self.coinAt.push(self.obs[k].at + j * 0.004); ci++;
+      }
+      var tag = label('COUPON PAID IN USDG', hex(C.signalInk), 0.5, 600); tag.position.set(x - 2.6, FLOOR_Y + 2.2, HOLDERS_Z + 0.6); tag.material.opacity = 0;
+      self.couponTags.push({ s: tag, at: self.obs[k].at }); s.add(tag);
+    });
+    this.coins.count = ci; s.add(this.coins);
+
+    var ISSUER = new V(-23, 0, -7), INVESTORS = new V(-23, 0, 8);
+    this.ISSUER = ISSUER; this.INVESTORS = INVESTORS;
+    this.collateral = new T.Group();
+    var box = new T.BoxGeometry(5.6, 3.2, 4.2);
+    this.collEdges = new T.LineSegments(new T.EdgesGeometry(box), new T.LineBasicMaterial({ color: C.ink }));
+    this.collateral.add(new T.Mesh(box, new T.MeshBasicMaterial({ color: C.panel, transparent: true, opacity: 0.9 })), this.collEdges);
+    [-0.7, 0.7].forEach(function (dy) { var band = new T.Mesh(new T.BoxGeometry(5.9, 0.16, 4.5), new T.MeshBasicMaterial({ color: C.signal })); band.position.y = dy; self.bands.push(band); self.collateral.add(band); });
+    this.collateral.position.set(ISSUER.x, FLOOR_Y + 1.6, ISSUER.z);
+    this.collLabel = label('COLLATERAL · LOCKED', hex(C.text), 0.6); this.collLabel.position.set(ISSUER.x - 2.8, FLOOR_Y + 4.1, ISSUER.z + 2.2);
+    this.collLabelReleased = label('CRE · COLLATERAL RELEASED', hex(C.signalInk), 0.6); this.collLabelReleased.position.copy(this.collLabel.position);
+    var il = label('ISSUER', hex(C.muted), 0.55); il.position.set(ISSUER.x - 2.8, FLOOR_Y - 0.9, ISSUER.z + 2.3);
+    this.marginCre = label('CRE · MARGIN CHECKED', hex(C.blue), 0.5, 600); this.marginCre.position.set(ISSUER.x - 2.8, FLOOR_Y + 5.0, ISSUER.z + 2.2); this.marginCre.material.opacity = 0;
+    s.add(this.collateral, this.collLabel, this.collLabelReleased, il, this.marginCre);
+
+    var crowd = new T.InstancedMesh(new T.SphereGeometry(0.28, 12, 10), new T.MeshBasicMaterial({ color: C.text }), 14);
+    for (var c = 0; c < 14; c++) { var a = c * 2.39996, r = 0.55 * Math.sqrt(c + 0.5); this.tmp.position.set(INVESTORS.x + Math.cos(a) * r, FLOOR_Y + 0.3, INVESTORS.z + Math.sin(a) * r); this.tmp.updateMatrix(); crowd.setMatrixAt(c, this.tmp.matrix); }
+    var invl = label('INVESTORS', hex(C.muted), 0.55); invl.position.set(INVESTORS.x - 2.4, FLOOR_Y - 0.9, INVESTORS.z + 2.6); s.add(crowd, invl);
+
+    var flowN = low ? 10 : 18;
+    this.flowCoins = new T.InstancedMesh(new T.CylinderGeometry(0.3, 0.3, 0.07, 24), coinMaterials(), flowN);
+    this.flowUnits = new T.InstancedMesh(new T.BoxGeometry(0.34, 0.34, 0.34), new T.MeshBasicMaterial({ color: C.text }), flowN);
+    s.add(this.flowCoins, this.flowUnits);
+    var mid = new V().lerpVectors(INVESTORS, ISSUER, 0.5);
+    this.swapMark = new T.Group();
+    var sring = new T.Mesh(new T.RingGeometry(1.25, 1.4, 48), new T.MeshBasicMaterial({ color: C.signal, transparent: true, side: T.DoubleSide, depthWrite: false })); sring.rotation.y = Math.PI / 2;
+    this.swapMark.add(sring); this.swapMark.position.set(mid.x, FLOOR_Y + 1.6, mid.z);
+    this.swapTag = label('ATOMIC SWAP · ONE TRANSACTION', hex(C.blue), 0.55, 600); this.swapTag.position.set(mid.x - 3.4, FLOOR_Y - 0.5, mid.z + 2.4);
+    s.add(this.swapMark, this.swapTag);
+
+    var n = low ? 6 : 10;
+    this.principal = new T.InstancedMesh(new T.CylinderGeometry(0.62, 0.62, 0.12, 32), coinMaterials(), n);
+    for (var pi = 0; pi < n; pi++) { this.principalFrom.push(new V(ISSUER.x + 1, FLOOR_Y + 2.4, ISSUER.z + 2)); this.principalTo.push(new V(13 + (pi % 5) * 1.5, FLOOR_Y + 0.75 + Math.floor(pi / 5) * 0.25, HOLDERS_Z - 0.6 + Math.floor(pi / 5) * 1.1)); }
+    this.principal.count = n; s.add(this.principal);
+    this.principalTag = label('PRINCIPAL BACK · USDG', hex(C.signalInk), 0.62, 600); this.principalTag.position.set(12.4, FLOOR_Y + 3.1, HOLDERS_Z + 0.6); this.principalTag.material.opacity = 0; s.add(this.principalTag);
+
+    var dn = low ? 260 : 700;
+    this.dustBase = new Float32Array(dn * 3);
+    for (var d = 0; d < dn; d++) {
+      var rr = function (k) { return frac(Math.sin((d + 1) * (12.9898 + k * 7.233)) * 43758.5453); };
+      this.dustBase[d * 3] = -44 + rr(1) * 88; this.dustBase[d * 3 + 1] = FLOOR_Y + rr(2) * 18; this.dustBase[d * 3 + 2] = -36 + rr(3) * 58;
+    }
+    var dg = new T.BufferGeometry(); dg.setAttribute('position', new T.BufferAttribute(this.dustBase.slice(), 3));
+    this.dust = new T.Points(dg, new T.PointsMaterial({ color: C.soft, size: 0.06, transparent: true, opacity: 0.3, depthWrite: false }));
+    s.add(this.dust);
+  };
+  NoteScene.prototype.placeCamera = function (p, t) {
+    var S = NoteScene.SHOTS, i = 0, cam = this.camera;
+    if (this.mode.shot) {
+      var sh = this.mode.shot;
+      cam.position.set(sh.pos[0], sh.pos[1], sh.pos[2]); this.look.set(sh.at[0], sh.at[1], sh.at[2]);
+      if (!this.opts.reducedMotion) { cam.position.x += Math.sin(t * 0.13) * 0.8; cam.position.y += Math.sin(t * 0.17 + 1) * 0.3; }
+      if (cam.aspect < 1.4) { this.v.copy(cam.position).sub(this.look).multiplyScalar(1 + (1.4 - cam.aspect) * 0.55); cam.position.copy(this.look).add(this.v); }
+      cam.lookAt(this.look);
+      if (cam.view && cam.view.enabled) cam.clearViewOffset();
+      return;
+    }
+    while (i < S.length - 2 && p > S[i + 1].p) i++;
+    var a = S[i], b = S[i + 1], k = smoother(span(p, a.p, b.p));
+    cam.position.set(mix(a.pos[0], b.pos[0], k), mix(a.pos[1], b.pos[1], k), mix(a.pos[2], b.pos[2], k));
+    this.look.set(mix(a.at[0], b.at[0], k), mix(a.at[1], b.at[1], k), mix(a.at[2], b.at[2], k));
+    if (!this.opts.reducedMotion) {
+      var sway = 1 - smooth(span(p, 0.02, 0.16)) * 0.75;
+      cam.position.x += Math.sin(t * 0.13) * 1.6 * sway; cam.position.y += Math.sin(t * 0.17 + 1) * 0.6 * sway;
+    }
+    if (cam.aspect < 1) {
+      var pull = clamp((1 - cam.aspect) * 0.75, 0, 0.55);
+      this.v.copy(cam.position).sub(this.look).multiplyScalar(1 + pull); cam.position.copy(this.look).add(this.v);
+    }
+    cam.lookAt(this.look);
+    var shift = cam.aspect >= 1 && this.mode.lens ? 0.27 * (1 - smooth(span(p, 0.03, 0.13))) : 0;
+    if (shift > 0.001) { var fw = 1000, fh = 1000 / cam.aspect; cam.setViewOffset(fw, fh, -shift * fw, 0, fw, fh); }
+    else if (cam.view && cam.view.enabled) cam.clearViewOffset();
+  };
+  NoteScene.prototype.apply = function (p, t) {
+    var self = this;
+    var lock = smooth(span(p, 0.14, 0.24)), release = smooth(span(p, 0.86, 0.97));
+    this.bands.forEach(function (b, i) {
+      var off = (1 - lock) * 3.2 * (i === 0 ? -1 : 1) + release * (i === 0 ? -2.6 : 2.6);
+      b.position.y = (i === 0 ? -0.7 : 0.7) + off;
+      b.material.transparent = true; b.material.opacity = clamp(lock * (1 - release)); b.visible = lock * (1 - release) > 0.01;
+    });
+    this.collateral.position.y = FLOOR_Y + 1.6 + release * 1.4;
+    this.collEdges.material.color.setHex(release > 0.5 ? C.signal : C.ink);
+    this.collLabel.material.opacity = 1 - release; this.collLabelReleased.material.opacity = release;
+
+    var sub = span(p, 0.3, 0.45), flowOn = sub > 0 && sub < 1, flowFade = Math.sin(Math.PI * sub);
+    var n = this.flowCoins.count, WAVES = 3, perWave = Math.max(1, Math.floor(n / WAVES)), cross = 0;
+    for (var i = 0; i < n; i++) {
+      var w = Math.floor(i / perWave), j = i % perWave, ph = clamp(sub * 1.6 - w * 0.28), e = smoother(ph);
+      cross = Math.max(cross, 1 - Math.min(1, Math.abs(e - 0.5) * 6));
+      var arc = Math.sin(Math.PI * e) * 2.4, spread = (j - (perWave - 1) / 2) * 0.45, live = flowOn && ph > 0 && ph < 1;
+      this.v.lerpVectors(this.INVESTORS, this.ISSUER, e);
+      this.tmp.position.set(this.v.x + 0.9, FLOOR_Y + 1.6 + arc + spread * 0.2, this.v.z + spread);
+      this.tmp.scale.setScalar(live ? Math.max(0.0001, flowFade) : 0.0001);
+      this.tmp.rotation.set(Math.PI / 2, 0, 0); this.tmp.updateMatrix(); this.flowCoins.setMatrixAt(i, this.tmp.matrix);
+      this.v.lerpVectors(this.ISSUER, this.INVESTORS, e);
+      this.tmp.position.set(this.v.x - 0.9, FLOOR_Y + 1.6 - arc * 0.4 + spread * 0.2, this.v.z + spread);
+      this.tmp.rotation.set(e * 3, e * 4, 0); this.tmp.updateMatrix(); this.flowUnits.setMatrixAt(i, this.tmp.matrix);
+    }
+    var swapOn = flowOn ? flowFade : 0;
+    this.swapMark.scale.setScalar(0.85 + cross * 0.35);
+    this.swapMark.children[0].material.opacity = swapOn * (0.45 + cross * 0.55);
+    this.swapTag.material.opacity = swapOn;
+    this.flowCoins.instanceMatrix.needsUpdate = true; this.flowUnits.instanceMatrix.needsUpdate = true;
+
+    var pv = 1 - smooth(span(p, 0.05, 0.13));
+    var hero = this.mode.lens;
+    var dr = hero ? this.draw : 1;
+    this.preview.material.opacity = pv * (hero ? 0.35 : 0.85);
+    this.preview.visible = pv > 0.01;
+    this.heroPath.visible = hero && pv > 0.01;
+    this.heroGeo.setDrawRange(0, Math.floor(dr * this.pathSegs) * this.pathRadial * 6);
+    this.heroHead.visible = hero && dr > 0.002 && dr < 0.998;
+    if (this.heroHead.visible) { this.curve.getPointAt(clamp(dr), this.v); this.heroHead.position.copy(this.v); }
+
+    var pathT = pathAt(p), segs = Math.floor(pathT * this.pathSegs);
+    this.pathGeo.setDrawRange(0, segs * this.pathRadial * 6);
+    this.head.visible = pathT > 0.002 && pathT < 0.998;
+    this.curve.getPointAt(clamp(pathT), this.v); this.head.position.copy(this.v);
+    var reach = hero ? dr : 1;
+    this.obs.forEach(function (o) {
+      var since = pathT - o.at, hit = since >= 0, lit = hit || (pv > 0.5 && reach >= o.at - 0.001);
+      var shown = !(hero && pv > 0.5 && reach < o.at - 0.001);
+      o.ring.visible = shown;
+      o.ring.material.color.setHex(lit ? C.signal : C.muted); o.ring.material.opacity = lit ? 1 : 0.55;
+      o.ring.quaternion.copy(self.camera.quaternion);
+      // On the hero, a pulse marks each date as the path reaches it.
+      var pulse = hit ? clamp(since / 0.07) : (hero && pv > 0.5 ? clamp((reach - o.at) / 0.07) : 0);
+      o.pulse.visible = pulse > 0 && pulse < 1;
+      o.pulse.scale.setScalar(1 + pulse * 3.2); o.pulse.material.opacity = (1 - pulse) * 0.9;
+      o.pulse.quaternion.copy(self.camera.quaternion);
+      var check = hit ? smooth(clamp(since / 0.035)) : 0;
+      o.hexMark.visible = check > 0.01; o.hexMark.scale.setScalar(0.4 + check * 0.6);
+      o.hexMark.material.opacity = check; o.cre.material.opacity = check;
+      o.hexMark.quaternion.copy(self.camera.quaternion);
+      if (!self.opts.reducedMotion) o.hexMark.rotateZ(t * 0.4 + o.x);
+    });
+    for (var c = 0; c < this.coinAt.length; c++) {
+      var kk = clamp((pathT - this.coinAt[c]) / 0.05), ee = smooth(kk);
+      this.v.lerpVectors(this.coinFrom[c], this.coinTo[c], ee); this.v.y += Math.sin(Math.PI * ee) * 2.2;
+      this.tmp.position.copy(this.v); this.tmp.rotation.set(ee * Math.PI * 3, 0, ee * Math.PI);
+      this.tmp.scale.setScalar(kk > 0 ? 1 : 0.0001);
+      if (kk >= 1) this.tmp.rotation.set(1.15, 0, 0);
+      this.tmp.updateMatrix(); this.coins.setMatrixAt(c, this.tmp.matrix);
+    }
+    this.coins.instanceMatrix.needsUpdate = true;
+    this.couponTags.forEach(function (ct) { ct.s.material.opacity = smooth(clamp((pathT - ct.at - 0.02) / 0.05)); });
+    this.strikeCre.material.opacity = smooth(clamp(pathT / 0.03)) * (1 - smooth(span(p, 0.86, 0.9)));
+    this.marginCre.material.opacity = smooth(span(p, 0.5, 0.56)) * (1 - smooth(span(p, 0.84, 0.88)));
+    if (!this.opts.reducedMotion) {
+      var pos = this.dust.geometry.getAttribute('position'), arr = pos.array;
+      for (var d = 1; d < arr.length; d += 3) arr[d] = FLOOR_Y + frac((this.dustBase[d] - FLOOR_Y + t * 0.18) / 18) * 18;
+      pos.needsUpdate = true;
+    }
+  };
+  NoteScene.prototype.applyEndings = function (q) {
+    var a = smoother(span(q, STORY_END + 0.02, STORY_END + 0.12));
+    for (var i = 0; i < this.principalFrom.length; i++) {
+      var e = smoother(clamp(a * 1.25 - i * 0.03));
+      this.v.lerpVectors(this.principalFrom[i], this.principalTo[i], e); this.v.y += Math.sin(Math.PI * e) * 3;
+      this.tmp.position.copy(this.v); this.tmp.rotation.set(e >= 1 ? 1.15 : e * Math.PI * 2, 0, 0);
+      this.tmp.scale.setScalar(e > 0 ? 1 : 0.0001); this.tmp.updateMatrix(); this.principal.setMatrixAt(i, this.tmp.matrix);
+    }
+    this.principal.instanceMatrix.needsUpdate = true;
+    this.principalTag.material.opacity = a;
+  };
+  NoteScene.prototype.resize = function () {
+    var c = this.renderer.domElement, w = c.clientWidth || 800, h = c.clientHeight || 450;
+    this.renderer.setSize(w, h, false);
+    this.camera.aspect = w / Math.max(1, h);
+    this.camera.fov = this.camera.aspect < 1 ? 58 : 42;
+    this.camera.updateProjectionMatrix();
+  };
+  NoteScene.prototype.render = function (now) {
+    var t = now / 1000, q = this.q;
+    var p = q <= STORY_END ? (q / STORY_END) * 0.8 : 0.8 + 0.2 * clamp((q - STORY_END) / (ENDING_SPLIT - STORY_END));
+    this.placeCamera(p, t); this.apply(p, t); this.applyEndings(q);
+    this.renderer.render(this.scene, this.camera);
+  };
+
+  /* =========================================================================================
+     The deck
+     ========================================================================================= */
+  var root = document.documentElement;
+  if (!reduced) root.classList.add('js');
+  var slides = [].slice.call(document.querySelectorAll('.slide'));
+  var stage = document.getElementById('stage'), fit = document.getElementById('fit'), deck = document.getElementById('deck');
+  var bar = document.getElementById('bar'), counter = document.getElementById('counter'), ctlCount = document.getElementById('ctl-count');
+  var notes = document.getElementById('notes'), notesK = document.getElementById('notes-k'), notesP = document.getElementById('notes-p');
+  var notesBtn = document.getElementById('notes-btn'), presentBtn = document.getElementById('present-btn');
+  var idx = -1;
+
+  function layout() {
+    if (narrow()) { stage.style.transform = ''; fit.style.width = fit.style.height = ''; return; }
+    var cs = getComputedStyle(deck);
+    var aw = deck.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    var ah = deck.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    var s = Math.min(aw / 1600, ah / 900);
+    stage.style.transform = 'scale(' + s + ')';
+    fit.style.width = 1600 * s + 'px'; fit.style.height = 900 * s + 'px';
+  }
+
+  // ---- the scene, one renderer moved between slots ----
+  var sc = null, canvas = document.createElement('canvas'), anim = null, rafId = 0, running = false;
+  canvas.setAttribute('aria-hidden', 'true');
+  var MODES = {
+    hero: { lens: true, shot: null, from: { q: 0, draw: 0 }, to: { q: 0, draw: 1 }, dur: 2600, ambient: true },
+    story: { lens: false, shot: { pos: [3, 11, 30], at: [-3, 1.4, 1.5] }, from: { q: 0.1, draw: 1 }, to: { q: 0.66, draw: 1 }, dur: 6500, ambient: false },
+    close: { lens: false, shot: { pos: [2, 12, 33], at: [-3, 1.2, 2] }, from: { q: 0.66, draw: 1 }, to: { q: 0.839, draw: 1 }, dur: 4200, ambient: false }
+  };
+  var ease = function (t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
+  function frame(now) {
+    if (!running || !sc) return;
+    var done = true;
+    if (anim) {
+      var k = clamp((now - anim.start) / anim.m.dur), e = ease(k);
+      sc.q = mix(anim.m.from.q, anim.m.to.q, e); sc.draw = mix(anim.m.from.draw, anim.m.to.draw, e);
+      done = k >= 1;
+    }
+    sc.render(now);
+    if (done && !(anim && anim.m.ambient)) { running = false; return; }
+    rafId = requestAnimationFrame(frame);
+  }
+  function startScene(slide, enter) {
+    if (!sc) return;
+    var slot = slide.querySelector('[data-slot]'), key = slide.getAttribute('data-scene');
+    if (!slot || !key) { running = false; cancelAnimationFrame(rafId); return; }
+    var m = MODES[key];
+    if (canvas.parentNode !== slot) slot.insertBefore(canvas, slot.firstChild);
+    sc.mode = { lens: m.lens, shot: m.shot };
+    sc.resize();
+    cancelAnimationFrame(rafId);
+    if (reduced || !enter) { sc.q = m.to.q; sc.draw = m.to.draw; anim = null; sc.render(performance.now()); running = false; return; }
+    anim = { m: m, start: performance.now() + 250 };
+    sc.q = m.from.q; sc.draw = m.from.draw;
+    running = true; rafId = requestAnimationFrame(frame);
+  }
+  function initScene() {
+    if (!T) return;
+    try {
+      sc = new NoteScene(canvas, { lowPower: narrow(), reducedMotion: reduced });
+    } catch (err) { sc = null; return; }
+    startScene(slides[idx], true);
+  }
+
+  // ---- navigation ----
+  function go(n, enter) {
+    var markEl = document.getElementById('chrome-mark');
+    n = Math.max(0, Math.min(slides.length - 1, n));
+    if (n === idx) return;
+    var prev = slides[idx];
+    if (prev) prev.classList.remove('on');
+    idx = n;
+    var s = slides[idx];
+    if (!reduced && enter !== false) s.classList.add('pre');
+    s.classList.add('on');
+    void s.offsetWidth;
+    requestAnimationFrame(function () { requestAnimationFrame(function () { s.classList.remove('pre'); }); });
+    var label = (idx + 1) + ' / ' + slides.length;
+    counter.textContent = label; ctlCount.textContent = label;
+    bar.style.width = ((idx + 1) / slides.length * 100) + '%';
+    markEl.style.visibility = idx === slides.length - 1 ? 'hidden' : 'visible';
+    notesK.textContent = s.getAttribute('data-time');
+    notesP.textContent = s.getAttribute('data-notes').replace(/^\[[^\]]*\]\s*/, '');
+    document.getElementById('prev').disabled = idx === 0;
+    document.getElementById('next').disabled = idx === slides.length - 1;
+    try { history.replaceState(null, '', '#' + (idx + 1)); } catch (e) {}
+    if (narrow()) window.scrollTo(0, 0);
+    startScene(s, true);
+  }
+  function toggleNotes() { notes.hidden = !notes.hidden; notesBtn.setAttribute('aria-pressed', String(!notes.hidden)); }
+  function togglePresent() {
+    var on = !document.body.classList.contains('present');
+    document.body.classList.toggle('present', on);
+    presentBtn.setAttribute('aria-pressed', String(on));
+    try {
+      if (on && document.documentElement.requestFullscreen && !document.fullscreenElement) { var pr = document.documentElement.requestFullscreen(); if (pr && pr.catch) pr.catch(function () {}); }
+      else if (!on && document.fullscreenElement && document.exitFullscreen) { var px = document.exitFullscreen(); if (px && px.catch) px.catch(function () {}); }
+    } catch (e) {}
+    layout(); if (sc) startScene(slides[idx], false);
+  }
+  document.addEventListener('fullscreenchange', function () {
+    if (!document.fullscreenElement && document.body.classList.contains('present')) { document.body.classList.remove('present'); presentBtn.setAttribute('aria-pressed', 'false'); }
+    layout(); if (sc) startScene(slides[idx], false);
+  });
+  document.getElementById('prev').addEventListener('click', function () { go(idx - 1); });
+  document.getElementById('next').addEventListener('click', function () { go(idx + 1); });
+  notesBtn.addEventListener('click', toggleNotes);
+  presentBtn.addEventListener('click', togglePresent);
+  window.addEventListener('keydown', function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var k = e.key;
+    if (k === 'ArrowRight' || k === 'PageDown' || (k === ' ' && !e.shiftKey)) { e.preventDefault(); go(idx + 1); }
+    else if (k === 'ArrowLeft' || k === 'PageUp' || (k === ' ' && e.shiftKey)) { e.preventDefault(); go(idx - 1); }
+    else if (k === 'Home') { e.preventDefault(); go(0); }
+    else if (k === 'End') { e.preventDefault(); go(slides.length - 1); }
+    else if (k === 'n' || k === 'N') toggleNotes();
+    else if (k === 'f' || k === 'F') togglePresent();
+    else if (k === 'Escape' && document.body.classList.contains('present')) togglePresent();
+  });
+  var hideT = 0;
+  window.addEventListener('mousemove', function () {
+    if (!document.body.classList.contains('present')) return;
+    document.body.classList.add('pointer'); clearTimeout(hideT);
+    hideT = setTimeout(function () { document.body.classList.remove('pointer'); }, 1600);
+  });
+  // Swipe on touch screens.
+  var tx = null;
+  window.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  window.addEventListener('touchend', function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx; tx = null;
+    if (Math.abs(dx) > 60) go(idx + (dx < 0 ? 1 : -1));
+  }, { passive: true });
+  var resizeT = 0;
+  window.addEventListener('resize', function () { layout(); clearTimeout(resizeT); resizeT = setTimeout(function () { if (sc) startScene(slides[idx], false); }, 120); });
+
+  layout();
+  var start = parseInt((location.hash || '').replace('#', ''), 10);
+  go(isNaN(start) ? 0 : start - 1);
+  // Scene labels use Geist Mono: build once the face is ready (or after a short wait).
+  var fontsReady = document.fonts && document.fonts.load ? Promise.race([
+    Promise.all([document.fonts.load('500 64px "Geist Mono"'), document.fonts.load('600 64px "Geist Mono"')]),
+    new Promise(function (r) { setTimeout(r, 2500); })
+  ]).catch(function () {}) : Promise.resolve();
+  fontsReady.then(initScene);
+})();
+</script>
+
+
+</body>
+</html>

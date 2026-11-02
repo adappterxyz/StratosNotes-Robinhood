@@ -33,3 +33,4 @@ web/wrangler.jsonc
 *.html
 *.yaml
 *.yml
+landing/public/pitch
