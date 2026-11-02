@@ -7,7 +7,7 @@ price; the contract enforces every payment.
 
 - **Site:** https://notes.markets · **App:** https://notes.markets/app
 - **Code:** https://github.com/adappterxyz/StratosNotes-Robinhood
-- **Pitch video script:** [PITCH.md](PITCH.md) · **Demo video script:** [DEMO-SCRIPT.md](DEMO-SCRIPT.md) ·
+- **Investor deck:** [PITCH.md](PITCH.md) · **Demo video script:** [DEMO-SCRIPT.md](DEMO-SCRIPT.md) ·
   **Demo walkthrough:** [DEMO.md](DEMO.md)
 - **How the money works:** [NOTE-ECONOMICS.md](NOTE-ECONOMICS.md) · **ERC-20 notes and claims:**
   [ERC20-NOTES.md](ERC20-NOTES.md) · **Alerts and email binding:** [NOTIFICATIONS.md](NOTIFICATIONS.md) ·

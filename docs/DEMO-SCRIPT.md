@@ -2,7 +2,7 @@
 
 It shows one note end to end on Robinhood Chain testnet: issued with Robinhood's real TSLA pledged straight into the
 note as collateral, priced by Chainlink CRE from Robinhood Chain's TSLA feed, a coupon claimed with a receipt, and the
-TSLA released to the issuer on the same chain. The pitch video ([PITCH.md](PITCH.md)) reuses these cuts.
+TSLA released to the issuer on the same chain. The investor deck ([PITCH.md](PITCH.md)) can cut these in live.
 
 Nothing crosses chains, so there is no CCIP wait: the whole run fits in about 15 minutes of wall time. Record each
 step as its own take anyway and cut the waits; say on screen that waits were cut.
