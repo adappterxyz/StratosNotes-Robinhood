@@ -70,8 +70,15 @@ structuring for their own clients, where permitted, embedded in wallets and fron
 licensed partners · Parallel: institutions on Canton. Metrics: notional issued, repeat issuers, subscribers per note,
 on-time funding rate, CRE report success.
 
-**10 · Market.** A bank product line meeting on-chain assets: structured notes × tokenized stocks and RWAs ×
-on-chain investors who want terms, not vault yield. `[[MARKET-SIZE]]`: add a sourced figure before using the deck.
+**10 · Market.** A $2 trillion bank product, not yet on-chain.
+- $1.94T structured products sold worldwide in 2025, up from $691B in 2021
+  ([Structured Retail Products, 30 Oct 2026](https://www.structuredretailproducts.com/insights/85220/global-structured-products-on-course-for-us23-trillion-record-as-stock-linked-sales-surge)).
+- $2.55T outstanding globally (SRP, cited by
+  [Numerix, 6 May 2026](https://www.numerix.com/resources/blog/structured-products-global-trends-market-forces-and-what-comes-next)).
+- ~$225B US structured notes issued in 2025 (TP ICAP's head of structured products, Americas, in
+  [Markets Media, 6 Mar 2026](https://www.marketsmedia.com/tp-icap-debuts-ats-for-u-s-structured-note-trading/)).
+- $963M tokenized equities in Jan 2026, up from $32M a year earlier (Sentora and DL Research, in
+  [Yahoo Finance, 1 Feb 2026](https://finance.yahoo.com/news/market-tokenized-equities-exploded-almost-170000690.html)).
 
 **11 · Roadmap.** Done: testnet product · 1 independent audit · 2 mainnet on Robinhood Chain, in-house notes first ·
 3 collateral on other chains (future extension; Robinhood Chain stays home) · parallel: institutions on Canton.
@@ -155,4 +162,4 @@ for Canton. That is a later path to institutional take-up, not part of this prod
 
 ## Placeholders to fill
 
-`[[LEGAL]]`, `[[MARKET-SIZE]]` (slide 10: a sourced figure for the structured-note market).
+`[[LEGAL]]`.
