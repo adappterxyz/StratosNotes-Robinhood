@@ -1,7 +1,7 @@
 # @sn/evm-engine
 
 `FlowEngine.sol` runs compiled StratosNotes workflows (structured notes as BPMN) on EVM chains: notes run on
-Robinhood Chain testnet. It is a port of the hackathon's Solana engine (StratosNotes `solana/programs/flow_engine`),
+Robinhood Chain testnet and Base Sepolia (one engine per chain). It is a port of the hackathon's Solana engine (StratosNotes `solana/programs/flow_engine`),
 with the same semantics. Chainlink CRE is its calculation agent: oracle values arrive as DON-signed reports
 through the KeystoneForwarder (`onReport`).
 
@@ -176,14 +176,17 @@ CHAIN=robinhood-testnet FORWARDER_MODE=mock OWNER=<deployer> \
   forge script script/Deploy.s.sol --rpc-url <rpc> --private-key <key> --broadcast
 ```
 
-- **Chains:** `robinhood-testnet` (where notes run) or `robinhood-mainnet`.
+- **Chains:** `robinhood-testnet` and `base-sepolia` (the note chains), or `robinhood-mainnet`. `scripts/deploy-testnets.sh`
+  deploys both testnets (skipping one already deployed unless `REDEPLOY=1`; `REHEARSAL=1` on anvil forks).
 - **Output:** writes `deployments/<chain>.json` at the repo root.
-- **Forwarder:** `FORWARDER_MODE=mock` trusts the MockKeystoneForwarder, which `cre workflow simulate --broadcast` writes through. `production` trusts the KeystoneForwarder. Robinhood mainnet has no CRE forwarder yet: pass `FORWARDER`.
+- **Forwarder:** `FORWARDER_MODE=mock` trusts the MockKeystoneForwarder, which `cre workflow simulate --broadcast` writes through. `production` trusts the KeystoneForwarder. Base Sepolia: mock `0x8230…F3e5`, production `0xF834…4482`. Robinhood mainnet has no CRE forwarder yet: pass `FORWARDER`.
 - **Test tokens (retired):** notes use real tokens only (USDG, WETH, Robinhood's stock tokens). `TEST_TOKENS=1` still
   deploys the old tUSD, tETH, tBTC, tSOL, tTSLA, tNVDA, tAAPL and tSPY (`src/test-tokens/TestToken.sol`) and their
   `TokenFaucet`, for local rehearsals only; scripts/deploy-testnets.sh no longer does on testnets. The deployer must
   be `OWNER` for this (it sets the faucet as minter).
-- **Gas:** the engine needs about 6.7M gas of execution; see docs/DEPLOY.md for per-chain funding.
+- **Gas:** engine, email policy and lens: 8.3M gas on Robinhood Chain (the linked libraries are there already), 12.1M
+  on a fresh chain such as Base Sepolia (DefCheck, Units and EmailAttest go first through the CREATE2 deployer),
+  measured on anvil forks 2026-11-06; see docs/DEPLOY.md for per-chain funding.
 - **EVM version:** the build targets the Paris EVM (no PUSH0 or MCOPY), so one bytecode runs on every target chain.
 
 ## Differences from the Solana engine
@@ -201,13 +204,36 @@ CHAIN=robinhood-testnet FORWARDER_MODE=mock OWNER=<deployer> \
 - **Not yet ported:** CCIP. `ccip_receive`, `withdraw_remote`, the outbox and payout reports (`0xFFFE`) come in
   Phase 5.
 
-## Cross-chain collateral (planned)
+## Cross-chain collateral
 
-`src/crosschain/`: `HomeGateway` (next to the engine on Robinhood Chain, the home chain), `RemoteVault` (on another
-asset chain, e.g. Ethereum) and `RemoteReceipt` (the engine-only claim on locked collateral), over Chainlink CCIP. Not
-deployed yet; the engine is unchanged. Design, message formats, trust and the deploy plan: [docs/CROSS-CHAIN.md](../../docs/CROSS-CHAIN.md).
+`src/crosschain/`: `HomeGateway` (next to the engine on the note's chain), `RemoteVault` (on the other chain, where the
+collateral stays) and `RemoteReceipt` (the engine-only claim on locked collateral), over Chainlink CCIP. The engine is
+unchanged. Two pairs, one per direction:
+
+| Home (notes, gateway, receipts) | Vault (collateral stays) | Receipts |
+|---|---|---|
+| Robinhood Chain testnet | Base Sepolia | USDC.base, WETH.base |
+| Base Sepolia | Robinhood Chain testnet | USDG.rh, WETH.rh, TSLA.rh, AMZN.rh, AMD.rh, PLTR.rh |
+
+The token lists come from packages/core (`REMOTE_COLLATERAL`, `wirePlan`). `scripts/deploy-crosschain.sh` runs
+`script/DeployCrossChain.s.sol` (gateway, vault, wire) for one pair and writes `deployments/crosschain/<home>.json`
+(`scripts/xc-plan.ts` builds and checks it). Design, message formats, trust and the runbook:
+[docs/CROSS-CHAIN.md](../../docs/CROSS-CHAIN.md).
 
 ```bash
-forge test --match-contract CrossChainTest                    # mock routers: lifecycle, duplicates, forgeries, freezes
-CCIP_FORK=true forge test --match-contract CrossChainForkTest # real routers: Robinhood testnet home + Ethereum Sepolia
+forge test --match-contract CrossChainTest        # mock routers: lifecycle, duplicates, forgeries, freezes, auto-release
+forge test --match-contract CrossChainPairsTest   # both pairs at once (Robinhood <-> Base), mock routers
+forge test --match-contract CrossChainLocalTest   # Chainlink Local's router: exact CCIP gas limits
+# Real routers on forks (network), each direction:
+CCIP_FORK=true REMOTE_RPC=https://sepolia.base.org REMOTE_CHAIN_ID=84532 \
+  REMOTE_WETH=0x4200000000000000000000000000000000000006 forge test --match-contract CrossChainForkTest -vv
+CCIP_FORK=true HOME_RPC=https://sepolia.base.org HOME_CHAIN_ID=84532 \
+  REMOTE_RPC=https://rpc.testnet.chain.robinhood.com REMOTE_CHAIN_ID=46630 \
+  REMOTE_WETH=0x7943e237c7F95DA44E0301572D358911207852Fa forge test --match-contract CrossChainForkTest -vv
 ```
+
+Measured on the real routers (forks, 2026-11-06): a lock costs a CCIP fee of ~0.000054 ETH from Base Sepolia and
+~0.000049 ETH from Robinhood Chain testnet (plus ~325k / ~335k gas); a redeem or a queued release ~0.000049 ETH from
+Robinhood Chain and ~0.000054 ETH from Base; a flush of one release ~284k gas (Robinhood) / ~270k (Base). Deploying a
+pair (fork rehearsal): gateway + fee pool 4.0M gas, vault 1.7M (Base, 2 tokens) / 1.9M (Robinhood, 6 tokens), wire
+1.9M (2 receipts) / 5.5M (6 receipts).

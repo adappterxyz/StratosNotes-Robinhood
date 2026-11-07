@@ -17,13 +17,13 @@ import {CreReceiver} from "../src/cre/CreReceiver.sol";
 import {IReceiver} from "../src/cre/IReceiver.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
-/// Stage 1 of the (planned) cross-chain lifecycle: a note runs on its home chain (Ethereum Sepolia) while its
+/// The cross-chain lifecycle, generic: a note runs on its home chain (Robinhood Chain testnet) while its
 /// collateral stays locked on other chains (Ethereum Sepolia, Base), coordinated by CCIP. The note fixtures that pledge collateral
 /// are replayed with that collateral locked remotely: the issuer locks it in the vault, the gateway mints receipts,
 /// the engine uses them exactly like local collateral (coverage, margin calls, release, the default rule), and at
 /// the end every receipt is redeemed for the real asset on its own chain. Every amount must equal the reference.
 contract CrossChainTest is ProductsBase {
-    uint64 constant HOME = 2032988798112970440; // Ethereum Sepolia testnet (home)
+    uint64 constant HOME = 2032988798112970440; // Robinhood Chain testnet (home)
     uint64 constant SEP = 16015286601757825753; // Ethereum Sepolia
     uint64 constant BASE = 10344971235874465080; // Base Sepolia
     uint256 constant FEE = 0.001 ether;

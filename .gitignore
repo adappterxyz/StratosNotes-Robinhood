@@ -17,6 +17,8 @@ packages/evm-engine/lib/
 
 # Local end-to-end runs (scripts/e2e-cre-evm.sh)
 deployments/local/
+# Live per-step outputs of scripts/deploy-crosschain.sh (the record is deployments/crosschain/<home>.json)
+deployments/xc-steps/
 .tmp/
 log/
 # CRE CLI build scratch

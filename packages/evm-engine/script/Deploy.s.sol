@@ -14,14 +14,16 @@ import {TokenFaucet} from "../src/test-tokens/TokenFaucet.sol";
 ///   CHAIN=robinhood-testnet FORWARDER_MODE=mock OWNER=0x... TEST_TOKENS=1 \
 ///   forge script script/Deploy.s.sol --rpc-url $RPC --private-key $KEY --broadcast
 ///
-/// CHAIN:          robinhood-testnet (notes run there) | robinhood-mainnet
+/// CHAIN:          robinhood-testnet | base-sepolia (the two note chains) | robinhood-mainnet
 /// FORWARDER_MODE: mock (`cre workflow simulate --broadcast` writes through the MockKeystoneForwarder) or
 ///                 production (a deployed CRE workflow writes through the KeystoneForwarder)
 /// FORWARDER:      optional override; required on robinhood-mainnet, where CRE has no forwarder yet
 /// OWNER:          the engine's admin (pause, forwarder, workflow checks); a multisig in production
 ///
-/// Forwarder addresses: `cre workflow supported-chains` (CRE CLI v1.36), checked 2026-10-23. Check them again
-/// before a live deployment. The fallback reporter is left unset (off).
+/// Forwarder addresses: `cre workflow supported-chains` (CRE CLI v1.36), checked 2026-10-23 (Robinhood Chain), and
+/// CRE's forwarder directory for Base Sepolia (ethereum-testnet-sepolia-base-1), checked on-chain 2026-11-06
+/// (typeAndVersion: MockKeystoneForwarder 1.0.0, KeystoneForwarder 1.0.0). Check them again before a live deployment.
+/// The fallback reporter is left unset (off).
 contract Deploy is Script {
     struct Target {
         uint256 chainId;
@@ -34,6 +36,9 @@ contract Deploy is Script {
         bytes32 h = keccak256(bytes(name));
         if (h == keccak256("robinhood-testnet")) {
             return Target(46630, 0x0b93082D9b3C7C97fAcd250082899BAcf3af3885, 0x8E6E6A1f2B2D4dF503bfd67951CF28F27BF3AF19, true);
+        }
+        if (h == keccak256("base-sepolia")) {
+            return Target(84532, 0x82300bd7c3958625581cc2F77bC6464dcEcDF3e5, 0xF8344CFd5c43616a4366C34E3EEE75af79a74482, true);
         }
         if (h == keccak256("robinhood-mainnet")) return Target(4663, address(0), address(0), false);
         revert(string.concat("unknown CHAIN ", name));
