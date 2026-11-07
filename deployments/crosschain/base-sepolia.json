@@ -1,0 +1,64 @@
+{
+  "home": {
+    "chain": "base-sepolia",
+    "chainId": 84532,
+    "selector": "10344971235874465080",
+    "router": "0xD3b06cEbF099CE7DA4AcCf578aaebFDBd6e88a93",
+    "engine": "0x37184A9D436B9e8F2225cAFd5474E60A5d18FDEb",
+    "gateway": "0x5Daa05c6D9866AEC94D7E73462e09F8bC40C6fcD",
+    "gatewayBlock": 55680378,
+    "version": 2,
+    "feePoolWei": "5000000000000000"
+  },
+  "remotes": [
+    {
+      "chain": "robinhood-testnet",
+      "chainId": 46630,
+      "selector": "2032988798112970440",
+      "router": "0x30D197C6F5bE050D5525dD94d01760FaCdB67e7C",
+      "vault": "0xd47ef8947b09E1acc6642815c4d6b46E624Adf02",
+      "vaultBlock": 150000764,
+      "gasLimit": 300000,
+      "receipts": {
+        "USDG.rh": {
+          "receipt": "0x98Da60992Ba0C81f4619FA1cB1F8a8FF5759A3f2",
+          "token": "0x7E955252E15c84f5768B83c41a71F9eba181802F",
+          "decimals": 6,
+          "valuedAs": "USD"
+        },
+        "WETH.rh": {
+          "receipt": "0xAfF65cf0b1C5884C709E45E39636600237A92537",
+          "token": "0x7943e237c7F95DA44E0301572D358911207852Fa",
+          "decimals": 18,
+          "valuedAs": "ETH"
+        },
+        "TSLA.rh": {
+          "receipt": "0xC9C7ac78C7Aef250f33eFb55e57C235335C9d091",
+          "token": "0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E",
+          "decimals": 18,
+          "valuedAs": "TSLA"
+        },
+        "AMZN.rh": {
+          "receipt": "0x413ED5ede70bB56018608a8c0c5df0e93f33Da19",
+          "token": "0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02",
+          "decimals": 18,
+          "valuedAs": "AMZN"
+        },
+        "AMD.rh": {
+          "receipt": "0xbEcc58867E45E1Fc7942196d885D9EaD689f74bC",
+          "token": "0x71178BAc73cBeb415514eB542a8995b82669778d",
+          "decimals": 18,
+          "valuedAs": "AMD"
+        },
+        "PLTR.rh": {
+          "receipt": "0x0D531d23156A9D8fd2B80F2ad190124794a562F0",
+          "token": "0x1FBE1a0e43594b3455993B5dE5Fd0A7A266298d0",
+          "decimals": 18,
+          "valuedAs": "PLTR"
+        }
+      }
+    }
+  ],
+  "owner": "0x298afB9424188C7eA7c01556D8CAE6ff4768de0a",
+  "checkedAt": "2026-11-07"
+}

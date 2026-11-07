@@ -1,0 +1,40 @@
+{
+  "home": {
+    "chain": "robinhood-testnet",
+    "chainId": 46630,
+    "selector": "2032988798112970440",
+    "router": "0x30D197C6F5bE050D5525dD94d01760FaCdB67e7C",
+    "engine": "0xCba17Fe422220AeCa3EE06D15BE4aA5a1F06D4eE",
+    "gateway": "0xA6e162CfA848B53a6Bf28dB338BE6F84dcAaB939",
+    "gatewayBlock": 150000335,
+    "version": 2,
+    "feePoolWei": "5000000000000000"
+  },
+  "remotes": [
+    {
+      "chain": "base-sepolia",
+      "chainId": 84532,
+      "selector": "10344971235874465080",
+      "router": "0xD3b06cEbF099CE7DA4AcCf578aaebFDBd6e88a93",
+      "vault": "0xC7cdfBfE828E99b9bdF14CF1aBaA49b44922c8A6",
+      "vaultBlock": 55680157,
+      "gasLimit": 300000,
+      "receipts": {
+        "USDC.base": {
+          "receipt": "0x486B8EA5332ebE7BC3B278D414a9F5c982E69D98",
+          "token": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "decimals": 6,
+          "valuedAs": "USD"
+        },
+        "WETH.base": {
+          "receipt": "0x755677c690DA3E6fC650bf97129838A2a6905614",
+          "token": "0x4200000000000000000000000000000000000006",
+          "decimals": 18,
+          "valuedAs": "ETH"
+        }
+      }
+    }
+  ],
+  "owner": "0x298afB9424188C7eA7c01556D8CAE6ff4768de0a",
+  "checkedAt": "2026-11-07"
+}

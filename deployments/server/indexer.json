@@ -11,6 +11,18 @@
       "maxRange": 20000,
       "pollMs": 2000,
       "legacyEngines": []
+    },
+    {
+      "key": "base-sepolia",
+      "family": "evm",
+      "chainId": 84532,
+      "rpc": "https://base-sepolia-rpc.publicnode.com",
+      "engine": "0x37184A9D436B9e8F2225cAFd5474E60A5d18FDEb",
+      "startBlock": 55679693,
+      "confirmations": 30,
+      "maxRange": 5000,
+      "pollMs": 2000,
+      "legacyEngines": []
     }
   ]
 }
