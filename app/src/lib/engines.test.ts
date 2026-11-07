@@ -84,7 +84,7 @@ describe('engines per chain', () => {
   });
 });
 
-describe('Robinhood Chain: the only note chain', () => {
+describe('the chains notes are issued on', () => {
   it('issues on every chain the deployment serves', () => {
     expect(issueChains(config).map((c) => c.key)).toEqual(['robinhood-testnet']);
     expect(issueChains({ chains: [{ ...cfg, key: 'local' }], ai: false }).map((c) => c.key)).toEqual(['local']);

@@ -24,12 +24,12 @@ async function boot() {
     );
     return;
   }
-  // Before the contracts on Robinhood Chain are deployed the API serves no chain: wagmi needs at least one, so say so.
+  // Before any engine is deployed the API serves no chain: wagmi needs at least one, so say so.
   if (!config.chains.some((c) => c.family === 'evm' && c.chainId)) {
     root.render(
       <main className="page">
         <div className="empty">
-          <strong>notes.markets is moving to Robinhood Chain.</strong>
+          <strong>notes.markets is being deployed to Robinhood Chain and Base testnets.</strong>
           <span className="small">
             The new contracts are being deployed: the app opens here as soon as they are live.
           </span>

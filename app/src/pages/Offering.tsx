@@ -60,7 +60,7 @@ export default function OfferingPage() {
   );
 
   // Receipts of collateral locked on another chain: leaving the note they are burned and released on that chain.
-  const autoReleased = useAutoReleased();
+  const autoReleased = useAutoReleased(note?.state.chain);
   if (note === undefined)
     return (
       <main className="page">
@@ -224,7 +224,7 @@ export default function OfferingPage() {
               size={18}
               label={false}
             />
-            {listingOf(o.params, {}, sym).assets} · {chain?.cfg.name ?? s.chain}
+            {listingOf(o.params, {}, sym).assets} · <span data-note-chain>{chain?.cfg.name ?? s.chain}</span>
           </span>
           <div className="row">
             <h1>{o.name}</h1>

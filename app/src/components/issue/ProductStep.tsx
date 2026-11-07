@@ -1,10 +1,13 @@
 import {
+  cashTokenOf,
   catalogueFeed,
+  chainLabel,
   deliverableToken,
   EXAMPLE_PRODUCTS,
   FEEDS,
   isCatalogueSymbol,
   MAX_UNDERLYINGS,
+  noteChainOf,
   PRODUCT_LABELS,
   productUses,
   type ProductParams,
@@ -13,6 +16,7 @@ import {
 import type { ChainConfig } from '../../lib/api';
 import { Asset, AssetStack } from '../AssetIcon';
 import { feedSource, renameForUnderlyings, UnderlyingPicker } from '../UnderlyingPicker';
+import { ChainPicker, chainHint } from './ChainPicker';
 import { Num } from './Num';
 import { PRODUCTS, type Kind } from './wizard-data';
 
@@ -22,14 +26,22 @@ export function ProductStep({
   p,
   set,
   chainCfg,
+  chains,
+  onChain,
   moved,
 }: {
   kind: Kind;
   p: ProductParams;
   set: (patch: Partial<ProductParams>) => void;
   chainCfg: ChainConfig | undefined;
+  /** The networks this deployment issues on, and how to move the terms to one. */
+  chains: ChainConfig[];
+  onChain: (key: string) => void;
   moved: boolean;
 }) {
+  const chainKey = noteChainOf(p);
+  const where = chainCfg?.name ?? chainLabel(chainKey);
+  const cash = cashTokenOf(p).token;
   const use = productUses(p.productType);
   const syms = p.underlyings.map((u) => u.symbol);
   const delivered = (s: string) => deliverableToken(p, s)?.token ?? null;
@@ -53,7 +65,7 @@ export function ProductStep({
   const undeliverable = syms.filter((s) => !delivered(s));
   /** Why physical delivery is off: no token on the note's chain for these (forex, commodities, most stocks). */
   const whyCashOnly = undeliverable.length
-    ? `${undeliverable.join(', ')} ${undeliverable.length > 1 ? 'have' : 'has'} no token on ${chainCfg?.name ?? 'Robinhood Chain'} to deliver${undeliverable.some((s) => ['Forex', 'Commodities'].includes(catalogueFeed(s)?.assetClass ?? '')) ? ' (a currency or commodity price is cash-settled)' : ''}: the note settles in cash, final ÷ strike in USDG.`
+    ? `${undeliverable.join(', ')} ${undeliverable.length > 1 ? 'have' : 'has'} no token on ${where} to deliver${undeliverable.some((s) => ['Forex', 'Commodities'].includes(catalogueFeed(s)?.assetClass ?? '')) ? ' (a currency or commodity price is cash-settled)' : ''}: the note settles in cash, final ÷ strike in ${cash}.`
     : '';
   return (
     <>
@@ -86,20 +98,20 @@ export function ProductStep({
           .
         </span>
       </div>
-      <div className="field" data-issue-network>
+      <div className="field" data-issue-network={chainKey}>
         <span className="lbl">Network</span>
-        <strong>{chainCfg?.name ?? 'Robinhood Chain testnet'}</strong>
-        <span className="hint">
-          Notes run on Robinhood Chain: issued, paid and collateralised there. Below the knock-in a note can deliver
-          Robinhood's TSLA, AMZN, AMD or PLTR token, or WETH; every other underlying (BTC, other stocks, forex,
-          commodities) settles in cash.
-        </span>
+        {chains.length > 1 ? (
+          <ChainPicker chains={chains} value={chainKey} onPick={onChain} />
+        ) : (
+          <strong>{where}</strong>
+        )}
+        <span className="hint">{chainHint(chainKey)}</span>
       </div>
       {moved && (
         <div className="notice info" role="note" data-moved-to-robinhood>
-          These terms named another chain, collateral held elsewhere, or a token Robinhood Chain does not have. Notes
-          run on Robinhood Chain only, so they were moved there: such an underlying settles in cash, and the collateral
-          is pledged into the note on Robinhood Chain.
+          These terms named a chain notes do not run on, collateral held where this note's chain takes none, or a token
+          {` ${where}`} does not have, so they were adjusted: such an underlying settles in cash, and the collateral is
+          pledged into the note.
         </div>
       )}
       {kind === 'worst-of' && (
@@ -134,7 +146,7 @@ export function ProductStep({
               className={(p.settlement ?? 'cash') === 'cash' ? 'active' : ''}
               onClick={() => set({ settlement: 'cash' })}
             >
-              <Asset sym="USDG" size={16} />
+              <Asset sym={cash} size={16} />
               Cash
             </button>
             <button
@@ -157,8 +169,8 @@ export function ProductStep({
           </span>
           {p.settlement === 'physical' && !physicalOk && (
             <div className="notice warn">
-              Robinhood Chain has no token to deliver for {syms.filter((s) => !delivered(s)).join(', ')}: settle in
-              cash, or pick another underlying.
+              {where} has no token to deliver for {syms.filter((s) => !delivered(s)).join(', ')}: settle in cash, or
+              pick another underlying.
             </div>
           )}
         </div>

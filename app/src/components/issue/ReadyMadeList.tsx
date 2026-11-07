@@ -6,7 +6,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CalendarClock, LifeBuoy, ShieldCheck, Undo2, Workflow } from 'lucide-react';
-import { collateralTokenOf, economicsOf, isRemoteCollateral, NOTE_CHAIN_LABELS, noteChainOf } from '@sn/core';
+import {
+  chainLabel,
+  collateralTokenOf,
+  economicsOf,
+  isRemoteCollateral,
+  NOTE_CHAIN_LABELS,
+  noteChainOf,
+} from '@sn/core';
 import { parseNoteId } from '@sn/sdk';
 import type { NoteItem } from '../../lib/api';
 import { useChains } from '../../lib/chains';
@@ -32,7 +39,7 @@ function collateralLine(r: ReadyMade) {
     ),
   ];
   const where = isRemoteCollateral(r.params)
-    ? 'locked on another chain'
+    ? `locked on ${chainLabel(r.params.collateralChain!)}`
     : `on ${NOTE_CHAIN_LABELS[noteChainOf(r.params)]}`;
   return `Backed by ${e.collateralRatioPct}% collateral (${names.join(' + ')}, ${where})`;
 }

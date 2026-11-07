@@ -15,11 +15,12 @@ export interface ChainConfig extends ChainInfo {
   faucet: boolean;
   /** The retired notes.markets TokenFaucet, when the API still names one: the app no longer offers it. */
   tokenFaucet: `0x${string}` | null;
-  /** Tokens by symbol: the chain's real tokens (USDG, WETH, Robinhood's stock tokens), plus receipts of collateral held
-   * on other chains once cross-chain collateral is deployed (planned; none today). */
+  /** Tokens by symbol: the chain's real tokens (USDG, WETH and Robinhood's stock tokens on Robinhood Chain; USDC and
+   * WETH on Base), plus the receipts its gateway mints for collateral locked on the other chain (USDC.base, TSLA.rh…). */
   tokens: Record<string, `0x${string}`>;
-  /** Cross-chain collateral (planned, docs/CROSS-CHAIN.md): absent today. home = this chain (Robinhood Chain) runs
-   * notes and holds receipts; asset = a vault on another chain. The app hides every cross-chain step without it. */
+  /** Cross-chain collateral (docs/CROSS-CHAIN.md): role 'home' = this chain runs notes and its gateway holds receipts
+   * for the vaults in `remotes` (each note chain is a home, the other its asset chain). An 'asset' entry (older
+   * configs) is ignored. The app hides every cross-chain step for a chain without it. */
   crossChain?: CrossChainConfig | null;
   /**
    * Earlier engines on this chain whose notes stay on them (none today): their notes render and

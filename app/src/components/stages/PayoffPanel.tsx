@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { economicsOf, simulateNote, simulatePerf, totalPerUnit } from '@sn/core';
+import { collateralTokenOf, economicsOf, simulateNote, simulatePerf, totalPerUnit } from '@sn/core';
 import PayoffChart from '../PayoffChart';
 import { Head } from './Head';
 import type { DocInfo } from './types';
@@ -149,8 +149,10 @@ export function PayoffPanel({ doc }: { doc: DocInfo }) {
         <p className="small">
           The escrow holds collateral worth at least <strong className="num">{(ratio * 100).toFixed(2)}</strong> per 100
           of face, counted after haircuts (
-          {eco.collateral.map((c) => `${c.symbol === 'USD' ? 'USDG' : `t${c.symbol}`} ${c.haircutPct}%`).join(', ')}) at
-          the last Chainlink prices, plus any payment the issuer had funded but not yet paid.{' '}
+          {eco.collateral
+            .map((c) => `${collateralTokenOf(p, c.symbol)?.token ?? c.symbol} ${c.haircutPct}%`)
+            .join(', ')}
+          ) at the last Chainlink prices, plus any payment the issuer had funded but not yet paid.{' '}
           {eco.defaultRule === 'cap-at-owed'
             ? 'Holders take what they are owed from it, pro rata (the missed payment plus par: 100 per 100 of face plus the coupon), stablecoin first, then collateral at market value; anything above that goes back to the issuer.'
             : 'Holders receive all of it, pro rata, whatever it is worth.'}{' '}

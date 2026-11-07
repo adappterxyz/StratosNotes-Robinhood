@@ -47,7 +47,7 @@ export function ScheduleStep({
           value={size}
           min={1}
           onChange={(v) => setSize(v)}
-          hint="Units on offer, one unit per 1 USDG of face value."
+          hint={`Units on offer, one unit per 1 ${sym} of face value.`}
         />
         <Num
           id="is-strike"

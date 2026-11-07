@@ -1,22 +1,19 @@
 /**
  * Where to get testnet tokens. notes.markets mints none: every token a note uses is a real one, from its issuer's
- * own faucet, linked here in the order a newcomer needs them: ETH for gas (Robinhood Chain's faucet), USDG (Paxos's
- * faucet), WETH (wrapped from that ETH: the issue step offers it when a note takes
- * ETH collateral), and Robinhood Chain's stock tokens (Robinhood's faucet). On a local dev chain the API mints its
- * mock stablecoin instead.
+ * own faucet, linked here in the order a newcomer needs them, per network the deployment serves: ETH for gas
+ * (Robinhood Chain's faucet; Base Sepolia faucets), the cash token (USDG from Paxos on Robinhood Chain, USDC from
+ * Circle on Base), WETH (wrapped from that ETH: the issue step offers it when a note takes ETH collateral), and
+ * Robinhood Chain's stock tokens (Robinhood's faucet). On a local dev chain the API mints its mock stablecoin instead.
  */
 import { AssetIcon, AssetStack } from './AssetIcon';
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Droplet, ExternalLink } from 'lucide-react';
-import { CASH_TOKEN, CHAIN_TOKENS, FAUCETS } from '@sn/core';
+import { CASH_FAUCETS, CHAIN_CASH, CHAIN_TOKENS, FAUCETS, GAS_FAUCETS, isNoteChain, type NoteChain } from '@sn/core';
 import { api } from '../lib/api';
 import { useAddress, useChains } from '../lib/chains';
 import { errText } from '../lib/format';
 
-/** Where to get gas on the testnet (Robinhood Chain's faucet also gives the stock tokens). */
-const GAS_FAUCETS: Record<string, string[]> = {
-  'robinhood-testnet': [FAUCETS.robinhood],
-};
+const CASH_ISSUER: Record<string, string> = { USDG: 'Paxos', USDC: 'Circle' };
 const STOCKS = Object.values(CHAIN_TOKENS['robinhood-testnet'])
   .filter((t) => t.issuer === 'Robinhood')
   .map((t) => t.token);
@@ -27,7 +24,7 @@ export default function FaucetButton() {
   const { config } = useChains();
   const [state, setState] = useState<{ busy: boolean; text: string; bad?: boolean }>({ busy: false, text: '' });
   if (!address) return null;
-  const testnets = config.chains.filter((c) => GAS_FAUCETS[c.key]);
+  const testnets = config.chains.filter((c) => isNoteChain(c.key));
   const dev = config.chains.find((c) => c.faucet);
 
   if (!testnets.length && dev) {
@@ -69,14 +66,27 @@ export default function FaucetButton() {
   if (!testnets.length) return null;
   return (
     <TokenMenu
-      gas={testnets.flatMap((c) => GAS_FAUCETS[c.key].map((url) => ({ name: c.name, url })))}
+      gas={testnets.flatMap((c) => GAS_FAUCETS[c.key as NoteChain].map((url) => ({ name: c.name, url })))}
+      cash={testnets.map((c) => ({
+        name: c.name,
+        token: CHAIN_CASH[c.key as NoteChain].token,
+        url: CASH_FAUCETS[c.key as NoteChain],
+      }))}
       stocks={config.chains.some((c) => c.key === 'robinhood-testnet')}
     />
   );
 }
 
 /** "Get testnet tokens": one menu that says where each token comes from. */
-function TokenMenu({ gas, stocks }: { gas: Array<{ name: string; url: string }>; stocks: boolean }) {
+function TokenMenu({
+  gas,
+  cash,
+  stocks,
+}: {
+  gas: Array<{ name: string; url: string }>;
+  cash: Array<{ name: string; token: string; url: string }>;
+  stocks: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
   useEffect(() => {
@@ -105,7 +115,7 @@ function TokenMenu({ gas, stocks }: { gas: Array<{ name: string; url: string }>;
         <div className="menu-pop" role="menu">
           <span className="label pad-4-10">1 · Gas (testnet ETH)</span>
           {gas.map((g) => (
-            <a key={g.url} className="mi" role="menuitem" href={g.url} target="_blank" rel="noreferrer">
+            <a key={`${g.name}:${g.url}`} className="mi" role="menuitem" href={g.url} target="_blank" rel="noreferrer">
               <span className="row gap-8">
                 <AssetIcon sym="ETH" size={20} />
                 <span>
@@ -117,16 +127,27 @@ function TokenMenu({ gas, stocks }: { gas: Array<{ name: string; url: string }>;
             </a>
           ))}
           <div className="sep" />
-          <span className="label pad-4-10">2 · {CASH_TOKEN.token} to subscribe</span>
-          <a className="mi" role="menuitem" href={FAUCETS.usdg} target="_blank" rel="noreferrer">
-            <span className="row gap-8">
-              <AssetIcon sym={CASH_TOKEN.token} size={20} />
-              <span>
-                {CASH_TOKEN.token} from Paxos<small>The stablecoin notes are paid in, on Robinhood Chain testnet</small>
+          <span className="label pad-4-10">2 · {[...new Set(cash.map((c) => c.token))].join(' or ')} to subscribe</span>
+          {cash.map((c) => (
+            <a
+              key={c.name}
+              className="mi"
+              role="menuitem"
+              href={c.url}
+              target="_blank"
+              rel="noreferrer"
+              data-cash-faucet={c.token}
+            >
+              <span className="row gap-8">
+                <AssetIcon sym={c.token} size={20} />
+                <span>
+                  {c.token} from {CASH_ISSUER[c.token] ?? c.token}
+                  <small>Notes on {c.name} are paid in it</small>
+                </span>
               </span>
-            </span>
-            <ExternalLink className="i" />
-          </a>
+              <ExternalLink className="i" />
+            </a>
+          ))}
           <div className="sep" />
           <span className="label pad-4-10">Collateral and delivery</span>
           <span className="mi" role="menuitem" aria-disabled="true">

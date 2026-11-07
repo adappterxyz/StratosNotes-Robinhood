@@ -7,6 +7,8 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import {
+  cashTokenOf,
+  chainLabel,
   COLLATERAL_SYMBOLS,
   collateralTokenOf,
   DEFAULT_HAIRCUT,
@@ -18,9 +20,13 @@ import {
   MAX_COLLATERAL,
   MAX_GRACE_DAYS,
   MAX_UNDERLYINGS,
+  NOTE_CHAIN_LABELS,
+  NOTE_CHAINS,
+  noteChainOf,
   PRODUCT_LABELS,
   productUses,
   simulatePerf,
+  toChain,
   toIssuanceTerms,
   totalPerUnit,
   UNPRICED_STOCKS,
@@ -31,6 +37,7 @@ import {
   type ProductType,
 } from '@sn/core';
 import PayoffChart from './PayoffChart';
+import { ChainPicker, chainHint } from './issue/ChainPicker';
 import { UnderlyingPicker } from './UnderlyingPicker';
 
 type Num = (v: number) => void;
@@ -64,8 +71,21 @@ function NumField({
   );
 }
 
-export function ProductForm({ p, set }: { p: ProductParams; set: (patch: Partial<ProductParams>) => void }) {
+const NETWORKS = NOTE_CHAINS.map((key) => ({ key, name: NOTE_CHAIN_LABELS[key] }));
+
+export function ProductForm({
+  p,
+  set,
+  onChain,
+}: {
+  p: ProductParams;
+  set: (patch: Partial<ProductParams>) => void;
+  /** Move the terms to another note chain (core toChain); without it the network is shown, not picked. */
+  onChain?: (key: string) => void;
+}) {
   const use = productUses(p.productType);
+  const chainKey = noteChainOf(p);
+  const cash = cashTokenOf(p).token;
   const pick = (t: ProductType) =>
     set({
       ...EXAMPLE_PRODUCTS[t],
@@ -213,24 +233,24 @@ export function ProductForm({ p, set }: { p: ProductParams; set: (patch: Partial
             value={p.settlement ?? 'cash'}
             onChange={(e) => set({ settlement: e.target.value as 'cash' | 'physical' })}
           >
-            <option value="cash">Cash (USDG)</option>
+            <option value="cash">Cash ({cash})</option>
             <option value="physical">Physical delivery</option>
           </select>
           <span className="hint">
             {p.settlement === 'physical'
-              ? `Holders receive units ÷ strike of ${p.underlyings.length > 1 ? "the worst performer's" : `the ${p.underlyings[0]?.symbol}`} token (${delivered}, on Robinhood Chain); the issuer funds the delivery before maturity.`
-              : 'Holders receive final ÷ strike in USDG.'}
+              ? `Holders receive units ÷ strike of ${p.underlyings.length > 1 ? "the worst performer's" : `the ${p.underlyings[0]?.symbol}`} token (${delivered}, on ${chainLabel(chainKey)}); the issuer funds the delivery before maturity.`
+              : `Holders receive final ÷ strike in ${cash}.`}
           </span>
         </div>
       )}
-      <div className="field wide" data-issue-network>
+      <div className="field wide" data-issue-network={chainKey}>
         <span className="lbl">Network</span>
-        <strong>Robinhood Chain testnet</strong>
-        <span className="hint">
-          Notes run on Robinhood Chain: it can deliver Robinhood's TSLA, AMZN, AMD and PLTR tokens or WETH; BTC, SOL and
-          the other stocks settle in cash. Collateral (USDG, WETH or the stock tokens) is pledged straight into the
-          note.
-        </span>
+        {onChain ? (
+          <ChainPicker chains={NETWORKS} value={chainKey} onPick={onChain} />
+        ) : (
+          <strong>{chainLabel(chainKey)}</strong>
+        )}
+        <span className="hint">{chainHint(chainKey)}</span>
       </div>
       {use.protection && (
         <NumField
@@ -263,17 +283,19 @@ export function ProductForm({ p, set }: { p: ProductParams; set: (patch: Partial
               {colToken(c)}
             </button>
           ))}
-          {UNPRICED_STOCKS.map((k) => (
-            <button
-              key={k}
-              type="button"
-              className="chip"
-              disabled
-              title={`${k}: on Robinhood Chain, no Chainlink price yet`}
-            >
-              {k}
-            </button>
-          ))}
+          {chainKey === 'robinhood-testnet' &&
+            !p.collateralChain &&
+            UNPRICED_STOCKS.map((k) => (
+              <button
+                key={k}
+                type="button"
+                className="chip"
+                disabled
+                title={`${k}: on Robinhood Chain, no Chainlink price yet`}
+              >
+                {k}
+              </button>
+            ))}
         </div>
         <span className="hint">
           Locked in the note's escrow until the final payment; on a default the holders are paid from it (see the
@@ -346,7 +368,8 @@ export default function ProductDialog({
   onClose: () => void;
   onCreate: (p: ProductParams) => void;
 }) {
-  // Notes run on Robinhood Chain only: an old term sheet (another chain, remote collateral) opens moved there.
+  // Notes run on Robinhood Chain or Base: an old term sheet (another chain, collateral held where its chain takes none)
+  // opens adjusted (toIssuanceTerms).
   const [p, setP] = useState<ProductParams>(toIssuanceTerms(initial ?? EXAMPLE_PRODUCTS.phoenix));
   useEffect(() => {
     if (initial) setP(toIssuanceTerms(initial));
@@ -383,7 +406,11 @@ export default function ProductDialog({
         </div>
         <div className="modal-body">
           <div className="modal-cols">
-            <ProductForm p={p} set={(patch) => setP((prev) => ({ ...prev, ...patch }))} />
+            <ProductForm
+              p={p}
+              set={(patch) => setP((prev) => ({ ...prev, ...patch }))}
+              onChain={(k) => setP((prev) => (NOTE_CHAINS.includes(k as never) ? toChain(prev, k as never) : prev))}
+            />
             <div className="stack gap-8">
               <span className="label">Payout per 100 at maturity</span>
               {errors.length ? (

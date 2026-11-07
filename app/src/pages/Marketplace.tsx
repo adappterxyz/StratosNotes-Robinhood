@@ -6,7 +6,7 @@ import { cashSymbol } from '../lib/chains';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
-import { engineOf, useChains } from '../lib/chains';
+import { chainName, engineOf, issueChains, useChains } from '../lib/chains';
 import { listingOf } from '../lib/listing';
 import { useNotes, useNow } from '../lib/live';
 import { ListingRow } from '../components/Listing';
@@ -27,6 +27,10 @@ export default function Marketplace() {
   const [filters, setFilters] = useState<Set<Filter>>(new Set());
   const [sort, setSort] = useState<Sort>('yield');
   const [q, setQ] = useState('');
+  // Which network's notes: all, or one (Robinhood Chain testnet, Base Sepolia).
+  const [net, setNet] = useState<string>('all');
+  const nets = issueChains(config);
+  const multi = nets.length > 1;
   const { notes, error } = useNotes({ status: 'all', q: q.trim() || undefined });
   // Each note's own cash token (older demo notes settle in tUSD), falling back to the chain's stablecoin.
   const cashOf = (chain: string, token?: string) =>
@@ -39,6 +43,7 @@ export default function Marketplace() {
 
   const shown = useMemo(() => {
     const items = (notes ?? [])
+      .filter((n) => net === 'all' || n.chain === net)
       .filter((n) => !openOnly || (n.view.phase === 'book' && !earlier(n.id)))
       .map((n) => ({
         n,
@@ -63,7 +68,7 @@ export default function Marketplace() {
       newest: (a, b) => b.n.view.createdAt - a.n.view.createdAt,
     };
     return items.sort((a, b) => by[sort](a, b)).map((x) => x.n);
-  }, [notes, filters, sort, openOnly]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [notes, filters, sort, openOnly, net]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = (f: Filter) =>
     setFilters((s) => {
@@ -79,8 +84,10 @@ export default function Marketplace() {
         <div>
           <h1>Notes</h1>
           <p>
-            Buy into a note with USDG. You know the terms before you buy; Chainlink checks the prices on each date and
-            every payment is made on-chain.
+            Buy into a note with{' '}
+            {multi ? 'USDG on Robinhood Chain or USDC on Base' : (nets[0]?.stablecoin.symbol ?? 'USDG')}. You know the
+            terms before you buy; Chainlink checks the prices on each date and every payment is made on-chain. Testnets
+            only: these are test tokens, and the contracts are not audited.
           </p>
         </div>
         <Link to="/issue" className="btn primary lg">
@@ -89,6 +96,26 @@ export default function Marketplace() {
         </Link>
       </div>
 
+      {multi && (
+        <div className="seg chain-filter" role="radiogroup" aria-label="Network" data-chain-filter>
+          {[
+            { key: 'all', name: 'All networks' },
+            ...nets.map((c) => ({ key: c.key, name: chainName(config, c.key, true) })),
+          ].map((c) => (
+            <button
+              key={c.key}
+              type="button"
+              role="radio"
+              aria-checked={net === c.key}
+              className={net === c.key ? 'active' : ''}
+              data-chain={c.key}
+              onClick={() => setNet(c.key)}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="filters" role="group" aria-label="Filters">
         <button
           className={`chip ${openOnly ? 'on' : ''}`}
@@ -151,6 +178,7 @@ export default function Marketplace() {
               cash={cashOf(chain, view.cashToken)}
               now={now}
               earlier={earlier(id)}
+              chainName={multi ? chainName(config, chain, true) : undefined}
             />
           ))}
         </div>

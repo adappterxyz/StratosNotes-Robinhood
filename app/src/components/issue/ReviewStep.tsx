@@ -1,4 +1,4 @@
-import { PRODUCT_LABELS, type CollateralSymbol, type economicsOf, type ProductParams } from '@sn/core';
+import { chainLabel, PRODUCT_LABELS, type CollateralSymbol, type economicsOf, type ProductParams } from '@sn/core';
 import { fmtMoney, lockedAsset } from '../../lib/format';
 import { AssetStack } from '../AssetIcon';
 import { IssuePanel, TemplatePanel, type Built, type DocInfo, type IssuePreset } from '../Stages';
@@ -57,12 +57,12 @@ export function ReviewStep({
         <dt>Investors get</dt>
         <dd>
           {p.couponRatePct
-            ? `${p.couponRatePct}% ${p.productType === 'snowball' ? 'added each period, paid when called' : 'coupon each period'} in USDG${p.couponBarrierPct ? ` while the worst price is at least ${p.couponBarrierPct}% of strike` : ''}. `
+            ? `${p.couponRatePct}% ${p.productType === 'snowball' ? 'added each period, paid when called' : 'coupon each period'} in ${sym}${p.couponBarrierPct ? ` while the worst price is at least ${p.couponBarrierPct}% of strike` : ''}. `
             : ''}
           {p.autocallLevelPct ? `Repaid early at ${p.autocallLevelPct}% or more. ` : ''}
           {p.protectionPct ? `${p.protectionPct}% back at maturity plus ${p.participationPct}% of any rise. ` : ''}
           {p.knockInBarrierPct
-            ? `Below ${p.knockInBarrierPct}% at maturity: ${p.settlement === 'physical' ? 'the stock instead of cash' : 'final ÷ strike in USDG'}.`
+            ? `Below ${p.knockInBarrierPct}% at maturity: ${p.settlement === 'physical' ? 'the stock instead of cash' : `final ÷ strike in ${sym}`}.`
             : ''}
         </dd>
         <dt>Payouts</dt>
@@ -76,7 +76,9 @@ export function ReviewStep({
           <ul className="iw-list">
             <li>
               Lock {eco.collateral.map((c) => lockedAsset(colToken(c.symbol) ?? c.symbol)).join(' + ')} worth at least{' '}
-              {eco.collateralRatioPct}% of what's sold{remote ? ', on Robinhood Chain' : ''}, until the last payment.
+              {eco.collateralRatioPct}% of what's sold
+              {remote && p.collateralChain ? `, locked on ${chainLabel(p.collateralChain)}` : ''}, until the last
+              payment.
             </li>
             <li>
               Fund each payment within {dur(t.lag)} of its observation; a {dur(t.grace)} grace period follows.

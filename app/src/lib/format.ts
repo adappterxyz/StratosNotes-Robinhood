@@ -1,4 +1,5 @@
 import type { NoteView } from '@sn/sdk';
+import { NOTE_CHAIN_SHORT, receiptChain } from '@sn/core';
 import { BaseError, ContractFunctionRevertedError } from 'viem';
 
 export const fmtMoney = (x: number, dp = 2) =>
@@ -38,14 +39,19 @@ export function agentLabel(o: Pick<NoteView, 'reports'>) {
   return `Chainlink CRE (${o.reports.cre}) and fallback keeper (${o.reports.fallback})`;
 }
 
-/** A receipt for collateral held on another chain (planned, docs/CROSS-CHAIN.md): a token name with a chain suffix,
- * e.g. "USDC.eth". None exists today: every collateral token is a Robinhood Chain token. */
+/** A receipt for collateral locked on the other note chain (docs/CROSS-CHAIN.md): a token name with a chain suffix,
+ * e.g. "TSLA.rh" (TSLA locked on Robinhood Chain, backing a Base note) or "USDC.base". */
 export const isReceipt = (token: string) => /\.[a-z]+$/.test(token);
-/** The asset a person locks, for a collateral token name: a receipt ("USDC.eth") reads as its asset ("USDC"). */
+/** The asset a person locks, for a collateral token name: a receipt ("TSLA.rh") reads as its asset ("TSLA"). */
 export const lockedAsset = (token: string) => token.replace(/\.[a-z]+$/, '');
-/** "USDC on another chain" for a receipt, else the token itself. */
+/** Where a receipt's token is locked ("Robinhood Chain", "Base"), or "another chain" for a suffix no gateway mints. */
+export const lockedOn = (token: string) => {
+  const c = receiptChain(token);
+  return c ? NOTE_CHAIN_SHORT[c] : 'another chain';
+};
+/** "TSLA on Robinhood Chain" / "USDC on Base" for a receipt, else the token itself. */
 export const lockedAssetWhere = (token: string) =>
-  isReceipt(token) ? `${lockedAsset(token)} on another chain` : token;
+  isReceipt(token) ? `${lockedAsset(token)} on ${lockedOn(token)}` : token;
 
 /** What the engine's refusals mean, in the words a person acting on the page would use. */
 const ENGINE_ERRORS: Record<string, string> = {

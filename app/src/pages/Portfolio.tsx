@@ -12,7 +12,7 @@ import { isAddress } from 'viem';
 import { BadgeCheck, Coins, FileText, Landmark, Lock, RefreshCw, Wallet } from 'lucide-react';
 import { CASH_ASSET, type NoteView } from '@sn/sdk';
 import { entryFor, useAddress, useChains, useSigner } from '../lib/chains';
-import { errText, fmtMoney, fmtPct, nextEvent } from '../lib/format';
+import { errText, fmtMoney, fmtPct, isReceipt, lockedOn, nextEvent } from '../lib/format';
 import { useNotes, usePortfolio } from '../lib/live';
 import { useClaimable, useWalletBalances } from '../lib/balances';
 import { RedeemOnAssetChain } from '../components/CrossChainCollateral';
@@ -77,7 +77,7 @@ export default function Portfolio() {
         <div className="empty">
           <strong>Connect a wallet to see your portfolio.</strong>
           <span className="small">
-            Your assets on Robinhood Chain, the notes you hold or issued, and what you can claim.
+            Your assets on Robinhood Chain and Base testnets, the notes you hold or issued, and what you can claim.
           </span>
           <Link to="/" className="btn">
             Browse notes
@@ -615,8 +615,8 @@ export default function Portfolio() {
                           </span>
                         </td>
                         <td className="small">
-                          {/\.[a-z]+$/.test(c.symbol)
-                            ? 'Another chain (via Chainlink CCIP)'
+                          {isReceipt(c.symbol)
+                            ? `Locked on ${lockedOn(c.symbol)} (via Chainlink CCIP)`
                             : (byKey[o.chain]?.cfg.name ?? o.chain)}
                         </td>
                         <td className="r num">{c.value == null ? '—' : fmtMoney(c.value)}</td>
@@ -629,7 +629,7 @@ export default function Portfolio() {
           ) : (
             <Empty
               title="No collateral locked."
-              body="Issuers lock collateral in the note when they issue, on Robinhood Chain: USDG, WETH or Robinhood's stock tokens. Collateral a note pays you after a default can be claimed from the note; it shows here."
+              body="Issuers lock collateral when they issue: in the note on its own chain, or in a vault on the other chain (Robinhood's stock tokens locked on Robinhood Chain behind a Base note, USDC or WETH locked on Base behind a Robinhood Chain note). Collateral a note pays you after a default can be claimed from the note, or is released to your wallet on the chain where it is locked; it shows here."
             />
           )}
         </div>

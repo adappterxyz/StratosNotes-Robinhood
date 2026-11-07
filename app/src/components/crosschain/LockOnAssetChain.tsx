@@ -9,9 +9,21 @@ import { useCrossChain, useReceiptBalances } from './legs';
 import { LockTracker } from './LockTracker';
 import { messageIdOf, receiptLabel } from './shared';
 
-/** Issue flow: lock collateral on its own (asset) chain so its receipts can be pledged into the note on Robinhood Chain. */
-export function LockOnAssetChain({ needed }: { needed: Array<{ receipt: string; amount: number }> }) {
-  const leg = useCrossChain();
+/**
+ * Issue flow: lock collateral on its own (asset) chain so its receipts can be pledged into the note on its home chain
+ * (USDC or WETH locked on Base for a Robinhood Chain note; TSLA, AMZN, AMD, PLTR, USDG or WETH locked on Robinhood Chain
+ * for a Base note).
+ */
+export function LockOnAssetChain({
+  needed,
+  homeKey,
+  assetKey,
+}: {
+  needed: Array<{ receipt: string; amount: number }>;
+  homeKey?: string;
+  assetKey?: string;
+}) {
+  const leg = useCrossChain(homeKey, assetKey);
   const address = useAddress();
   const signer = useSigner();
   const { byKey } = useChains();
@@ -89,7 +101,7 @@ export function LockOnAssetChain({ needed }: { needed: Array<{ receipt: string; 
   };
 
   return (
-    <div className="xc-panel stack">
+    <div className="xc-panel stack" data-xc-lock={leg.asset.key}>
       <div className="row gap-8">
         <Lock className="i" />
         <strong>Lock collateral on {leg.asset.name}</strong>

@@ -148,12 +148,12 @@ export default function Workspace() {
   };
 
   const openProduct = async (given: ProductParams, extra: Partial<Doc> = {}) => {
-    // Notes run on Robinhood Chain only: an old term sheet (another chain, collateral held elsewhere, an underlying with
-    // no token to deliver) opens moved there.
+    // Notes run on Robinhood Chain or Base: an old term sheet (a chain notes do not run on, collateral held where its
+    // chain takes none, an underlying with no token to deliver) opens adjusted.
     const p = toIssuanceTerms(given);
     if (p !== given)
       setNotice(
-        'These terms named another chain, collateral held elsewhere, or a token Robinhood Chain does not have. Notes run on Robinhood Chain only, so they were moved there: such an underlying settles in cash, and the collateral is pledged into the note on Robinhood Chain.',
+        "These terms named a chain notes do not run on, collateral held where the note's chain takes none, or a token its chain does not have, so they were adjusted: notes run on Robinhood Chain testnet or Base Sepolia, such an underlying settles in cash, and the collateral is pledged into the note.",
       );
     const prod = instantiateProduct(p);
     await load(prod.bpmnXml, { name: p.name, origin: 'product', basis: p, assets: prod.assets, ...extra });
@@ -165,15 +165,15 @@ export default function Workspace() {
       const r = await fetch(`/api/templates/${t.definition}`);
       if (!r.ok) throw new Error(`Template ${short(t.definition)} could not be read (${r.status}).`);
       const e = (await r.json()) as TemplateEntry;
-      // A saved note the library no longer offers (another chain, remote collateral, an undeliverable token): its terms
-      // open moved to Robinhood Chain; a custom workflow built for another chain can't be issued at all.
+      // A saved note the library no longer offers (a chain notes do not run on, an undeliverable token): its terms open
+      // adjusted; a custom workflow built for another chain can't be issued at all.
       if (!templateOffered(e)) {
         if (e.product && !e.bpmnXml) {
           await openProduct(normalizeParams(e.product), { name: e.name });
           return;
         }
         throw new Error(
-          'This saved workflow was built for another chain or names tokens notes no longer use. Notes run on Robinhood Chain only: start from a ready-made note instead.',
+          'This saved workflow was built for another chain or names tokens notes no longer use. Notes run on Robinhood Chain testnet or Base Sepolia: start from a ready-made note instead.',
         );
       }
       const { bpmnXml, assets } = templateBpmn(e);

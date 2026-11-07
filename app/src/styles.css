@@ -3199,3 +3199,8 @@ svg.i.issue-ic {
     grid-template-rows: minmax(0, 1.4fr) minmax(0, 1fr);
   }
 }
+
+/* Marketplace: which network's notes (Robinhood Chain testnet, Base Sepolia). */
+.seg.chain-filter {
+  margin-bottom: 10px;
+}

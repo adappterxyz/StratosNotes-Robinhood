@@ -2,57 +2,26 @@
 import { useEffect, useMemo, useState } from 'react';
 import { erc20Abi } from 'viem';
 import { homeGatewayAbi } from '@sn/sdk';
-import { legacyConfig, useAddress, useChains } from '../../lib/chains';
+import { crossChainLeg, crossChainLegs, useAddress, useChains } from '../../lib/chains';
 import type { Leg } from './shared';
 
-/** The home chain and its first asset chain, when this deployment has cross-chain collateral. */
-export function useCrossChain(): Leg | null {
+/**
+ * The cross-chain pair for notes on `homeKey` with collateral locked on `assetKey` (default: the first home chain this
+ * deployment serves and its first asset chain), when this deployment has it.
+ */
+export function useCrossChain(homeKey?: string, assetKey?: string): Leg | null {
   const { config } = useChains();
   // Memoised: the leg is an effect dependency (receipt balances), so it must keep its identity across renders.
-  return useMemo(() => currentLeg(config), [config]);
+  return useMemo(() => {
+    const home = homeKey ?? config.chains.find((c) => c.crossChain?.role === 'home')?.key;
+    return home ? crossChainLeg(config, home, assetKey) : null;
+  }, [config, homeKey, assetKey]);
 }
 
-function currentLeg(config: ReturnType<typeof useChains>['config']): Leg | null {
-  const home = config.chains.find((c) => c.crossChain?.role === 'home');
-  const r = home?.crossChain?.remotes?.[0];
-  const asset = r && config.chains.find((c) => c.key === r.chain);
-  if (!home || !r || !asset || !home.crossChain?.gateway) return null;
-  return { home, asset, vault: r.vault, gateway: home.crossChain.gateway, receipts: r.receipts };
-}
-
-/** The current pair, then each earlier engine's pair (receipts from v3 notes redeem through the v3 gateway). */
+/** Every pair, both directions: current pairs per home chain, then earlier engines' and replaced pairs. */
 export function useCrossChainLegs(): Leg[] {
   const { config } = useChains();
-  return useMemo(() => legsOf(config), [config]);
-}
-
-function legsOf(config: ReturnType<typeof useChains>['config']): Leg[] {
-  const current = currentLeg(config);
-  const out: Leg[] = current ? [current] : [];
-  for (const c of config.chains) {
-    for (const l of c.legacyEngines ?? []) {
-      const xc = l.crossChain;
-      const r = xc?.role === 'home' ? xc.remotes?.[0] : undefined;
-      const asset = r && config.chains.find((x) => x.key === r.chain);
-      if (!xc?.gateway || !r || !asset) continue;
-      out.push({
-        home: legacyConfig(c, l),
-        asset,
-        vault: r.vault,
-        gateway: xc.gateway,
-        receipts: r.receipts,
-        version: l.version,
-      });
-    }
-    // The current engine's earlier pairs (a v1 gateway: receipts held in wallets redeem by hand).
-    for (const xc of c.previousCrossChain ?? []) {
-      const r = xc?.role === 'home' ? xc.remotes?.[0] : undefined;
-      const asset = r && config.chains.find((x) => x.key === r.chain);
-      if (!xc?.gateway || !r || !asset) continue;
-      out.push({ home: c, asset, vault: r.vault, gateway: xc.gateway, receipts: r.receipts });
-    }
-  }
-  return out;
+  return useMemo(() => crossChainLegs(config), [config]);
 }
 
 /** Receipt balances (on the home chain) for the given receipt symbols, refreshed every 20 s. */
@@ -118,15 +87,24 @@ export function useGatewayVersion(leg: Leg | null): number | null {
 }
 
 /**
- * Whether `token` (a note asset) is a receipt that the current gateway releases automatically when it leaves the
- * note: withdrawing it pays the real token on the asset chain, nothing to redeem.
+ * Whether `token` (a note asset on `homeKey`) is a receipt that the chain's current gateway releases automatically when
+ * it leaves the note: withdrawing it pays the real token on the asset chain, nothing to redeem. Every pair of that
+ * home shares its gateway, so one version read covers them.
  */
-export function useAutoReleased(): (token: string | undefined) => { chain: string } | null {
-  const leg = useCrossChain();
+export function useAutoReleased(homeKey?: string): (token: string | undefined) => { chain: string } | null {
+  const leg = useCrossChain(homeKey);
+  const legs = useCrossChainLegs();
   const v = useGatewayVersion(leg);
   return (token) => {
     if (!leg || v !== 2 || !token) return null;
     const t = token.toLowerCase();
-    return Object.values(leg.receipts).some((r) => r.receipt.toLowerCase() === t) ? { chain: leg.asset.name } : null;
+    const hit = legs.find(
+      (l) =>
+        !l.version &&
+        l.home.key === leg.home.key &&
+        l.gateway.toLowerCase() === leg.gateway.toLowerCase() &&
+        Object.values(l.receipts).some((r) => r.receipt.toLowerCase() === t),
+    );
+    return hit ? { chain: hit.asset.name } : null;
   };
 }

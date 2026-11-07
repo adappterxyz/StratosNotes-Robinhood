@@ -9,7 +9,7 @@ import { dec, type WorkflowDef } from '@sn/core';
 import { issuerActions, type NoteEconomics, type NoteState, type PeriodStatus } from '@sn/sdk';
 import { useAddress, useNoteChain, useSigner } from '../lib/chains';
 import { When } from './ui';
-import { errText, fmtDate, fmtMoney, fmtPct, isReceipt, lockedAsset } from '../lib/format';
+import { errText, fmtDate, fmtMoney, fmtPct, isReceipt, lockedAsset, lockedOn } from '../lib/format';
 
 const STATUS: Record<PeriodStatus, string> = {
   upcoming: 'Upcoming',
@@ -20,7 +20,7 @@ const STATUS: Record<PeriodStatus, string> = {
   missed: 'Missed: default',
   cancelled: '—',
 };
-const fallbackName = (symbol: string) => (symbol === 'USD' ? 'USDG' : `t${symbol}`);
+const fallbackName = (symbol: string) => (symbol === 'USD' ? 'USD' : `t${symbol}`);
 /** The token this note actually pledges for a collateral symbol, from its asset names ("Collateral TSLA"). */
 function collateralTokenNames(def: WorkflowDef): (symbol: string) => string {
   const tokens = def.assets.map((a) => /^Collateral (.+)$/.exec(a.name)?.[1]).filter((t): t is string => !!t);
@@ -28,11 +28,12 @@ function collateralTokenNames(def: WorkflowDef): (symbol: string) => string {
     t
       .replace(/\.[a-z]+$/, '')
       .replace(/^t(?=[A-Z])/, '')
-      .replace(/^USDG$|^USD$/, 'USD');
+      .replace(/^(USDG|USDC|USD)$/, 'USD');
   return (symbol) => tokens.find((t) => base(t) === symbol) ?? fallbackName(symbol);
 }
-/** Receipts (planned) stand for tokens locked on another chain. */
-const remoteNote = (token: string) => (isReceipt(token) ? `${lockedAsset(token)}, locked on another chain` : token);
+/** Receipts stand for tokens locked on the other chain (TSLA.rh: TSLA locked on Robinhood Chain). */
+const remoteNote = (token: string) =>
+  isReceipt(token) ? `${lockedAsset(token)}, locked on ${lockedOn(token)}` : token;
 const countdown = (t: number, now: number) => {
   const s = Math.round(t - now);
   if (s <= 0) return 'now';

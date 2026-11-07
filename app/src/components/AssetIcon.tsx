@@ -8,7 +8,8 @@
  * currency sign for forex, the element for metals (Au, Ag), else the ticker. Sources: app/public/assets/SOURCES.md.
  *
  * Variants: tUSD (the retired test dollar older notes settle in) carries a small "t" tag; receipts for collateral
- * held on another chain (planned; a token name with a chain suffix, e.g. USDC.eth) carry a small tag.
+ * locked on the other chain (a token name with a chain suffix: TSLA.rh on Robinhood Chain, USDC.base on Base) carry
+ * a small R or B tag.
  */
 import {
   siAlibabadotcom,
@@ -44,6 +45,7 @@ import {
   siXrp,
   siZcash,
 } from 'simple-icons';
+import { lockedOn } from '../lib/format';
 
 type Mark = { path: string; hex: string; title: string };
 const MARKS: Record<string, Mark> = {
@@ -115,21 +117,26 @@ const BADGES: Record<string, string> = {
   XAG: 'Ag',
 };
 
-/** "tUSD" -> { base: TUSD, test }, "USDC.eth" -> { base: USDC, remote }, "USDG" -> { base: USDG }. */
-export function parseAsset(sym: string): { base: string; test: boolean; remote: boolean } {
+/**
+ * "tUSD" -> { base: TUSD, test }, "TSLA.rh" -> { base: TSLA, remote: 'rh' } (TSLA locked on Robinhood Chain),
+ * "USDC.base" -> { base: USDC, remote: 'base' }, "USDG" -> { base: USDG }.
+ */
+export function parseAsset(sym: string): { base: string; test: boolean; remote: string | null } {
   let s = sym.trim();
-  const remote = /\.[a-z]+$/.test(s);
+  const remote = /\.([a-z]+)$/.exec(s)?.[1] ?? null;
   if (remote) s = s.replace(/\.[a-z]+$/, '');
   if (s === 'tUSD') return { base: 'TUSD', test: true, remote };
   return { base: s.toUpperCase(), test: false, remote };
 }
+/** The small tag on a receipt's icon: where its token is locked. */
+const REMOTE_TAG: Record<string, string> = { rh: 'R', base: 'B' };
 
 export function AssetIcon({ sym, size = 18, title }: { sym: string; size?: number; title?: string }) {
   const { base, test, remote } = parseAsset(sym);
   const mark = MARKS[base];
   const label =
     title ??
-    `${mark?.title ?? base}${test ? ' (retired test dollar)' : ''}${remote ? ' (locked on another chain)' : ''}`;
+    `${mark?.title ?? base}${test ? ' (retired test dollar)' : ''}${remote ? ` (locked on ${lockedOn(sym)})` : ''}`;
   return (
     <span className="asset-ic" style={{ width: size, height: size }} role="img" aria-label={label} title={label}>
       {mark ? (
@@ -151,8 +158,8 @@ export function AssetIcon({ sym, size = 18, title }: { sym: string; size?: numbe
         </span>
       )}
       {remote && (
-        <span className="asset-tag t" aria-hidden="true">
-          x
+        <span className="asset-tag t" aria-hidden="true" data-remote={remote}>
+          {REMOTE_TAG[remote] ?? 'x'}
         </span>
       )}
     </span>

@@ -89,7 +89,7 @@ export default function App() {
   const workspace = pathname.startsWith('/issue');
   const extras = (
     <>
-      <span className="pill plain" title="Notes run on Robinhood Chain">
+      <span className="pill plain" title="Networks notes run on (testnets)" data-networks>
         <span className="dot text-success" />
         {networks}
       </span>
@@ -161,8 +161,9 @@ export default function App() {
       {!workspace && (
         <footer className="foot">
           <span>
-            notes.markets · Robinhood Chain testnet. Each note is a workflow run by one contract on Robinhood Chain;
-            Chainlink CRE writes the strikes and observations.
+            notes.markets · Robinhood Chain and Base testnets: test tokens only, contracts not audited. Each note is a
+            workflow run by one contract on its chain; Chainlink CRE writes the strikes and observations, and Chainlink
+            CCIP carries collateral locked on the other chain.
           </span>
           {config.chains
             .filter((c) => c.explorer)

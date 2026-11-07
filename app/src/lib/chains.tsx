@@ -1,8 +1,8 @@
 /**
  * Chains and wallets. The API's /api/config says which chains this deployment serves (RPC, engine, lens,
- * stablecoin): Robinhood Chain testnet. This builds the wagmi + RainbowKit setup for it (injected wallets,
- * discovered with EIP-6963) and one SDK adapter per (chain, engine): the chain's current engine, plus any earlier
- * engine whose notes stay on it (none today). `useNoteChain` picks the one that runs a note. Writes go through `useSigner`, which puts the
+ * stablecoin): Robinhood Chain testnet and Base Sepolia. This builds the wagmi + RainbowKit setup for them (injected
+ * wallets, discovered with EIP-6963) and one SDK adapter per (chain, engine): the chain's current engine, plus any
+ * earlier engine whose notes stay on it (none today). `useNoteChain` picks the one that runs a note. Writes go through `useSigner`, which puts the
  * wallet on the note's chain first.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -19,19 +19,31 @@ import { createPublicClient, defineChain, http, type Chain, type PublicClient, t
 import { createConfig, deserialize, WagmiProvider, useAccount, type State } from 'wagmi';
 import { getAccount, getWalletClient, switchChain } from 'wagmi/actions';
 import { EvmAdapter, type EngineVersion } from '@sn/sdk';
-import { CASH_TOKEN, CASH_TOKENS, EXTERNAL_TOKENS, TEST_CASH_TOKEN } from '@sn/core';
+import { CASH_TOKENS, cashTokenOf, EXTERNAL_TOKENS, HOME_CHAIN, isNoteChain, TEST_CASH_TOKEN } from '@sn/core';
 import type { AppConfig, ChainConfig } from './api';
 import { entryFor, legacyConfig, type ByKey, type EngineEntry } from './engines';
 
-export { engineOf, entryFor, issueChains, legacyConfig, type ByKey, type EngineEntry } from './engines';
+export {
+  chainName,
+  crossChainLeg,
+  crossChainLegs,
+  engineOf,
+  entryFor,
+  heldOnChoices,
+  issueChains,
+  legacyConfig,
+  type ByKey,
+  type EngineEntry,
+} from './engines';
 import '@rainbow-me/rainbowkit/styles.css';
 
-/** The chain notes run on: Robinhood Chain testnet (the only one this deployment serves). */
-export const NOTE_CHAIN = 'robinhood-testnet';
+/** The chain the app defaults to where a network is picked (Robinhood Chain testnet); Base Sepolia is the other. */
+export const DEFAULT_CHAIN: string = HOME_CHAIN;
 
 /**
- * The deployment's config as the app uses it: USDG (Paxos) as the cash token, with a deployment's own test dollar kept
- * under its symbol (tUSD) if the API names one, and the chain's own tokens (WETH, Robinhood's stock tokens).
+ * The deployment's config as the app uses it: each note chain's own cash token (USDG from Paxos on Robinhood Chain,
+ * USDC from Circle on Base), with a deployment's own test dollar kept under its symbol (tUSD) if the API names one,
+ * and the chain's own tokens (WETH, Robinhood's stock tokens on Robinhood Chain).
  */
 export function prepareConfig(config: AppConfig): AppConfig {
   const chains = config.chains.map((c) => {
@@ -39,7 +51,7 @@ export function prepareConfig(config: AppConfig): AppConfig {
     const tokens: Record<string, `0x${string}`> = { ...(EXTERNAL_TOKENS[c.key] ?? {}), ...c.tokens };
     if (!usdg) return { ...c, tokens };
     // An older deployment's own test dollar, when the API still names it the stablecoin. Never overwrite a tUSD the
-    // API already lists: that would relabel every tUSD note as USDG.
+    // API already lists: that would relabel every tUSD note as the chain's cash token.
     if (
       c.stablecoin?.address &&
       c.stablecoin.address.toLowerCase() !== usdg.toLowerCase() &&
@@ -47,14 +59,15 @@ export function prepareConfig(config: AppConfig): AppConfig {
     ) {
       tokens[TEST_CASH_TOKEN.token] = c.stablecoin.address;
     }
-    return { ...c, tokens, stablecoin: { symbol: CASH_TOKEN.token, address: usdg, decimals: CASH_TOKEN.decimals } };
+    const cash = cashTokenOf(isNoteChain(c.key) ? c.key : HOME_CHAIN);
+    return { ...c, tokens, stablecoin: { symbol: cash.token, address: usdg, decimals: cash.decimals } };
   });
   return { ...config, chains };
 }
 
-/** A note's cash symbol from the token it actually settles in: USDG, or tUSD for notes issued before USDG. */
+/** A note's cash symbol from the token it actually settles in: USDG or USDC (by chain), or tUSD for older notes. */
 export function cashSymbol(cfg: ChainConfig | undefined, cashToken?: string): string {
-  if (!cfg) return 'USDG';
+  if (!cfg) return cashTokenOf(HOME_CHAIN).token;
   const t = cashToken?.toLowerCase();
   if (!t || t === cfg.stablecoin.address.toLowerCase()) return cfg.stablecoin.symbol;
   return Object.entries(cfg.tokens).find(([, a]) => a.toLowerCase() === t)?.[0] ?? cfg.stablecoin.symbol;

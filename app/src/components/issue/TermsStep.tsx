@@ -1,4 +1,4 @@
-import { productUses, type ProductParams } from '@sn/core';
+import { cashTokenOf, productUses, type ProductParams } from '@sn/core';
 import { Num } from './Num';
 import { TermErrors } from './TermErrors';
 
@@ -38,7 +38,7 @@ export function TermsStep({
             suffix="%"
             value={p.couponRatePct}
             onChange={(v) => set({ couponRatePct: v })}
-            hint="Paid in USDG."
+            hint={`Paid in ${cashTokenOf(p).token}.`}
           />
         )}
         {use.couponBarrier && (
@@ -69,7 +69,7 @@ export function TermsStep({
             hint={
               p.settlement === 'physical'
                 ? 'Below it at maturity: the stock.'
-                : 'Below it at maturity: final ÷ strike in USDG.'
+                : `Below it at maturity: final ÷ strike in ${cashTokenOf(p).token}.`
             }
           />
         )}

@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
-import type { ByKey } from '../../../lib/engines';
+import { chainName, type ByKey } from '../../../lib/engines';
 import { fmtMoney, lockedAsset, lockedAssetWhere } from '../../../lib/format';
 import { LockOnAssetChain } from '../../CrossChainCollateral';
 
@@ -17,6 +17,7 @@ export function IssueCollateral({
   pledgeOf,
   setPledges,
   remote,
+  assetKey,
   chain,
   usdCoverage,
 }: {
@@ -32,6 +33,8 @@ export function IssueCollateral({
   pledgeOf: (c: string) => string;
   setPledges: Dispatch<SetStateAction<Record<string, string>>>;
   remote: boolean;
+  /** Where remote collateral is locked (the terms' collateralChain). */
+  assetKey?: string;
   chain: ByKey[string] | undefined;
   usdCoverage: number;
 }) {
@@ -110,15 +113,21 @@ export function IssueCollateral({
       </div>
       {remote && (
         <LockOnAssetChain
+          homeKey={chain?.cfg.key}
+          assetKey={assetKey}
           needed={collateralSyms.map((c) => ({ receipt: tokOf(c), amount: Number(pledgeOf(c)) || 0 }))}
         />
       )}
-      {remote && chain?.cfg.crossChain?.role !== 'home' && (
-        <p className="xs err">
-          Collateral held on another chain needs a cross-chain gateway on Robinhood Chain, which this deployment does
-          not configure yet.
-        </p>
-      )}
+      {remote &&
+        !(
+          chain?.cfg.crossChain?.role === 'home' && chain.cfg.crossChain.remotes?.some((r) => r.chain === assetKey)
+        ) && (
+          <p className="xs err">
+            Collateral locked on {assetKey ? chainName(null, assetKey, true) : 'another chain'} needs a cross-chain
+            gateway on {chain?.cfg.name ?? "the note's chain"} wired to a vault there, which this deployment does not
+            configure yet.
+          </p>
+        )}
       {collateralSyms.every((c) => c === 'USD') && (
         <p className={`xs ${usdCoverage + 1e-9 >= required ? 'muted' : 'err'}`}>
           Coverage at the strike: {fmtMoney(usdCoverage)} {sym} of {fmtMoney(required)} required

@@ -3,19 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import { isAddress } from 'viem';
 import {
   CHAIN_TOKENS,
+  chainLabel,
   collateralTokenOf,
+  isNoteChain,
   dec,
   economicsOf,
   FKIND,
   MAX_GRACE_DAYS,
   isLegacyChainTerms,
   isRemoteCollateral,
+  noteChainOf,
   PRODUCT_LABELS,
   type CollateralSymbol,
 } from '@sn/core';
 import { FIELD_LABEL, fieldLabel, noteTokenMeta, obsIndex, planIssuance, type InputValue } from '@sn/sdk';
 import WrapEth from '../WrapEth';
-import { issueChains, NOTE_CHAIN, useAddress, useChains, useSigner } from '../../lib/chains';
+import { DEFAULT_CHAIN, issueChains, useAddress, useChains, useSigner } from '../../lib/chains';
 import { Steps } from '../ui';
 import { useVerifiedEmail } from '../VerifiedEmail';
 import { errText } from '../../lib/format';
@@ -57,14 +60,20 @@ export function IssuePanel({
       return e instanceof Error ? e.message : String(e);
     }
   }, [built]);
-  // Every note runs on Robinhood Chain (the deployment's one chain). A term sheet that names another chain (saved by
-  // the earlier Arbitrum build) can't be issued as it is.
+  // A product note is issued on the chain its terms name (Robinhood Chain when they name none, Base Sepolia when they
+  // say so); a custom workflow on the network it was opened for. A term sheet that names a chain notes do not run on
+  // (saved by the earlier Arbitrum build) can't be issued as it is. Terms that name no chain also issue on whatever
+  // this deployment serves first (a local fork of Robinhood Chain in development); terms naming Base only on Base.
   const issuable = issueChains(config);
+  const wanted = doc.basis ? noteChainOf(doc.basis) : (preset?.chainKey ?? DEFAULT_CHAIN);
   const chainKey =
-    issuable.find((c) => c.key === NOTE_CHAIN)?.key ??
-    issuable.find((c) => c.key === preset?.chainKey)?.key ??
-    issuable[0]?.key ??
-    '';
+    issuable.find((c) => c.key === wanted)?.key ??
+    (doc.basis?.chain
+      ? ''
+      : (issuable.find((c) => c.key === preset?.chainKey)?.key ??
+        issuable.find((c) => c.key === DEFAULT_CHAIN)?.key ??
+        issuable[0]?.key ??
+        ''));
   const legacyTerms = !!doc.basis && isLegacyChainTerms(doc.basis);
   const emailGate = useVerifiedEmail(); // a verified email before issuing
   const [values, setValues] = useState<Record<string, string>>({});
@@ -85,11 +94,11 @@ export function IssuePanel({
   const [pledges, setPledges] = useState<Record<string, string>>({});
   const [timing, setTiming] = useState<{ lag: number; grace: number } | null>(preset?.timing ?? null);
   const chain = byKey[chainKey];
-  // Collateral held on another chain (planned, none today): the note pledges the CCIP receipts, not the token itself.
+  // Collateral locked on the other chain: the note pledges the CCIP receipts (TSLA.rh, USDC.base…), not the token.
   const remote = isRemoteCollateral(doc.basis);
   const tokOf = (c: string) =>
     collateralTokenOf(doc.basis ?? {}, c as CollateralSymbol)?.token ??
-    (c === 'USD' ? (chain?.cfg.stablecoin.symbol ?? 'USDG') : c);
+    (c === 'USD' ? (chain?.cfg.stablecoin.symbol ?? 'USD') : c);
 
   if (!built)
     return (
@@ -106,8 +115,8 @@ export function IssuePanel({
         <Head title="Issue" />
         <div className="section">
           <div className="notice err" data-other-chain-terms>
-            These terms put the note on another chain. Notes run on Robinhood Chain only: edit the terms (the note moves
-            to Robinhood Chain) and issue there.
+            These terms put the note on a chain notes do not run on. Notes run on Robinhood Chain testnet or Base
+            Sepolia: edit the terms (the note moves to Robinhood Chain) and issue there.
           </div>
         </div>
       </>
@@ -136,7 +145,7 @@ export function IssuePanel({
     }
     return strikeAt + k * every.n * (every.unit === 'days' ? 86400 : 60);
   };
-  const sym = chain?.cfg.stablecoin.symbol ?? 'USDG';
+  const sym = chain?.cfg.stablecoin.symbol ?? 'USD';
   // Collateral and payment timing: per issuance. Minutes-apart demo schedules get seconds; real ones, days.
   const names = new Set(inputs.map((f) => f.name));
   const collateralSyms = [...names].filter((n) => n.startsWith('pledge_')).map((n) => n.slice(7));
@@ -185,7 +194,11 @@ export function IssuePanel({
   const generic = inputs.filter((f) => !handled(f.name));
   // Cash settles in the network's stablecoin; a delivered underlying (WETH, TSLA…) needs its token on that network.
   const isCash = (token?: string) => !token || /^(t?USD|USDC|USDG)$/i.test(token);
-  const tokenOf = (token?: string) => (isCash(token) ? chain?.cfg.stablecoin.address : chain?.cfg.tokens?.[token!]);
+  const tokenOf = (token?: string) =>
+    token === chain?.cfg.stablecoin.symbol
+      ? chain?.cfg.stablecoin.address
+      : ((token ? chain?.cfg.tokens?.[token] : undefined) ??
+        (isCash(token) ? chain?.cfg.stablecoin.address : undefined));
   const unsupported = built.ir.assets
     .filter((a) => a.kind === 'cash' && !tokenOf(a.token))
     .map((a) => a.token ?? 'cash');
@@ -201,7 +214,13 @@ export function IssuePanel({
         throw new Error('The strike date must be at least a minute away.');
       if (unsupported.length)
         throw new Error(
-          `${chain.cfg.name} has no token configured for ${unsupported.join(', ')}.${unsupported.some((t) => !CHAIN_TOKENS['robinhood-testnet'][t]) ? ' Notes use Robinhood Chain tokens only (USDG, WETH, TSLA, AMZN, AMD, PLTR): settle in cash, or pledge one of those.' : ''}`,
+          `${chain.cfg.name} has no token configured for ${unsupported.join(', ')}.${
+            unsupported.some((t) => t.includes('.'))
+              ? ' Collateral locked on the other chain needs its cross-chain gateway and vault deployed first: pledge into the note instead.'
+              : isNoteChain(chain.cfg.key)
+                ? ` Notes on ${chainLabel(chain.cfg.key)} use its own tokens (${Object.keys(CHAIN_TOKENS[chain.cfg.key]).join(', ')}): settle in cash, or pledge one of those.`
+                : ''
+          }`,
         );
       if (timingBad) throw new Error(timingBad);
       const value = (f: { name: string; kind: number }): InputValue => {
@@ -258,7 +277,7 @@ export function IssuePanel({
       {!compact && (
         <Head
           title="Issue this note"
-          sub="Four steps. Publishing opens the book: investors subscribe until the strike date and their USDG is yours. Chainlink CRE then checks prices on each date, and you fund each payment before it falls due."
+          sub={`Four steps. Publishing opens the book: investors subscribe until the strike date and their ${sym} is yours. Chainlink CRE then checks prices on each date, and you fund each payment before it falls due.`}
         />
       )}
       <div className="section">
@@ -275,7 +294,14 @@ export function IssuePanel({
               {byKey[chainKey]?.cfg.name ?? chainKey}
               {byKey[chainKey]?.cfg.cre === false ? ' (fallback keeper)' : ''}
             </strong>
-            <span className="hint">Notes run on Robinhood Chain: issued, paid and collateralised there.</span>
+            <span className="hint">
+              {doc.basis
+                ? `Set by the terms: the note is issued and paid on ${chain?.cfg.name ?? chainLabel(wanted)}, in ${sym}.`
+                : `Issued and paid on ${chain?.cfg.name ?? chainKey}, in ${sym}.`}
+              {remote && doc.basis?.collateralChain
+                ? ` Its collateral stays locked on ${chainLabel(doc.basis.collateralChain)}.`
+                : ''}
+            </span>
           </div>
         )}
         <div className="form-grid" hidden={compact}>
@@ -329,6 +355,7 @@ export function IssuePanel({
           pledgeOf={pledgeOf}
           setPledges={setPledges}
           remote={remote}
+          assetKey={doc.basis?.collateralChain}
           chain={chain}
           usdCoverage={usdCoverage}
         />
@@ -336,7 +363,7 @@ export function IssuePanel({
       {names.has('grace') && !compact && <IssueTiming demo={demo} t={t} setTiming={setTiming} timingBad={timingBad} />}
       {generic.length > 0 && <IssueOtherTerms generic={generic} sym={sym} valueOf={valueOf} setValues={setValues} />}
       <div className="section">
-        {deposits.length > 0 && <IssueDeposits deposits={deposits} built={built} />}
+        {deposits.length > 0 && <IssueDeposits deposits={deposits} built={built} chainKey={chainKey} />}
         {deposits.length > 0 && built.ir.assets.some((a) => a.token === 'WETH') && <WrapEth chainKey={chainKey} />}
         {unsupported.length > 0 && (
           <div className="notice warn">

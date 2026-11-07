@@ -1,8 +1,12 @@
 import {
+  cashTokenOf,
+  chainLabel,
   COLLATERAL_SYMBOLS,
   DEFAULT_HAIRCUT,
   MAX_COLLATERAL,
   MAX_GRACE_DAYS,
+  noteChainOf,
+  remoteCollateralOf,
   UNPRICED_STOCKS,
   type CollateralSymbol,
   type DefaultRule,
@@ -31,6 +35,8 @@ export function CollateralStep({
   setTiming,
   timingBad,
   errors,
+  heldOn,
+  onHeldOn,
 }: {
   p: ProductParams;
   set: (patch: Partial<ProductParams>) => void;
@@ -45,9 +51,20 @@ export function CollateralStep({
   setTiming: (t: Timing | null) => void;
   timingBad: string;
   errors: string[];
+  /** Where the collateral can be held: in the note, or locked on the other chain (live when its pair is deployed). */
+  heldOn: Array<{ key: string; label: string; live: boolean }>;
+  onHeldOn: (key: string) => void;
 }) {
-  /** A receipt of collateral held on another chain (planned) is offered only when the chain's config lists it. */
+  /** A receipt of collateral locked on the other chain is offered only when the note chain's config lists it. */
   const colLive = (tok: string | null) => !!tok && (!tok.includes('.') || !!chainCfg?.tokens?.[tok]);
+  const noteChain = noteChainOf(p);
+  const heldKey = remote ? (p.collateralChain ?? 'note') : 'note';
+  /** The chain the collateral itself sits on: the note's own, or where it is locked. */
+  const collateralOn = remote ? (p.collateralChain ?? noteChain) : noteChain;
+  const onRobinhood = collateralOn === 'robinhood-testnet';
+  const lockable = Object.values(remoteCollateralOf(p) ?? {})
+    .map((r) => r!.locked.token)
+    .join(', ');
   const colSyms = eco.collateral.map((c) => c.symbol);
   const toggleCol = (c: CollateralSymbol) => {
     if (colSyms.includes(c)) {
@@ -59,19 +76,44 @@ export function CollateralStep({
     <>
       <h2>Collateral</h2>
       <p className="small muted">
-        You lock collateral for the note's whole life. Investors' USDG comes to you; if you miss a payment, holders take
-        what they're owed from the collateral.
+        You lock collateral for the note's whole life. Investors' {cashTokenOf(p).token} comes to you; if you miss a
+        payment, holders take what they're owed from the collateral, up to its value.
       </p>
-      <div className="field">
+      <div className="field" data-held-on={heldKey}>
         <span className="lbl">Held on</span>
-        <span className="small">
-          <img src={`${import.meta.env.BASE_URL}assets/robinhood-feather.svg`} alt="" width={14} height={14} />{' '}
-          Robinhood Chain, in the note itself
-        </span>
+        <div className="seg" role="radiogroup" aria-label="Collateral held on">
+          {heldOn.map((h) => (
+            <button
+              key={h.key}
+              type="button"
+              role="radio"
+              aria-checked={h.key === heldKey}
+              className={h.key === heldKey ? 'active' : ''}
+              data-held-on-choice={h.key}
+              disabled={!h.live && h.key !== heldKey}
+              title={
+                h.live
+                  ? undefined
+                  : `The cross-chain gateway and vault for ${h.label} are not deployed on this site yet`
+              }
+              onClick={() => h.key !== heldKey && onHeldOn(h.key)}
+            >
+              {h.key === 'robinhood-testnet' || (h.key === 'note' && noteChain === 'robinhood-testnet') ? (
+                <img src={`${import.meta.env.BASE_URL}assets/robinhood-feather.svg`} alt="" width={14} height={14} />
+              ) : null}
+              {h.key === 'note' ? `${h.label} (the note's chain)` : `${h.label}, locked via Chainlink CCIP`}
+            </button>
+          ))}
+        </div>
         <span className="hint">
           {remote
-            ? 'Held in a vault on another chain; Chainlink CCIP tells the note, and the note sends it back there when it lets it go. Nothing is bridged.'
-            : "USDG, WETH or Robinhood's stock tokens (TSLA, AMZN, AMD, PLTR), pledged into the note on Robinhood Chain."}
+            ? `${lockable ? `${lockable} ` : ''}stay locked in the vault on ${chainLabel(collateralOn)}; Chainlink CCIP tells the note (about 15–25 minutes per message), and the note sends them back there when it lets them go. Nothing is bridged. The collateral recovers up to its value in a default, and the tokens' own issuers can freeze them.`
+            : noteChain === 'base-sepolia'
+              ? "USDC or WETH, pledged into the note on Base. To pledge Robinhood's stock tokens, lock them on Robinhood Chain."
+              : "USDG, WETH or Robinhood's stock tokens (TSLA, AMZN, AMD, PLTR), pledged into the note on Robinhood Chain."}
+          {heldOn.some((h) => h.key !== 'note' && !h.live)
+            ? ' Locking on the other chain opens once its cross-chain gateway and vault are deployed.'
+            : ''}
         </span>
       </div>
       <div className="field">
@@ -95,22 +137,25 @@ export function CollateralStep({
               </button>
             );
           })}
-          {UNPRICED_STOCKS.map((k) => (
-            <button
-              key={k}
-              type="button"
-              className="chip"
-              disabled
-              title={`${k}: on Robinhood Chain, no Chainlink price yet`}
-            >
-              <AssetIcon sym={k} size={18} />
-              {k}
-            </button>
-          ))}
+          {onRobinhood &&
+            UNPRICED_STOCKS.map((k) => (
+              <button
+                key={k}
+                type="button"
+                className="chip"
+                disabled
+                title={`${k}: on Robinhood Chain, no Chainlink price yet`}
+              >
+                <AssetIcon sym={k} size={18} />
+                {k}
+              </button>
+            ))}
         </div>
-        <span className="hint">
-          {UNPRICED_STOCKS.join(', ')}: on Robinhood Chain, no Chainlink price yet, so it can't be pledged.
-        </span>
+        {onRobinhood && (
+          <span className="hint">
+            {UNPRICED_STOCKS.join(', ')}: on Robinhood Chain, no Chainlink price yet, so it can't be pledged.
+          </span>
+        )}
       </div>
       <div className="form-grid">
         <Num

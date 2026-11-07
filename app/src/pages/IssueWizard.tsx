@@ -17,9 +17,12 @@ import {
   economicsOf,
   EXAMPLE_PRODUCTS,
   instantiateProduct,
+  isNoteChain,
+  noteChainOf,
   parseBpmn,
   PRODUCT_LABELS,
   isRemoteCollateral,
+  toChain,
   toIssuanceTerms,
   validateProductParams,
   type CollateralSymbol,
@@ -47,7 +50,7 @@ import {
   type AiReading,
   type ReadyMade,
 } from '../lib/readymade';
-import { issueChains, NOTE_CHAIN, useChains } from '../lib/chains';
+import { heldOnChoices, issueChains, useChains } from '../lib/chains';
 import { fmtDate } from '../lib/format';
 import { CustomReview } from '../components/issue/CustomReview';
 
@@ -78,16 +81,23 @@ export default function IssueWizard() {
     if (demoTsla) return { p: DEMO_TSLA, from: null, ai: null, shown: key };
     return { p: start(kind ?? 'phoenix'), from: null, ai: null, shown: kind && !ready ? key : null };
   });
-  // Every note runs on Robinhood Chain: terms opened from elsewhere (e.g. saved by the earlier Arbitrum build, or
-  // delivering an underlying with no token there) are moved there as they load (toIssuanceTerms), and the issuer is told.
-  const [p, setPRaw] = useState<ProductParams>(() => toIssuanceTerms(init.p));
-  const [moved, setMoved] = useState(() => toIssuanceTerms(init.p) !== init.p);
+  // Notes run on Robinhood Chain testnet or Base Sepolia. Terms opened from elsewhere (e.g. saved by the earlier
+  // Arbitrum build, or delivering an underlying with no token on their chain) are adjusted as they load
+  // (toIssuanceTerms), and the issuer is told; terms for a chain this deployment does not serve move to one it does.
+  const issuable = issueChains(config);
+  const toServed = (q: ProductParams): ProductParams => {
+    const c = noteChainOf(q);
+    const first = issuable[0]?.key;
+    return issuable.some((x) => x.key === c) || !first || !isNoteChain(first) ? q : toChain(q, first);
+  };
+  const [p, setPRaw] = useState<ProductParams>(() => toServed(toIssuanceTerms(init.p)));
+  const [moved, setMoved] = useState(() => toServed(toIssuanceTerms(init.p)) !== init.p);
   const setP = (next: ProductParams | ((prev: ProductParams) => ProductParams)) => {
     if (typeof next === 'function') {
-      setPRaw((prev) => toIssuanceTerms(next(prev)));
+      setPRaw((prev) => toServed(toIssuanceTerms(next(prev))));
       return;
     }
-    const q = toIssuanceTerms(next); // terms loaded from elsewhere
+    const q = toServed(toIssuanceTerms(next)); // terms loaded from elsewhere
     setMoved(q !== next);
     setPRaw(q);
   };
@@ -95,9 +105,19 @@ export default function IssueWizard() {
   const [aiNotes, setAiNotes] = useState<string[]>(init.ai?.notes ?? []);
   const [shown, setShown] = useState<string | null>(init.shown); // the key whose terms are in p
   const [lost, setLost] = useState('');
-  // The network: Robinhood Chain testnet, always (left implicit in the terms).
-  const issuable = issueChains(config);
-  const chainKey = issuable.find((c) => c.key === NOTE_CHAIN)?.key ?? issuable[0]?.key ?? '';
+  // The network: the terms' chain (Robinhood Chain when they name none, so its definitions stay as they were; Base
+  // Sepolia sets `chain`). The picker on the Product step moves the terms with toChain.
+  const chainKey = issuable.find((c) => c.key === noteChainOf(p))?.key ?? issuable[0]?.key ?? '';
+  const pickChain = (k: string) => {
+    if (isNoteChain(k)) setP((prev) => toChain(prev, k));
+  };
+  /** Where the collateral is held: in the note, or locked on the other chain (its receipts pledged). */
+  const pickHeldOn = (k: string) =>
+    setP((prev) => {
+      const { collateralChain: _held, ...rest } = prev;
+      void _held;
+      return toChain(k === 'note' ? rest : { ...rest, collateralChain: k }, noteChainOf(prev));
+    });
   const [size, setSize] = useState(demoTsla ? 20 : (init.ai?.schedule?.size ?? 10_000));
   const [strikeIn, setStrikeIn] = useState(5);
   const [every, setEvery] = useState<Every>(
@@ -196,7 +216,8 @@ export default function IssueWizard() {
   if (custom) return <CustomReview key={custom} source={custom} />;
 
   const choose = (k: Kind) => {
-    setP(start(k));
+    // A new note type keeps the network picked so far.
+    setP(isNoteChain(chainKey) ? toChain(start(k), chainKey) : start(k));
     setFrom(null);
     setAiNotes([]);
     setShown(`k:${k}`);
@@ -240,7 +261,7 @@ export default function IssueWizard() {
   const remote = isRemoteCollateral(p);
   const chainCfg = config.chains.find((c) => c.key === chainKey);
   const colToken = (c: CollateralSymbol) => collateralTokenOf(p, c)?.token ?? null;
-  const sym = config.chains.find((c) => c.key === chainKey)?.stablecoin.symbol ?? 'USDG';
+  const sym = config.chains.find((c) => c.key === chainKey)?.stablecoin.symbol ?? 'USD';
   const { demo, t, timingBad, strikeAt, dateOf, fmtT, dur } = issueSchedule(every, strikeIn, timing, eco);
 
   const doc: DocInfo = {
@@ -326,7 +347,17 @@ export default function IssueWizard() {
       )}
       <div className={`iw-body ${step === 1 || step === 4 ? 'with-side' : ''}`}>
         <section className="card iw-step">
-          {step === 0 && <ProductStep kind={kind} p={p} set={set} chainCfg={chainCfg} moved={moved} />}
+          {step === 0 && (
+            <ProductStep
+              kind={kind}
+              p={p}
+              set={set}
+              chainCfg={chainCfg}
+              chains={issuable}
+              onChain={pickChain}
+              moved={moved}
+            />
+          )}
 
           {step === 1 && <TermsStep p={p} set={set} errors={errors} />}
 
@@ -365,6 +396,8 @@ export default function IssueWizard() {
               setTiming={setTiming}
               timingBad={timingBad}
               errors={errors}
+              heldOn={heldOnChoices(config, chainKey)}
+              onHeldOn={pickHeldOn}
             />
           )}
 

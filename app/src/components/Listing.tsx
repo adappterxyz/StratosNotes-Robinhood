@@ -6,9 +6,16 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CalendarClock, Clock, Coins, HandCoins, LifeBuoy, ShieldCheck, Undo2 } from 'lucide-react';
-import { isRemoteCollateral, payoutMethodOf, PRODUCT_LABELS } from '@sn/core';
+import {
+  chainLabel,
+  isNoteChain,
+  isRemoteCollateral,
+  NOTE_CHAIN_SHORT,
+  payoutMethodOf,
+  PRODUCT_LABELS,
+} from '@sn/core';
 import type { NoteView } from '@sn/sdk';
-import { fmtMoney } from '../lib/format';
+import { fmtMoney, isReceipt, lockedOn } from '../lib/format';
 import { inTime, listingOf, PAYOUT_TEXT, SIMPLE_STATUS_LABEL, simpleStatus } from '../lib/listing';
 import { AssetStack } from './AssetIcon';
 
@@ -22,10 +29,17 @@ export function collateralPhrase(o: NoteView, cash: string): string | null {
   const lines = o.economics?.collateral.length
     ? o.economics.collateral.map((c) => c.symbol)
     : (o.params.collateral ?? []).map((c) => c.symbol);
-  // A receipt (planned: collateral held on another chain) has a chain suffix, e.g. USDC.eth.
-  const remote = lines.some((s) => /\.[a-z]+$/.test(s)) || isRemoteCollateral(o.params);
+  // A receipt (collateral locked on the other chain) has a chain suffix: TSLA.rh (Robinhood Chain), USDC.base (Base).
+  const receipt = lines.find(isReceipt);
+  const where = receipt
+    ? lockedOn(receipt)
+    : isRemoteCollateral(o.params)
+      ? isNoteChain(o.params.collateralChain)
+        ? NOTE_CHAIN_SHORT[o.params.collateralChain]
+        : chainLabel(o.params.collateralChain!)
+      : null;
   const names = [...new Set(lines.map((s) => (s === 'USD' ? cash : s.replace(/\.[a-z]+$/, ''))))];
-  return `Backed by ${Math.round(ratio * 100)}% collateral${names.length ? ` (${names.join(' + ')}${remote ? ' on another chain' : ''})` : ''}`;
+  return `Backed by ${Math.round(ratio * 100)}% collateral${names.length ? ` (${names.join(' + ')}${where ? ` locked on ${where}` : ''})` : ''}`;
 }
 
 export function StatusPill({ phase }: { phase: string }) {
@@ -97,12 +111,15 @@ export function ListingRow({
   cash,
   now,
   earlier = false,
+  chainName,
 }: {
   id: string;
   o: NoteView;
   cash: string;
   now: number;
   earlier?: boolean;
+  /** The note's network (shown when the deployment serves more than one). */
+  chainName?: string;
 }) {
   const l = listingOf(o.params, { strikeDate: o.strikeDate, obsDates: o.obsDates }, cash);
   const syms = symsOf(o);
@@ -124,6 +141,11 @@ export function ListingRow({
       <Specs o={o} cash={cash} now={now} />
       <div className="ls-side">
         <StatusPill phase={o.phase} />
+        {chainName && (
+          <span className="pill plain" data-note-chain title={`Runs on ${chainName}`}>
+            {chainName}
+          </span>
+        )}
         {earlier && (
           <span
             className="pill plain"
