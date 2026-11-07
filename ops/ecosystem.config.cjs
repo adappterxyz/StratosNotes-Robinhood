@@ -16,9 +16,12 @@ if (fs.existsSync(envFile)) {
 }
 
 // The issuer's side of the demo notes (scripts/issuer-bot.ts) on Robinhood Chain testnet: funds each payment as it
-// falls due. MISS (e.g. "5:1") leaves a payment unfunded to show a default. Not started until the deployment file
+// falls due (one bot per note chain: Robinhood Chain testnet and Base Sepolia). MISS (e.g. "5:1") leaves a payment unfunded to show a default. Not started until the deployment file
 // names an engine (it is a placeholder before the fresh deploy).
-const RPCS = { 'robinhood-testnet': ['https://rpc.testnet.chain.robinhood.com', 46630] };
+const RPCS = {
+  'robinhood-testnet': ['https://rpc.testnet.chain.robinhood.com', 46630],
+  'base-sepolia': ['https://base-sepolia-rpc.publicnode.com', 84532],
+};
 const issuerBots = Object.entries(RPCS).flatMap(([chain, [rpc, id]]) => {
   const file = path.join(root, 'deployments', `${chain}.json`);
   if (!fs.existsSync(file)) return [];
