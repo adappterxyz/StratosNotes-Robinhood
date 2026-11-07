@@ -45,7 +45,7 @@ import {
 import { productNotifications } from '../notify';
 import type { AssetDefinition, AssetOperation, TemplateField } from '../types';
 import {
-  CASH_TOKEN,
+  cashTokenOf,
   collateralTokenOf,
   deliverableToken,
   economicsOf,
@@ -100,10 +100,12 @@ export function instantiateProduct(p: ProductParams): InstantiatedProduct {
   const basket = unds.length > 1;
   const physical = p.settlement === 'physical';
   const col = eco.collateral;
+  const cash = cashTokenOf(p);
 
   const assets: AssetDefinition[] = [
     { id: 'note', name: 'Note', kind: 'issued' },
-    { id: 'cash', name: 'USDG', kind: 'cash', decimals: CASH_TOKEN.decimals, token: CASH_TOKEN.token },
+    // The note chain's cash token (USDG on Robinhood Chain, USDC on Base), named after itself.
+    { id: 'cash', name: cash.token, kind: 'cash', decimals: cash.decimals, token: cash.token },
     // Physical delivery: each underlying's token, delivered below the knock-in barrier.
     ...(physical
       ? unds.map((u) => {
@@ -847,6 +849,6 @@ export function instantiateProduct(p: ProductParams): InstantiatedProduct {
     id: `product-${p.productType}`,
     name: p.name,
     params: p,
-    description: `${label} on ${underlyingLabel(p)}: ${n} observation${n > 1 ? 's' : ''} per issuance; investors subscribe in USDG until the strike date and the issuer receives the funds; the issuer pledges ${col.map((c) => collateralTokenOf(p, c.symbol)!.token).join(', ')} collateral (ratio set per issuance) and funds each payment before its date (${eco.settlementLagDays} days after the observation, ${eco.gracePeriodDays} days' grace), or the collateral goes to the holders. Chainlink CRE fixes the strike and observes from the ${unds.map((u) => `${u.symbol}/USD`).join(', ')} feed${basket ? 's' : ''}. Pools: Issuer, Paying Agent, Investor, Escrow.`,
+    description: `${label} on ${underlyingLabel(p)}: ${n} observation${n > 1 ? 's' : ''} per issuance; investors subscribe in ${cash.token} until the strike date and the issuer receives the funds; the issuer pledges ${col.map((c) => collateralTokenOf(p, c.symbol)!.token).join(', ')} collateral (ratio set per issuance) and funds each payment before its date (${eco.settlementLagDays} days after the observation, ${eco.gracePeriodDays} days' grace), or the collateral goes to the holders. Chainlink CRE fixes the strike and observes from the ${unds.map((u) => `${u.symbol}/USD`).join(', ')} feed${basket ? 's' : ''}. Pools: Issuer, Paying Agent, Investor, Escrow.`,
   };
 }

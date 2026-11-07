@@ -3,7 +3,7 @@
  * it, the app renders it, and every chain adapter produces it.
  *
  * A note's id is `<chain>:<engine>:<pid>`:
- *  - chain: a chain key from CHAINS (e.g. `robinhood-testnet`);
+ *  - chain: a chain key from CHAINS (e.g. `robinhood-testnet`, `base-sepolia`);
  *  - engine: the contract (EVM, lower-case 0x address) or package/party that runs it;
  *  - pid: the process id inside that engine.
  *
@@ -54,6 +54,17 @@ export const CHAINS: Record<string, ChainInfo> = {
     explorer: 'https://explorer.testnet.chain.robinhood.com',
     cre: true,
     stablecoin: { symbol: 'USDG', address: CASH_TOKENS['robinhood-testnet'], decimals: 6 },
+  },
+  // The second note chain: cash in Circle's USDC; CRE writes through Base Sepolia's forwarder.
+  'base-sepolia': {
+    key: 'base-sepolia',
+    family: 'evm',
+    name: 'Base Sepolia',
+    chainId: 84532,
+    testnet: true,
+    explorer: 'https://sepolia.basescan.org',
+    cre: true,
+    stablecoin: { symbol: 'USDC', address: CASH_TOKENS['base-sepolia'], decimals: 6 },
   },
   // Config only (no deployment yet): mainnet settlement in USDG; CRE cannot write here yet (keeper-fallback).
   'robinhood-mainnet': {

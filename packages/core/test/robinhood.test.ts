@@ -43,11 +43,11 @@ const tokensOf = (p: ProductParams) =>
     .map((a) => a.token!);
 
 describe('real tokens on Robinhood Chain', () => {
-  it('lists USDG, WETH and the stock tokens on Robinhood Chain testnet, the only note chain', () => {
-    expect(NOTE_CHAINS).toEqual(['robinhood-testnet']);
+  it('lists USDG, WETH and the stock tokens on Robinhood Chain testnet, the home chain', () => {
+    expect(NOTE_CHAINS).toEqual(['robinhood-testnet', 'base-sepolia']);
     expect(HOME_CHAIN).toBe('robinhood-testnet');
-    expect(ISSUANCE_CHAINS).toEqual(['robinhood-testnet']);
-    expect(Object.keys(CHAIN_TOKENS).sort()).toEqual(['robinhood-testnet']);
+    expect(ISSUANCE_CHAINS).toEqual(['robinhood-testnet', 'base-sepolia']);
+    expect(Object.keys(CHAIN_TOKENS).sort()).toEqual(['base-sepolia', 'robinhood-testnet']);
     expect(Object.keys(CHAIN_TOKENS['robinhood-testnet']).sort()).toEqual([
       'AMD',
       'AMZN',
@@ -64,7 +64,10 @@ describe('real tokens on Robinhood Chain', () => {
         expect(isRetiredTestToken(t.token)).toBe(false);
       }
     expect(CHAIN_TOKENS['robinhood-testnet'].WETH.address).toBe('0x7943e237c7F95DA44E0301572D358911207852Fa');
-    expect(CASH_TOKENS).toEqual({ 'robinhood-testnet': '0x7E955252E15c84f5768B83c41a71F9eba181802F' });
+    expect(CASH_TOKENS).toEqual({
+      'robinhood-testnet': '0x7E955252E15c84f5768B83c41a71F9eba181802F',
+      'base-sepolia': '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+    });
     expect(UNPRICED_STOCKS).toEqual(['NFLX']);
   });
 
@@ -104,10 +107,13 @@ describe('real tokens on Robinhood Chain', () => {
     expect(validateProductParams(amzn)).toEqual([]);
     for (const chain of ['arbitrum-sepolia', 'nasdaq'])
       expect(validateProductParams({ ...amzn, chain: chain as never }).join(' ')).toMatch(
-        /Notes run on Robinhood Chain testnet only/,
+        /Notes run on Robinhood Chain testnet and Base Sepolia only/,
       );
     expect(validateProductParams({ ...amzn, collateralChain: 'robinhood' }).join(' ')).toMatch(
-      /Collateral on other chains \(robinhood\) is not available yet/,
+      /A Robinhood Chain note can't hold collateral on robinhood: pledge it into the note, or lock it on Base Sepolia/,
+    );
+    expect(validateProductParams({ ...amzn, collateralChain: 'robinhood-testnet' }).join(' ')).toMatch(
+      /runs on Robinhood Chain testnet already/,
     );
     // BTC is synthetic: never collateral.
     const btc = {
@@ -239,7 +245,7 @@ describe('term sheets from the earlier Arbitrum build', () => {
   it('reads them but does not issue them as they are', () => {
     expect(isLegacyChainTerms(arb)).toBe(true);
     expect(isLegacyChainTerms(EXAMPLE_PRODUCTS.phoenix)).toBe(false);
-    expect(validateProductParams(arb).join(' ')).toMatch(/Notes run on Robinhood Chain testnet only/);
+    expect(validateProductParams(arb).join(' ')).toMatch(/Notes run on Robinhood Chain testnet and Base Sepolia only/);
     expect(templateOffered({ product: arb })).toBe(false);
     expect(templateOffered({ product: { ...arb, chain: undefined } })).toBe(false); // remote collateral, not deployed
   });
@@ -259,14 +265,18 @@ describe('term sheets from the earlier Arbitrum build', () => {
   it('hides a stored workflow that moves a receipt of collateral held elsewhere', () => {
     const { bpmnXml, assets } = instantiateProduct(EXAMPLE_PRODUCTS.phoenix);
     expect(templateOffered({ bpmnXml, assets })).toBe(true);
-    const withReceipt = assets.map((a) => (a.token === 'USDG' && a.id !== 'cash' ? { ...a, token: 'TSLA.rh' } : a));
+    // A receipt no gateway mints (Arbitrum's) is hidden; TSLA.rh is a receipt the Base gateway mints.
+    const withReceipt = assets.map((a) => (a.token === 'USDG' && a.id !== 'cash' ? { ...a, token: 'TSLA.arb' } : a));
     expect(templateOffered({ bpmnXml, assets: withReceipt })).toBe(false);
+    const rh = assets.map((a) => (a.token === 'USDG' && a.id !== 'cash' ? { ...a, token: 'TSLA.rh' } : a));
+    expect(templateOffered({ bpmnXml, assets: rh })).toBe(true);
   });
 });
 
-describe('collateral on other chains (planned)', () => {
-  it('has no remote collateral configured: every note pledges on Robinhood Chain', () => {
-    expect(REMOTE_COLLATERAL).toEqual({});
+describe('collateral on other chains', () => {
+  it('takes only the other note chain, by its chain key', () => {
+    expect(Object.keys(REMOTE_COLLATERAL['robinhood-testnet'])).toEqual(['base-sepolia']);
+    expect(Object.keys(REMOTE_COLLATERAL['base-sepolia'])).toEqual(['robinhood-testnet']);
     expect(isRemoteCollateral({})).toBe(false);
     expect(isRemoteCollateral({ collateralChain: 'note' })).toBe(false);
     expect(isRemoteCollateral({ collateralChain: 'ethereum' })).toBe(true);

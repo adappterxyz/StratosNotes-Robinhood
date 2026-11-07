@@ -66,7 +66,7 @@ const SCHEMA = {
   properties: {
     productType: { type: ['string', 'null'], enum: [...Object.keys(PRODUCT_LABELS), null] },
     name: { type: ['string', 'null'], description: 'Short display name, e.g. "12M Phoenix on ETH"' },
-    size: { ...num, description: 'Issuance size in USDG of face' },
+    size: { ...num, description: 'Issuance size in units of the cash token (USDG or USDC) of face' },
     issuePricePct: { ...num, description: 'Issue price, % of face' },
     underlyingSymbols: {
       type: ['array', 'null'],
@@ -134,7 +134,7 @@ const SCHEMA = {
 };
 
 function system(today: string): string {
-  return `You extract structured-note term sheets into JSON for StratosNotes (notes run on Robinhood Chain, observed by Chainlink; each note is secured by collateral the issuer pledges on Robinhood Chain: USDG, WETH, or Robinhood's stock tokens TSLA, AMZN, AMD, PLTR). Today is ${today}.
+  return `You extract structured-note term sheets into JSON for StratosNotes (notes run on Robinhood Chain testnet or Base Sepolia, observed by Chainlink; each note is secured by collateral the issuer pledges: on Robinhood Chain USDG, WETH or Robinhood's stock tokens TSLA, AMZN, AMD, PLTR; on Base USDC or WETH, or those stock tokens locked on Robinhood Chain. The issuer picks the chain in the issue form: leave it out). Today is ${today}.
 Products: ${Object.entries(PRODUCT_LABELS)
     .map(([k, v]) => `${k} = ${v}`)
     .join('; ')}.
@@ -256,7 +256,7 @@ export async function extractProduct(
       };
     const notes: string[] = [];
     const { params, schedule } = toParams(draft, prompt, notes);
-    delete params.chain; // never anything but the note chain (Robinhood Chain)
+    delete params.chain; // the issue form picks the note chain (Robinhood Chain by default, or Base)
     errors = validateProductParams(params);
     if (!errors.length) return { params, schedule, notes };
     messages.push({ role: 'assistant', content: JSON.stringify(draft) });

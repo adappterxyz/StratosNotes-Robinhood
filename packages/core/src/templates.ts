@@ -15,7 +15,7 @@ import {
   isRetiredTestToken,
   normalizeParams,
   PRODUCT_LABELS,
-  REMOTE_COLLATERAL,
+  RECEIPTS,
   underlyingLabel,
   validateProductParams,
   type ProductParams,
@@ -72,15 +72,14 @@ export const templateMessage = (definition: string) => `StratosNotes: publish te
 
 /**
  * Whether the library still offers a saved template: not when its workflow names one of notes.markets' retired test
- * tokens (tETH, tAAPL…) or a receipt of collateral held on another chain that is not deployed (e.g. TSLA.rh from the
- * earlier Arbitrum build), nor when its term sheet can't be issued now: it names a chain notes do not run on, delivers
- * an underlying with no token on Robinhood Chain, or otherwise no longer validates. A custom workflow is judged by the
+ * tokens (tETH, tAAPL…) or a token with a chain suffix that is no receipt a gateway mints (RECEIPTS: USDC.base,
+ * TSLA.rh…), nor when its term sheet can't be issued now: it names a chain notes do not run on, delivers an
+ * underlying with no token on its chain, or otherwise no longer validates. A custom workflow is judged by the
  * term sheet it was edited from.
  */
 export function templateOffered(t: TemplateSource): boolean {
   if (t.assets?.some((a) => !!a.token && isRetiredTestToken(a.token))) return false;
-  const receipts = new Set(Object.values(REMOTE_COLLATERAL).flatMap((m) => Object.values(m).map((x) => x?.token)));
-  if (t.assets?.some((a) => !!a.token && a.token.includes('.') && !receipts.has(a.token))) return false;
+  if (t.assets?.some((a) => !!a.token && a.token.includes('.') && !RECEIPTS[a.token])) return false;
   const p = t.product ?? t.basis;
   if (p) {
     let q: ProductParams;
