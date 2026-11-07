@@ -1,9 +1,10 @@
 /**
  * Fill the landing page's proof data from facts on disk, never from typed-in numbers:
- *   - deployments/robinhood-testnet.json   the contracts on Robinhood Chain testnet (written by scripts/deploy-testnets.sh);
- *                                          the placeholder before a fresh deploy has no `engine`: `deployed: false`
- *   - docs/evidence.json                   optional: real testnet runs (note, transactions, payouts), added after a run
- *                                          on Robinhood Chain (runs on any other chain are ignored)
+ *   - deployments/<chain>.json   the contracts on each note chain, Robinhood Chain testnet and Base Sepolia (written by
+ *                                scripts/deploy-testnets.sh); a missing file or the placeholder before a fresh deploy
+ *                                has no `engine`: `deployed: false`
+ *   - docs/evidence.json         optional: real testnet runs (note, transactions, payouts), added after a run on a note
+ *                                chain (runs on any other chain are ignored)
  *
  *   npx tsx scripts/landing-proof.ts     # writes landing/src/proof.json (run before building the landing page)
  */
@@ -15,6 +16,11 @@ const CHAINS = [
     key: 'robinhood-testnet',
     name: 'Robinhood Chain testnet',
     explorer: 'https://explorer.testnet.chain.robinhood.com',
+  },
+  {
+    key: 'base-sepolia',
+    name: 'Base Sepolia',
+    explorer: 'https://sepolia.basescan.org',
   },
 ];
 

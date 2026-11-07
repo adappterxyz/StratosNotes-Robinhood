@@ -1,7 +1,8 @@
 // StratosNotes keeper (EVM): one Chainlink CRE workflow that is the calculation agent for EVERY note on every
-// configured EVM chain: Robinhood Chain testnet, where notes run.
+// configured EVM chain: Robinhood Chain testnet and Base Sepolia (CRE ethereum-testnet-sepolia-base-1), where notes run.
 //
-// Each cron run, per chain:
+// Each cron run, per chain (in an order that rotates every run, so neither chain starves the other of the run's
+// chain reads):
 //  1. Reads every running process through the chain's NotesLens at the last FINALIZED block (one call), and
 //     each distinct definition's full bytes (the oracle feeds live in its metadata).
 //  2. Decides what is due with the shared keeper logic (packages/core/src/keeper.ts): a strike fixing or an
@@ -17,7 +18,7 @@
 //  4. Writes a DON-signed report to the chain's FlowEngine through the KeystoneForwarder:
 //     abi.encode(uint256 pid, uint16 step, int256[] values). The engine bounds-checks every value, runs the
 //     step and everything after it that needs nobody (coupons, autocall, redemption) in that transaction.
-//  5. Cross-chain auto-release (planned, HomeGateway v2, docs/CROSS-CHAIN.md; off while `gateways` is empty): reads each home chain's
+//  5. Cross-chain auto-release (HomeGateway v2 on each home chain, docs/CROSS-CHAIN.md; off while `gateways` is empty): reads each home chain's
 //     gateway queue (one call) and, when releases wait and the fee pool pays for them, writes a flush report
 //     abi.encode(uint8 1, uint256 maxItems) to the gateway, which sends them over CCIP. Counts as a report.
 import {
@@ -68,7 +69,7 @@ const configSchema = z.object({
   chains: z
     .array(
       z.object({
-        /** CRE chain-selector name, e.g. robinhood-testnet. */
+        /** CRE chain-selector name, e.g. robinhood-testnet, ethereum-testnet-sepolia-base-1. */
         chainSelectorName: z.string(),
         engine: deployed,
         lens: deployed,
@@ -103,8 +104,9 @@ const configSchema = z.object({
    */
   httpFeedChains: httpFeedChainsSchema.optional(),
   /**
-   * Optional: cross-chain collateral (planned; none configured today). For each vault on a remote asset chain and
-   * its receipt on the home chain (Robinhood Chain), check every run that the vault still backs the receipts (packages/core/src/crosschain.ts).
+   * Optional: cross-chain collateral, both directions (Robinhood Chain <-> Base Sepolia). For each vault on an asset
+   * chain and its receipt on the home chain, check that the vault still backs the receipts (packages/core/src/crosschain.ts);
+   * a rotating few per run, with the chain reads the run has left.
    */
   /**
    * Optional: auto-release gateways (HomeGateway v2), one per home chain. Each run reads the release queue (one
@@ -149,10 +151,15 @@ function client(name: string): EVMClient {
 
 /**
  * Chain reads this run. CRE caps EVM reads per workflow run (PerWorkflow.ChainRead.CallLimit, 15 in the
- * simulator), so optional checks (vault backing) only spend what the reports leave.
+ * simulator). With two note chains the budget is shared: one read per configured gateway is reserved up front (the
+ * flush must not starve), lens pages, definitions and feeds stop when the rest is spent (what is left waits for the
+ * next run, ~30 s later), and optional checks (vault backing) only spend what is left after that.
  */
 const READ_LIMIT = 15;
 let readsThisRun = 0;
+let readsReserved = 0;
+/** Whether `n` more reads fit this run, leaving the reserved ones. */
+const canRead = (n = 1) => readsThisRun + n <= READ_LIMIT - readsReserved;
 /** One view call, at the last finalized block unless `at` is 'latest'; returns the raw result. */
 function view(
   runtime: Runtime<Config>,
@@ -178,6 +185,10 @@ function dueOn(runtime: Runtime<Config>, chain: ChainConfig, nowSec: number): Du
   const defs = new Map<string, WorkflowDef | null>();
   let from = BigInt(chain.fromPid);
   for (let page = 0; page < 4; page++) {
+    if (!canRead()) {
+      runtime.log(`${chain.chainSelectorName}: chain reads spent this run; the rest of the book next run`);
+      break;
+    }
     const raw = view(
       runtime,
       evm,
@@ -193,6 +204,10 @@ function dueOn(runtime: Runtime<Config>, chain: ChainConfig, nowSec: number): Du
     for (const s of snaps) {
       const p = snapshotToState({ ...s, tokens: s.tokens, values: s.values, balances: s.balances });
       if (!defs.has(p.definition)) {
+        if (!canRead()) {
+          runtime.log(`${chain.chainSelectorName} pid ${p.id}: chain reads spent this run; next run`);
+          continue;
+        }
         const bytes = decodeFunctionResult({
           abi: lensAbi,
           functionName: 'definitionBytes',
@@ -223,6 +238,7 @@ function dueOn(runtime: Runtime<Config>, chain: ChainConfig, nowSec: number): Du
 
 /** A Chainlink feed's latest answer as engine fixed point (10 decimals), finalized block, staleness-checked. */
 function readFeed(runtime: Runtime<Config>, f: FeedRef, nowSec: number): bigint {
+  if (!canRead(2)) throw new Error('chain reads spent this run (the report waits for the next run)');
   const evm = client(f.feedChain);
   const [roundId, answer, , updatedAt, answeredInRound] = decodeFunctionResult({
     abi: feedAbi,
@@ -247,13 +263,17 @@ export const onCron = (runtime: Runtime<Config>): string => {
   const cfg = runtime.config;
   const nowSec = Math.floor(runtime.now().getTime() / 1000);
   readsThisRun = 0;
+  readsReserved = cfg.gateways?.length ?? 0;
   const written: string[] = [];
   const failed: string[] = [];
   let due = 0;
   let budget = cfg.maxReportsPerRun;
   // What is due everywhere first, so feeds on the HTTP feed chains can be read in one request per chain.
   const work: Array<{ chain: ChainConfig; d: DueReport; feeds: FeedRef[] }> = [];
-  for (const chain of cfg.chains) {
+  // Rotate which chain reads first (the schedule is every 30 s), so a long book on one chain never starves the other.
+  const shift = cfg.chains.length ? Math.floor(nowSec / 30) % cfg.chains.length : 0;
+  const order = [...cfg.chains.slice(shift), ...cfg.chains.slice(0, shift)];
+  for (const chain of order) {
     const reports = dueOn(runtime, chain, nowSec);
     due += reports.length;
     runtime.log(`${chain.chainSelectorName}: ${reports.length} report(s) due`);
@@ -310,7 +330,8 @@ export const onCron = (runtime: Runtime<Config>): string => {
   const flushed: string[] = [];
   for (const g of cfg.gateways ?? []) {
     const tag = g.chainSelectorName;
-    if (readsThisRun >= READ_LIMIT) {
+    readsReserved = Math.max(0, readsReserved - 1); // this gateway's reserved read
+    if (!canRead()) {
       runtime.log(`${tag} gateway flush: skipped (no chain reads left this run)`);
       continue;
     }

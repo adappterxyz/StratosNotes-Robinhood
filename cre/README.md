@@ -1,7 +1,8 @@
 # CRE: the calculation agent
 
 `notes-keeper-evm` is one Chainlink CRE workflow (TypeScript, `@chainlink/cre-sdk` 1.23). It is the
-calculation agent for every note on every configured EVM chain: Robinhood Chain testnet, where notes run.
+calculation agent for every note on every configured EVM chain: Robinhood Chain testnet and Base Sepolia (CRE chain
+`ethereum-testnet-sepolia-base-1`), where notes run, and the flusher of each chain's cross-chain release queue.
 
 Each cron run does this for each chain in the config:
 
@@ -22,7 +23,7 @@ Each cron run does this for each chain in the config:
 | Target | Chains written | Feeds read | Forwarder |
 |---|---|---|---|
 | `local-fork` | an anvil fork of Robinhood Chain testnet (`SN_FORK_PORT`) | Ethereum mainnet and Arbitrum One (crypto, forex, commodities), Robinhood Chain mainnet over HTTP (equities) | MockKeystoneForwarder (`--broadcast`) |
-| `staging-settings` | Robinhood Chain testnet | the same: the testnet has no feeds | MockKeystoneForwarder (`--broadcast`) or KeystoneForwarder once deployed |
+| `staging-settings` | Robinhood Chain testnet and Base Sepolia | the same: the testnet has no feeds | MockKeystoneForwarder (`--broadcast`) or KeystoneForwarder once deployed |
 
 There is no production target: CRE cannot write to Robinhood Chain mainnet yet.
 
@@ -57,15 +58,22 @@ trust (or your own node) for production.
 
 ## Config
 
-Generate a target's config from `deployments/robinhood-testnet.json`:
+Generate a target's config from `deployments/robinhood-testnet.json`, `deployments/base-sepolia.json` and the
+cross-chain pairs `deployments/crosschain/<home>.json`:
 
 ```bash
 npx tsx scripts/cre-config.ts staging
 ```
 
-Until the engine is deployed the deployment file is a placeholder: staging then lists no chain, and the workflow
-refuses to start (it needs at least one). A local fork without a deployment gets the zero address, which it also
-refuses.
+A chain whose deployment file is missing or a placeholder (no engine) is left out of staging; with no chain at all the
+workflow refuses to start (it needs at least one). A local fork without a deployment gets the zero address, which it
+also refuses. Each valid cross-chain pair whose home chain is deployed adds its gateway to `gateways` (the flush) and
+one entry per receipt to `vaults` (the backing check), both directions.
+
+**Chain reads.** CRE caps EVM reads per run (15 in the simulator). The run reserves one read per gateway, then reads
+the chains in an order that rotates every run (lens pages, new definitions, then EVM feeds at two reads each); what
+does not fit waits for the next run (30 s later) with a log line. Vault checks take four reads each and rotate
+through `vaults` with whatever is left. Equity feeds come over HTTP and cost no EVM read.
 
 | Field | Meaning |
 |---|---|
@@ -77,6 +85,8 @@ refuses.
 | `finalityAllowanceSec` | Extra staleness allowed for reads at a finalized block. |
 | `feedRoutes` | Optional. Sends a recorded feed (lowercase address) to another source. |
 | `httpFeedChains` | Optional. Feed chains read over HTTP JSON-RPC: `{ "robinhood-mainnet": { "rpc": "https://…", "lagBlocks": 600 } }` (or `"blockTag"`: `finalized`/`safe`/`latest`). Written by `cre-config.ts` from `HTTP_FEED_CHAINS`. |
+| `gateways` | Optional. One per home chain with a HomeGateway v2: `{ chainSelectorName, gateway, maxItems, baseGas, gasPerItem, stateBlock }`. |
+| `vaults` | Optional. One per receipt: `{ homeChain, receipt, assetChain, vault, token, label, stateBlock }` (CRE chain names). |
 
 ## Run
 
@@ -88,8 +98,8 @@ cre workflow simulate notes-keeper-evm --target staging-settings --non-interacti
 ```
 
 - **Broadcasting** needs `CRE_ETH_PRIVATE_KEY`. `scripts/keeper-loop.sh` passes the keeper key
-  (`.keys/keeper.json`) in a temporary env file it deletes after each run. That key pays gas on Robinhood Chain
-  testnet.
+  (`.keys/keeper.json`) in a temporary env file it deletes after each run. That key pays gas on both chains
+  (Robinhood Chain testnet and Base Sepolia): fund it on each.
 - **Deploying** (`cre workflow deploy`) needs CRE deploy access, a linked funded wallet, and engines whose
   forwarder is the KeystoneForwarder (`FORWARDER_MODE=production` in `packages/evm-engine/script/Deploy.s.sol`).
 

@@ -8,7 +8,8 @@
  *   /internal/email  an email relay (Cloudflare Email Service), guarded by EMAIL_RELAY_SECRET: kept for the Node
  *                 API (services/api) in local dev; the Worker's own notifier sends through the binding directly
  *
- * The Worker is the whole backend: the API reads D1, and the cron (scheduled) indexes Robinhood Chain testnet into D1 every
+ * The Worker is the whole backend: the API reads D1, and the cron (scheduled) indexes the note chains (Robinhood Chain
+ * testnet and Base Sepolia, each under its own key and cursor) into D1 every
  * minute and sends due notifications through Cloudflare Email Service. API_MODE = "proxy" forwards /api/* to
  * API_ORIGIN instead (only used during a cutover).
  *
@@ -239,7 +240,7 @@ export default {
     return env.ASSETS.fetch(req);
   },
 
-  /** Every minute: index the note chain (Robinhood Chain testnet) into D1, then plan, queue and send due notifications. */
+  /** Every minute: index the note chains (Robinhood Chain testnet, Base Sepolia) into D1, then plan, queue and send due notifications. */
   async scheduled(_event: unknown, env: Env, ctx: { waitUntil(p: Promise<unknown>): void }): Promise<void> {
     if (!env.DB) return;
     const work = runCron({

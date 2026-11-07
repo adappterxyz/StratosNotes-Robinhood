@@ -1,80 +1,82 @@
 /**
- * Write the CRE keeper's config for a target from deployments/robinhood-testnet.json (Robinhood Chain testnet, the only
- * note chain; CRE writes there through the chain's KeystoneForwarder or, simulating with --broadcast, its
- * MockKeystoneForwarder):
+ * Write the CRE keeper's config for a target from the note chains' deployments (deployments/robinhood-testnet.json,
+ * deployments/base-sepolia.json; CRE writes on each through the chain's KeystoneForwarder or, simulating with
+ * --broadcast, its MockKeystoneForwarder) and the cross-chain pairs (deployments/crosschain/<home>.json):
  *
- *   npx tsx scripts/cre-config.ts staging       # robinhood-testnet
+ *   npx tsx scripts/cre-config.ts staging       # robinhood-testnet and ethereum-testnet-sepolia-base-1
  *   npx tsx scripts/cre-config.ts local-fork deployments/local/robinhood-fork.json
  *   GATEWAY=0x... npx tsx scripts/cre-config.ts local-fork ...   # also flush a HomeGateway v2 on the fork
+ *   BASE_FORK=deployments/local/base-fork.json npx tsx scripts/cre-config.ts local-fork ...   # plus a Base Sepolia fork
  *
  * There is no production target: CRE cannot write to Robinhood Chain mainnet yet (services/keeper-fallback).
- * Cross-chain collateral is planned, not deployed (docs/CROSS-CHAIN.md): staging gets `gateways` and `vaults` only
- * once deployments/crosschain-testnet.json exists (home = Robinhood Chain); today both are left out.
+ * Staging gets `gateways` (one flush gateway per home chain, HomeGateway v2) and `vaults` (one backing check per
+ * receipt, both directions) from every valid deployments/crosschain/*.json (and a legacy crosschain-testnet.json)
+ * whose home chain is deployed; with none, both are left out. The pure parts: packages/core/src/served-config.ts.
  *
  * A deployment file without an engine (the placeholder before a fresh deploy) is left out of staging; a local fork
  * without one gets the zero address, which the workflow refuses (fails closed).
  */
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { keeperGateways } from '../packages/core/src/crosschain';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { keeperGateways, type CrossChainDeployment } from '../packages/core/src/crosschain';
 import { HTTP_FEED_CHAINS } from '../packages/core/src/feed-rpc';
+import { creGateways, creNameOf, creVaults, pickCrossChain } from '../packages/core/src/served-config';
 
 const ZERO = '0x0000000000000000000000000000000000000000';
 const TARGETS: Record<string, Array<{ file: string; chainSelectorName: string }>> = {
-  staging: [{ file: 'deployments/robinhood-testnet.json', chainSelectorName: 'robinhood-testnet' }],
+  staging: [
+    { file: 'deployments/robinhood-testnet.json', chainSelectorName: creNameOf('robinhood-testnet') },
+    { file: 'deployments/base-sepolia.json', chainSelectorName: creNameOf('base-sepolia') },
+  ],
   'local-fork': [
     {
       file: process.argv[3] ?? 'deployments/local/robinhood-fork.json',
-      chainSelectorName: 'robinhood-testnet',
+      chainSelectorName: creNameOf('robinhood-testnet'),
     },
+    ...(process.env.BASE_FORK ? [{ file: process.env.BASE_FORK, chainSelectorName: creNameOf('base-sepolia') }] : []),
   ],
 };
 const target = process.argv[2];
 const chains = TARGETS[target];
 if (!chains) throw new Error(`target: ${Object.keys(TARGETS).join(' | ')}`);
-/** Deployment chain names to CRE chain-selector names (remote collateral chains get theirs when deployed). */
-const CRE_NAMES: Record<string, string> = {
-  'robinhood-testnet': 'robinhood-testnet',
-};
 const engineOf = (file: string) => {
   if (!existsSync(file)) return null;
   const d = JSON.parse(readFileSync(file, 'utf8')) as { engine?: string; lens?: string };
   return d.engine && d.lens ? { engine: d.engine, lens: d.lens } : null;
 };
-function crossChainVaults() {
-  const x = JSON.parse(readFileSync('deployments/crosschain-testnet.json', 'utf8')) as {
-    home: { chain: string };
-    remotes: Array<{ chain: string; vault: string; receipts: Record<string, { receipt: string; token: string }> }>;
-  };
-  return x.remotes.flatMap((r) =>
-    Object.entries(r.receipts).map(([label, v]) => ({
-      homeChain: CRE_NAMES[x.home.chain],
-      receipt: v.receipt,
-      assetChain: CRE_NAMES[r.chain],
-      vault: r.vault,
-      token: v.token,
-      label,
-      stateBlock: 'latest' as const,
-    })),
+/** Valid cross-chain pairs, one per home chain, whose home is deployed (staging only). */
+function crossChain(): CrossChainDeployment[] {
+  if (target !== 'staging') return [];
+  const dir = 'deployments/crosschain';
+  const files = [
+    ...(existsSync(dir) ? readdirSync(dir) : [])
+      .filter((f) => f.endsWith('.json'))
+      .sort()
+      .map((f) => `${dir}/${f}`),
+    ...(existsSync('deployments/crosschain-testnet.json') ? ['deployments/crosschain-testnet.json'] : []),
+  ];
+  const { xs, warnings } = pickCrossChain(
+    files.map((file) => ({ file, data: JSON.parse(readFileSync(file, 'utf8')) as CrossChainDeployment })),
   );
+  for (const w of warnings) console.warn(w);
+  // A pair whose home chain has no engine in this config has nobody to drive its notes: leave it out.
+  return xs.filter((x) => !!engineOf(`deployments/${x.home.chain}.json`));
 }
-/** Auto-release gateways the keeper flushes: staging from the cross-chain deployment (v2 only; none today); a local
- * fork only when GATEWAY names one. */
+const XC = crossChain();
+/** Auto-release gateways the keeper flushes: staging from the cross-chain pairs (v2 only); a local fork only when
+ * GATEWAY names one (on the Robinhood Chain fork). */
 function gateways() {
-  if (target === 'staging' && existsSync('deployments/crosschain-testnet.json')) {
-    return keeperGateways(JSON.parse(readFileSync('deployments/crosschain-testnet.json', 'utf8')), CRE_NAMES, {
-      stateBlock: 'latest',
-    });
-  }
+  if (target === 'staging') return creGateways(XC);
   if (target === 'local-fork' && process.env.GATEWAY) {
     return keeperGateways(
       { home: { chain: 'robinhood-testnet', gateway: process.env.GATEWAY, version: 2 } },
-      CRE_NAMES,
+      { 'robinhood-testnet': creNameOf('robinhood-testnet') },
       { stateBlock: 'latest' },
     );
   }
   return [];
 }
 const flushGateways = gateways();
+const vaults = creVaults(XC);
 /** Earlier engines whose notes are still running (deployments/archive/<v>/<chain>.json): the keeper keeps
  * driving them to maturity after a redeploy. Staging only, and only when LEGACY=v<N>,... names them (none today). */
 const legacyEngines = (ch: { file: string; chainSelectorName: string }) =>
@@ -100,7 +102,7 @@ const config = {
         engine: d.engine,
         lens: d.lens,
         // A coupon to a full book (62 holders) measured 2.22M gas of execution; the margin covers the L1 data gas
-        // Robinhood Chain (an Arbitrum Orbit chain) charges inside the limit.
+        // Robinhood Chain (an Arbitrum Orbit chain) charges inside the limit (Base bills it outside: more margin).
         gasLimit: '8000000',
         fromPid: 1,
         scan: 200,
@@ -112,9 +114,9 @@ const config = {
   maxReportsPerRun: 5,
   // Auto-release (docs/CROSS-CHAIN.md, CRE report spec): read each home chain's gateway queue and flush it.
   ...(flushGateways.length ? { gateways: flushGateways } : {}),
-  // Cross-chain collateral (planned, docs/CROSS-CHAIN.md): every run, check that each remote vault still backs the
-  // receipts outstanding on Robinhood Chain. Staging only, once deployments/crosschain-testnet.json exists.
-  ...(target === 'staging' && existsSync('deployments/crosschain-testnet.json') ? { vaults: crossChainVaults() } : {}),
+  // Cross-chain collateral (docs/CROSS-CHAIN.md): check that each vault still backs the receipts outstanding on its
+  // home chain, both directions (a rotating few per run, within the read budget).
+  ...(vaults.length ? { vaults } : {}),
   // Feeds are read at a finalized block (Ethereum ~13 min behind the head).
   finalityAllowanceSec: 1800,
   // Feed chains CRE has no EVM read capability for (Robinhood Chain mainnet: the equity feeds) are read over the
@@ -132,5 +134,5 @@ const config = {
 const out = `cre/notes-keeper-evm/config.${target === 'staging' ? 'staging' : 'local-fork'}.json`;
 writeFileSync(out, JSON.stringify(config, null, 2) + '\n');
 console.log(
-  `${out}: ${config.chains.map((c) => `${c.chainSelectorName} engine ${c.engine}`).join(', ')}${flushGateways.map((g) => `; flush gateway ${g.gateway} on ${g.chainSelectorName}`).join('')}`,
+  `${out}: ${config.chains.map((c) => `${c.chainSelectorName} engine ${c.engine}`).join(', ') || 'no chain'}${flushGateways.map((g) => `; flush gateway ${g.gateway} on ${g.chainSelectorName}`).join('')}${vaults.length ? `; ${vaults.length} vault check(s)` : ''}`,
 );

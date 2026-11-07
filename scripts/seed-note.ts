@@ -5,14 +5,15 @@
  *   NOTE=crypto STRIKE_IN=900 OBS_EVERY=300 npx tsx scripts/seed-note.ts
  *   NOTE=equity npx tsx scripts/seed-note.ts
  *
- * Every note is issued on Robinhood Chain testnet (CHAIN=robinhood-testnet, the only one; RPC overrides its RPC, e.g.
- * a local fork with DEPLOY_DIR naming its deployment). NOTE=crypto: a worst-of phoenix on ETH and BTC; NOTE=equity:
- * on TSLA and NVDA, cash-settled (NVDA has no token on Robinhood Chain; Chainlink feeds on Robinhood Chain mainnet,
- * market hours: outside them the observations see the last close).
- * Cash and collateral are Paxos's testnet USDG on Robinhood Chain (notes.markets mints nothing): the deployer key
- * (.keys/deployer.json), issuer and paying agent, must already hold enough of it (faucet.paxos.com). It pledges USDG
+ * CHAIN=robinhood-testnet (default) or CHAIN=base-sepolia; RPC overrides its RPC, e.g. a local fork with DEPLOY_DIR
+ * naming its deployment. NOTE=crypto: a worst-of phoenix on ETH and BTC; NOTE=equity: on TSLA and NVDA,
+ * cash-settled (Chainlink feeds on Robinhood Chain mainnet, market hours: outside them the observations see the last
+ * close).
+ * Cash and collateral are the chain's stablecoin (notes.markets mints neither): Paxos's testnet USDG on Robinhood
+ * Chain (faucet.paxos.com), Circle's testnet USDC on Base Sepolia (faucet.circle.com). The deployer key
+ * (.keys/deployer.json), issuer and paying agent, must already hold enough of it. It pledges the stablecoin as
  * collateral covering 100% of the notional into the note's escrow at Approve Terms. Two demo investors
- * (.keys/investor1.json, investor2.json, created if missing) get a little ETH for gas and their USDG from the
+ * (.keys/investor1.json, investor2.json, created if missing) get a little ETH for gas and their cash from the
  * deployer, and subscribe 600 and 400 units; UNSOLD units stay open for visitors.
  * CASH=tUSD: the retired test dollar instead (local forks of an old deployment only: the deployer mints it).
  * The issuer funds each payment as it falls due with scripts/issuer-bot.ts (run it alongside the keeper; with
@@ -41,7 +42,9 @@ import {
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import {
+  CASH_FAUCETS,
   CASH_TOKENS,
+  cashTokenOf,
   compile,
   dec,
   EXAMPLE_PRODUCTS,
@@ -50,15 +53,18 @@ import {
   instantiateProduct,
   parseBpmn,
   SRC,
+  withChain,
   type EvmInput,
+  type NoteChain,
   type ProductParams,
 } from '@sn/core';
 import { engineAbi, flowEngineAbi, lensAbi } from '@sn/sdk';
 
-const RPCS: Record<string, { rpc: string; id: number }> = {
+const RPCS: Record<NoteChain, { rpc: string; id: number }> = {
   'robinhood-testnet': { rpc: process.env.RPC ?? 'https://rpc.testnet.chain.robinhood.com', id: 46630 },
+  'base-sepolia': { rpc: process.env.RPC ?? 'https://base-sepolia-rpc.publicnode.com', id: 84532 },
 };
-const chainKey = process.env.CHAIN ?? 'robinhood-testnet';
+const chainKey = (process.env.CHAIN ?? 'robinhood-testnet') as NoteChain;
 const net = RPCS[chainKey];
 if (!net) throw new Error(`CHAIN: ${Object.keys(RPCS).join(' | ')}`);
 const DIR = process.env.DEPLOY_DIR ?? 'deployments';
@@ -69,12 +75,14 @@ const dep = JSON.parse(readFileSync(`${DIR}/${chainKey}.json`, 'utf8')) as {
   tokens: Record<string, Address>;
 };
 if (!dep.engine) throw new Error(`${DIR}/${chainKey}.json has no engine yet: run scripts/deploy-testnets.sh first`);
-/** Paxos testnet USDG is the cash leg and the collateral (default); the deployer must already hold it (faucet.paxos.com),
- * and funds the demo investors from its own balance. CASH=tUSD: the retired test dollar, minted by the deployer. */
+/** The chain's stablecoin (USDG on Robinhood Chain, USDC on Base) is the cash leg and the collateral (default); the
+ * deployer must already hold it (CASH_FAUCETS) and funds the demo investors from its own balance. CASH=tUSD: the
+ * retired test dollar, minted by the deployer. */
 const usdg = process.env.CASH !== 'tUSD';
+const STABLE = cashTokenOf(chainKey).token;
 const tusd = usdg ? (CASH_TOKENS[chainKey] as Address) : dep.tokens.tUSD;
-if (!tusd) throw new Error(`no ${usdg ? 'USDG' : 'tUSD'} on ${chainKey}`);
-const CASH = usdg ? 'USDG' : 'tUSD';
+if (!tusd) throw new Error(`no ${usdg ? STABLE : 'tUSD'} on ${chainKey}`);
+const CASH = usdg ? STABLE : 'tUSD';
 
 const keyFrom = (file: string): Hex => {
   if (!existsSync(file)) execFileSync('bash', ['-c', `umask 077 && cast wallet new --json > ${file}`]);
@@ -115,7 +123,7 @@ async function send(a: typeof deployer, req: Record<string, unknown>) {
   return r;
 }
 
-const product: ProductParams =
+const base: ProductParams =
   process.env.NOTE === 'equity'
     ? {
         ...EXAMPLE_PRODUCTS.phoenix,
@@ -130,6 +138,8 @@ const product: ProductParams =
         underlyings: [FEEDS.ETH, FEEDS.BTC],
         observations: 3,
       };
+// On Base the term sheet names its chain (cash USDC); a Robinhood Chain note leaves it out.
+const product = withChain(base, chainKey);
 const prod = instantiateProduct(product);
 const c = compile(parseBpmn(prod.bpmnXml, prod.assets), { product: prod.params });
 const def = toHex(c.bytes);
@@ -227,7 +237,7 @@ if (usdg) {
   });
   if (have < need)
     throw new Error(
-      `the deployer holds ${Number(have) / 1e6} USDG; this seed needs ${Number(need) / 1e6} (collateral + investors): claim more at faucet.paxos.com`,
+      `the deployer holds ${Number(have) / 1e6} ${STABLE}; this seed needs ${Number(need) / 1e6} (collateral + investors): claim more at ${CASH_FAUCETS[chainKey]}`,
     );
 } else {
   await send(deployer, {
@@ -282,7 +292,7 @@ for (const [i, inv] of investors.entries()) {
   if (
     (await client.readContract({ address: tusd, abi: erc20, functionName: 'balanceOf', args: [inv.address] })) < cash
   ) {
-    // USDG can't be minted by us: the deployer sends the investor what it subscribes with.
+    // The stablecoin can't be minted by us: the deployer sends the investor what it subscribes with.
     if (usdg) await send(deployer, { address: tusd, abi: erc20, functionName: 'transfer', args: [inv.address, cash] });
     else await send(inv, { address: dep.faucet, abi: faucetAbi, functionName: 'claim', args: [tusd] });
   }

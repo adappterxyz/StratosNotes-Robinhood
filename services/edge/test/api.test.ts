@@ -199,7 +199,7 @@ describe('templates', () => {
     expect((await (await get(`/api/templates/${definition}`)).json()).product.productType).toBe('snowball');
   });
 
-  it('refuses a note on another chain: notes run on Robinhood Chain only', async () => {
+  it('refuses a note on another chain: notes run on Robinhood Chain and Base only', async () => {
     // A term sheet naming another chain no longer compiles at all; the API refuses it before trying.
     const rh = { ...product, chain: 'ethereum-sepolia' as never };
     const def = definition;
@@ -209,7 +209,7 @@ describe('templates', () => {
       signature,
     });
     expect(r.status).toBe(400);
-    expect((await r.json()).error).toMatch(/notes run on Robinhood Chain testnet only/);
+    expect((await r.json()).error).toMatch(/notes run on Robinhood Chain testnet or Base Sepolia/);
     const listed = (await (await get('/api/templates')).json()) as Array<{ definition: string; name: string }>;
     expect(listed.filter((t) => t.definition === def).map((t) => t.name)).toEqual(['Snowball']);
   });

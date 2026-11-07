@@ -1,36 +1,45 @@
 /**
- * Demo autopilot for the investor side of a recorded demo, on Robinhood Chain testnet: the presenter issues a note in
- * the app (signing as the issuer, collateral pledged directly on Robinhood Chain); this subscribes the first demo investor (.keys/investor1.json) to it as soon as its book opens, and then
+ * Demo autopilot for the investor side of a recorded demo, on Robinhood Chain testnet (default) or Base Sepolia
+ * (CHAIN=base-sepolia): the presenter issues a note in the app (signing as the issuer); this subscribes the first demo investor (.keys/investor1.json) to it as soon as its book opens, and then
  * claims every payout to the investor's wallet (pushTo for itself: a receipt per claim) as soon as one is owed.
  *
  *   NAME='TSLA Reverse Convertible' UNITS=20 npx tsx scripts/demo-investor.ts
  *
  * It only touches notes on the current engine created after it starts whose name matches NAME, plus claiming any
- * USDG the investor is already owed (so it has the cash to subscribe). The investor needs Robinhood Chain testnet ETH
- * for gas and USDG (faucet.paxos.com) to subscribe. The key is read from a file, never printed.
+ * cash the investor is already owed (so it has the cash to subscribe). The investor needs the chain's ETH for gas and
+ * its stablecoin to subscribe: USDG on Robinhood Chain (faucet.paxos.com), USDC on Base (faucet.circle.com). The key
+ * is read from a file, never printed.
  */
 import { readFileSync } from 'node:fs';
 import { createPublicClient, createWalletClient, http, parseAbi, type Address, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { robinhoodTestnet } from 'viem/chains';
-import { CASH_TOKENS, decodeEvmDef, dec, evmInput } from '@sn/core';
+import { baseSepolia, robinhoodTestnet } from 'viem/chains';
+import { CASH_TOKENS, decodeEvmDef, dec, evmInput, type NoteChain } from '@sn/core';
 import { engineAbi, flowEngineAbi, lensAbi } from '@sn/sdk';
 
 const NAME = process.env.NAME ?? 'TSLA Reverse Convertible';
 const UNITS = Number(process.env.UNITS ?? 20);
 const raw = (JSON.parse(readFileSync('.keys/investor1.json', 'utf8')) as Array<{ private_key: string }>)[0].private_key;
 const inv = privateKeyToAccount((raw.startsWith('0x') ? raw : `0x${raw}`) as Hex);
-const dep = JSON.parse(readFileSync('deployments/robinhood-testnet.json', 'utf8')) as {
+const CHAIN = (process.env.CHAIN ?? 'robinhood-testnet') as NoteChain;
+const NETS = {
+  'robinhood-testnet': { chain: robinhoodTestnet, rpc: 'https://rpc.testnet.chain.robinhood.com' },
+  'base-sepolia': { chain: baseSepolia, rpc: 'https://base-sepolia-rpc.publicnode.com' },
+} as const;
+const net = NETS[CHAIN];
+if (!net) throw new Error(`CHAIN: ${Object.keys(NETS).join(' | ')}`);
+const dep = JSON.parse(readFileSync(`deployments/${CHAIN}.json`, 'utf8')) as {
   engine?: Address;
   lens?: Address;
 };
-if (!dep.engine || !dep.lens) throw new Error('deployments/robinhood-testnet.json has no engine yet: deploy first');
+if (!dep.engine || !dep.lens) throw new Error(`deployments/${CHAIN}.json has no engine yet: deploy first`);
 const engine = dep.engine;
 const lens = dep.lens;
-const t = http(process.env.RPC ?? 'https://rpc.testnet.chain.robinhood.com');
-const pub = createPublicClient({ chain: robinhoodTestnet, transport: t });
-const wal = createWalletClient({ chain: robinhoodTestnet, account: inv, transport: t });
-const USDG = CASH_TOKENS['robinhood-testnet'];
+const t = http(process.env.RPC ?? net.rpc);
+const pub = createPublicClient({ chain: net.chain, transport: t });
+const wal = createWalletClient({ chain: net.chain, account: inv, transport: t });
+/** The chain's cash token (USDG on Robinhood Chain, USDC on Base). */
+const CASH = CASH_TOKENS[CHAIN];
 const erc20 = parseAbi([
   'function approve(address,uint256) returns (bool)',
   'function balanceOf(address) view returns (uint256)',
@@ -96,7 +105,7 @@ async function trySubscribe(pid: bigint) {
   const cost = BigInt(UNITS) * 10n ** 6n;
   try {
     await wal
-      .writeContract({ address: USDG, abi: erc20, functionName: 'approve', args: [engine, cost] })
+      .writeContract({ address: CASH, abi: erc20, functionName: 'approve', args: [engine, cost] })
       .then((h) => pub.waitForTransactionReceipt({ hash: h }));
     const { request } = await pub.simulateContract({
       account: inv,

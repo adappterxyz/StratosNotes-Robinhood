@@ -425,13 +425,14 @@ export function createEdgeApp(deps: EdgeAppDeps) {
         ...(e.bpmnXml ? { bpmnXml: e.bpmnXml, assets: e.assets as TemplateEntry['assets'] } : {}),
         ...(e.basis ? { basis: e.basis as TemplateEntry['basis'] } : {}),
       };
-      // Notes run on Robinhood Chain only: a term sheet naming another chain, collateral held elsewhere, a token that does
-      // not exist there (e.g. physical delivery of NVDA) or a retired test token is refused.
+      // Notes run on Robinhood Chain testnet and Base Sepolia: a term sheet naming another chain, collateral held where the
+      // note's chain takes none, a token that does not exist on its chain (e.g. physical delivery of NVDA, or of TSLA on
+      // Base) or a retired test token is refused.
       if (!templateOffered(entry))
         return err(
           c,
           400,
-          "This note can't be issued: notes run on Robinhood Chain testnet only, every token a note delivers or pledges must exist there, and no retired test token may appear.",
+          "This note can't be issued: notes run on Robinhood Chain testnet or Base Sepolia, every token a note delivers or pledges must exist on its chain (or be locked on the other one), and no retired test token may appear.",
         );
       let id: string;
       try {

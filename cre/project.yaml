@@ -1,6 +1,8 @@
 # CRE project settings: cre workflow simulate|deploy <workflow> --target <name>
 #
-# Notes run on Robinhood Chain testnet (CRE chain robinhood-testnet); the keeper writes there. Every target also needs
+# Notes run on Robinhood Chain testnet (CRE chain robinhood-testnet) and Base Sepolia (CRE chain
+# ethereum-testnet-sepolia-base-1); the keeper writes on both, and reads both sides of each cross-chain pair (vault
+# backing, gateway queues). Every target also needs
 # the chains it reads Chainlink price feeds from (the testnet has no feeds):
 #   ethereum-mainnet               crypto, forex and commodities (ETH/USD, BTC/USD, EUR/USD, XAU/USD…)
 #   ethereum-mainnet-arbitrum-1    the catalogue's few feeds Ethereum has not (e.g. HKD/USD, SEK/USD, DOGE/USD)
@@ -12,21 +14,27 @@
 # There is no production target: CRE cannot write to Robinhood Chain mainnet yet (services/keeper-fallback).
 
 # Local end-to-end run against an anvil fork of Robinhood Chain testnet (scripts/e2e-cre-evm.sh), which keeps the
-# real MockKeystoneForwarder. SN_FORK_PORT is the fork's port.
+# real MockKeystoneForwarder. SN_FORK_PORT is the fork's port. Base Sepolia is the public RPC here (read only unless
+# config.local-fork.json lists a Base fork: then point this entry at that fork, e.g. with an env file).
 local-fork:
   rpcs:
     - chain-name: robinhood-testnet
       url: "http://127.0.0.1:${SN_FORK_PORT}"
+    - chain-name: ethereum-testnet-sepolia-base-1
+      url: https://base-sepolia-rpc.publicnode.com
     - chain-name: ethereum-mainnet
       url: https://ethereum-rpc.publicnode.com
     - chain-name: ethereum-mainnet-arbitrum-1
       url: https://arbitrum-one-rpc.publicnode.com
 
-# Testnet: `cre workflow simulate --broadcast` writes through Robinhood Chain testnet's MockKeystoneForwarder.
+# Testnet: `cre workflow simulate --broadcast` writes through each chain's MockKeystoneForwarder (Robinhood Chain
+# testnet 0x0b93…3885, Base Sepolia 0x8230…F3e5).
 staging-settings:
   rpcs:
     - chain-name: robinhood-testnet
       url: https://rpc.testnet.chain.robinhood.com
+    - chain-name: ethereum-testnet-sepolia-base-1
+      url: https://base-sepolia-rpc.publicnode.com
     - chain-name: ethereum-mainnet
       url: https://ethereum-rpc.publicnode.com
     - chain-name: ethereum-mainnet-arbitrum-1

@@ -5,7 +5,7 @@
  *   "allowedOrigins": ["https://notes.markets"],
  *   "trustProxy": true,                       // take the client IP from X-Forwarded-For (behind a load balancer)
  *   "chains": [{ "key": "robinhood-testnet", "rpc": "https://…", "engine": "0x…", "lens": "0x…", "fromBlock": 123,
- *                "stablecoin": { "symbol": "USDG", "address": "0x…", "decimals": 6 },
+ *                "stablecoin": { "symbol": "USDG", "address": "0x…", "decimals": 6 },   // USDC on base-sepolia
  *                "faucet": { "token": "0x…", "amount": "2000" } }],     // dev chains only: mints a MockERC20
  *   "ai": true                                 // needs CF_ACCOUNT_ID and CF_AI_TOKEN in the environment
  * }
@@ -14,7 +14,11 @@ import { z } from 'zod';
 
 const addr = z.string().regex(/^0x[0-9a-fA-F]{40}$/);
 
-/** Cross-chain collateral (planned, docs/CROSS-CHAIN.md; home = Robinhood Chain), passed to the app as is. */
+/**
+ * Cross-chain collateral (docs/CROSS-CHAIN.md), passed to the app as is. scripts/server-config.ts serves each note
+ * chain that has a home gateway as role 'home' (its gateway and the vault on the other chain, with the receipts);
+ * 'asset' (a vault's own chain) is still accepted from older configs.
+ */
 const CrossChainCfg = z.object({
   role: z.enum(['home', 'asset']),
   router: addr,
@@ -69,8 +73,8 @@ export const ChainCfg = z.object({
   /** Dev chains only: the API mints this MockERC20 to callers (the key comes from FAUCET_KEY). */
   faucet: z.object({ token: addr, amount: z.string().regex(/^\d+$/) }).optional(),
   /** The retired notes.markets TokenFaucet (optional; scripts/server-config.ts no longer writes it). `tokens`: the
-   * chain's real tokens by symbol (USDG, WETH, Robinhood's stock tokens), and receipts on the home chain once
-   * cross-chain collateral is deployed. */
+   * chain's real tokens by symbol (USDG or USDC, WETH, Robinhood's stock tokens), and the receipts of collateral
+   * locked on the other chain (TSLA.rh on Base, USDC.base on Robinhood Chain) once its gateway is deployed. */
   tokenFaucet: addr.optional(),
   tokens: z.record(addr).default({}),
   /**

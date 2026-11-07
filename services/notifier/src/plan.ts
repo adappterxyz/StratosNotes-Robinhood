@@ -13,7 +13,14 @@
  * tick, after a restart, on a replayed event) never queues the same email twice. No I/O here: the caller loads
  * the inputs and stores the result (tick.ts), so this runs the same in Node and in a Worker cron.
  */
-import { productNotifications, type NotifyCategory, type NotifyDecl, type WorkflowDef } from '@sn/core';
+import {
+  NOTE_CHAIN_SHORT,
+  productNotifications,
+  receiptChain,
+  type NotifyCategory,
+  type NotifyDecl,
+  type WorkflowDef,
+} from '@sn/core';
 import { TAG, type NoteState, type NoteView } from '@sn/sdk';
 import type { Vars } from './templates';
 
@@ -85,6 +92,12 @@ const duration = (s: number) =>
     : s >= 3600
       ? `${+(s / 3600).toFixed(1)} hours`
       : `${Math.round(s / 60)} minutes`;
+
+/** " locked on Robinhood Chain" for a receipt (TSLA.rh), " locked on Base" (USDC.base), else nothing. */
+const lockedWhere = (sym: string) => {
+  const c = receiptChain(sym);
+  return c ? ` locked on ${NOTE_CHAIN_SHORT[c]}` : '';
+};
 
 /** A ledger asset's symbol for people: the stablecoin is USD; tokens drop the "Collateral"/"Deliver" prefix. */
 export function assetLabel(name: string): string {
@@ -193,7 +206,8 @@ export function planNote(p: PlanInput): Planned[] {
   const collateralText = () => {
     if (!econ) return 'none';
     const lines = econ.collateral
-      .map((c) => `${c.symbol === 'USD' ? 'USD' : `t${c.symbol}`} (${Math.round(c.haircut * 100)}% counted)`)
+      // A receipt (TSLA.rh, USDC.base) names where the token is locked: on the other note chain.
+      .map((c) => `${c.symbol}${lockedWhere(c.symbol)} (${Math.round(c.haircut * 100)}% counted)`)
       .join(', ');
     return `${econ.ratio !== null ? `${Math.round(econ.ratio * 100)}% of units sold` : 'as pledged'}${lines ? `, in ${lines}` : ''}; grace period ${duration(econ.grace)}`;
   };

@@ -11,49 +11,54 @@
  *                your wallet automatically, issuer covers gas"); every other note stays claim-only
  *   PUSH=1       push every note this bot looks after (or PIDS), opted in or not
  *   PUSH=0       push nothing, not even opted-in notes
- *   PUSH_MIN=x   when pushing, only holders owed at least x of the asset (e.g. 0.5 = 0.5 USDG), with pushTo in
+ *   PUSH_MIN=x   when pushing, only holders owed at least x of the asset (e.g. 0.5 = 0.5 USDG or USDC), with pushTo in
  *                batches; smaller amounts stay claimable. Without it, the round's cursor is walked (pushPayouts)
  *                and anyone the cursor missed is swept with pushTo.
  *   PUSH_BATCH   holders per transaction (default 100); PUSH_ASSETS limits pushing to some assets (e.g. 1: the
  *                stablecoin). PUSH_ONLY=1 makes it a payout keeper for every note (or PIDS) under the same
  *                policy, funding nothing: any funded account will do, since pushing is permissionless.
  *
- * Notes run on Robinhood Chain testnet (CHAIN_ID=46630), with their collateral (USDG, WETH, Robinhood's stock tokens)
- * pledged directly into the note there: nothing waits on another chain, and physical delivery uses the real stock
- * tokens, which the issuer's wallet must hold (faucet.testnet.chain.robinhood.com).
+ * One bot per note chain: Robinhood Chain testnet (CHAIN_ID=46630; cash USDG, collateral USDG, WETH and Robinhood's
+ * stock tokens) or Base Sepolia (CHAIN_ID=84532; cash USDC, collateral USDC and WETH). Collateral pledged directly
+ * into the note waits on nothing; physical delivery uses the real tokens, which the issuer's wallet must hold
+ * (faucet.testnet.chain.robinhood.com for the stock tokens; WETH by wrapping ETH).
  *
- * Cross-chain collateral (planned, HomeGateway v2, docs/CROSS-CHAIN.md): INERT today. With no gateway configured
- * (no GATEWAY and no deployments/crosschain-testnet.json) none of the following runs. Once collateral on other chains
- * is deployed (home = Robinhood Chain), receipts never wait inside the engine: they burn and queue a release on the
- * asset chain only when they LEAVE the engine, and this bot makes them leave (RECEIPTS=0 turns both off):
+ * Cross-chain collateral (HomeGateway v2, docs/CROSS-CHAIN.md): a note holding collateral locked on the other chain
+ * (a Base note backed by TSLA locked on Robinhood Chain, a Robinhood Chain note backed by USDC locked on Base) holds
+ * receipts. With no gateway configured for this chain (no GATEWAY and no deployments/crosschain/<chain>.json) none of
+ * the following runs. Receipts never wait inside the engine: they burn and queue a release on the asset chain only
+ * when they LEAVE the engine, and this bot makes them leave (RECEIPTS=0 turns both off):
  *   - Paid in full (or the excess after a capped default): the engine credits the released receipts to the
  *     issuer's ledger. Once the note no longer runs, the bot withdraws every receipt asset on its ledger: the
  *     receipts burn and the gateway queues a release to the issuer's own address on the asset chain.
  *   - Default: the collateral is distributed to the holders as a payout. For receipt assets only, the bot pushes
  *     it to every holder owed one (`pushTo`, permissionless, RECEIPT_BATCH holders per transaction, default 25,
  *     with gas set for the engine's 150k per-transfer cap; the receipt hook takes ~102k), whatever PUSH says, so
- *     each holder's collateral is released on the asset chain without them acting. Cash payouts (USDG) stay
+ *     each holder's collateral is released on the asset chain without them acting. Cash payouts (USDG, USDC) stay
  *     claim-by-default under PUSH as above. With PUSH_ONLY=1 it does this for every note (or PIDS).
  *   A receipt is a token the gateway's registry knows (`receiptInfo`); the gateway must be VERSION 2.
  * Chainlink CRE flushes the release queue (about every minute). This bot is only the fallback: it calls `flush`
  * for releases that have waited more than FLUSH_AFTER seconds (default 180; the queued time is the block time of
  * the release's first ReleaseQueued event) when the fee pool can pay (FLUSH=0: never; FLUSH_MAX: releases per
  * transaction, default 10). Flushing is permissionless: any funded key will do.
- * The gateway is GATEWAY, or else home.gateway of CROSSCHAIN_CONFIG (default deployments/crosschain-testnet.json)
- * when its home chain id and engine are this bot's (GATEWAY= empty: none). Its events are read from
+ * The gateway is GATEWAY, or else home.gateway of CROSSCHAIN_CONFIG (default: the deployments/crosschain/*.json whose
+ * home is this chain, then the legacy deployments/crosschain-testnet.json) when its home chain id and engine are this
+ * bot's (GATEWAY= empty: none). Its events are read from
  * GATEWAY_FROM_BLOCK (default: the config's gatewayBlock, else FROM_BLOCK), LOG_CHUNK blocks per query (50000).
  *
  *   RPC=https://rpc.testnet.chain.robinhood.com CHAIN_ID=46630 ENGINE=0x... LENS=0x... ISSUER_KEY_FILE=path [FROM_BLOCK=n] [GATEWAY=0x...] \
+ *   (Base Sepolia: RPC=https://base-sepolia-rpc.publicnode.com CHAIN_ID=84532 ENGINE/LENS/FROM_BLOCK from
+ *   deployments/base-sepolia.json) \
  *   [PIDS=3,4] [MISS=4:1,7:2] [MINT=1] [TOP_UP=1] [PUSH=1|0] [PUSH_MIN=0.5] [RECEIPTS=0] [RECEIPT_BATCH=25] \
  *   [FLUSH_AFTER=180] [INTERVAL=10] npx tsx scripts/issuer-bot.ts [--once]
  *
  * PIDS: the notes to look after (default: every note whose Issuer role is this key). MISS: pid:period payments
  * to leave unfunded. MINT=1: mint tokens the wallet lacks where the key may mint (a local MockERC20, or the retired
- * tUSD of a TEST_TOKENS rehearsal, as its owner). Real tokens (USDG, WETH, Robinhood's stock tokens) must already be
+ * tUSD of a TEST_TOKENS rehearsal, as its owner). Real tokens (USDG, USDC, WETH, Robinhood's stock tokens) must already be
  * in the wallet. The key is read from a file (a
  * `cast wallet new --json` array, or a bare hex key) or ISSUER_KEY, and never printed.
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import {
   createPublicClient,
   createWalletClient,
@@ -85,6 +90,7 @@ import {
   toBase,
 } from '@sn/core';
 import {
+  CASH_ASSET,
   CHAINS,
   engineAbi,
   EvmAdapter,
@@ -141,23 +147,33 @@ function gatewayOf(): { gateway?: Address; fromBlock: bigint } {
     const gateway = /^0x[0-9a-fA-F]{40}$/.test(explicit) ? (explicit as Address) : undefined;
     return { gateway, fromBlock: BigInt(process.env.GATEWAY_FROM_BLOCK ?? from) };
   }
-  try {
-    const x = JSON.parse(
-      readFileSync(process.env.CROSSCHAIN_CONFIG ?? 'deployments/crosschain-testnet.json', 'utf8'),
-    ) as { home?: { chainId?: number; engine?: string; gateway?: string; gatewayBlock?: number; version?: number } };
-    const h = x.home;
-    if (
-      h?.gateway &&
-      h.chainId === chainId &&
-      (h.version ?? 1) >= 2 &&
-      h.engine?.toLowerCase() === engine.toLowerCase()
-    )
-      return {
-        gateway: h.gateway as Address,
-        fromBlock: BigInt(process.env.GATEWAY_FROM_BLOCK ?? h.gatewayBlock ?? from),
+  // CROSSCHAIN_CONFIG, else every per-home record (deployments/crosschain/<home>.json), then the legacy single file.
+  const dir = 'deployments/crosschain';
+  const files = process.env.CROSSCHAIN_CONFIG
+    ? [process.env.CROSSCHAIN_CONFIG]
+    : [
+        ...(existsSync(dir) ? readdirSync(dir) : []).filter((f) => f.endsWith('.json')).map((f) => `${dir}/${f}`),
+        'deployments/crosschain-testnet.json',
+      ];
+  for (const f of files) {
+    try {
+      const x = JSON.parse(readFileSync(f, 'utf8')) as {
+        home?: { chainId?: number; engine?: string; gateway?: string; gatewayBlock?: number; version?: number };
       };
-  } catch {
-    /* no config: no gateway */
+      const h = x.home;
+      if (
+        h?.gateway &&
+        h.chainId === chainId &&
+        (h.version ?? 1) >= 2 &&
+        h.engine?.toLowerCase() === engine.toLowerCase()
+      )
+        return {
+          gateway: h.gateway as Address,
+          fromBlock: BigInt(process.env.GATEWAY_FROM_BLOCK ?? h.gatewayBlock ?? from),
+        };
+    } catch {
+      /* no such file: no gateway from it */
+    }
   }
   return { fromBlock: from };
 }
@@ -633,8 +649,7 @@ async function tick() {
     const actions = issuerActions(def, s, now); // windows still open: the engine refuses a late one
     const field = (name: string) => def.fields.findIndex((f) => f.name === name);
     const run = async (step: number, fieldName: string, amount: number, assetName: string, label: string) => {
-      // The cash asset is USDG on new notes and USDC (tUSD) on notes issued before USDG.
-      const asset = def.assets.findIndex((a) => a.name === assetName || (assetName === 'USDG' && a.name === 'USDC'));
+      const asset = def.assets.findIndex((a) => a.name === assetName);
       const token = s.assetTokens[asset] as Address;
       if (!(await ensure(token, toBase(dec(amount.toFixed(9)), def.assets[asset].decimals)))) return;
       await adapter.executeStep(wallet as never, id, step, {
@@ -646,7 +661,14 @@ async function tick() {
     if (call && !call.funded && !miss.has(`${pid}:${call.period}`)) {
       const step = actions.fund.find((f) => f.period === call.period);
       if (step)
-        await run(step.step, 'fundAmount', ceil6(call.total - e.escrowCash), 'USDG', `funded payment ${call.period}:`);
+        // The note's own cash asset (asset 1): USDG on Robinhood Chain, USDC on Base (or tUSD on older demo notes).
+        await run(
+          step.step,
+          'fundAmount',
+          ceil6(call.total - e.escrowCash),
+          def.assets[CASH_ASSET].name,
+          `funded payment ${call.period}:`,
+        );
       else log(`${id}: payment ${call.period}'s funding window has closed`);
     } else if (call && miss.has(`${pid}:${call.period}`)) {
       log(`${id}: leaving payment ${call.period} unfunded (MISS)`);

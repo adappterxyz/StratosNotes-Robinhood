@@ -1,17 +1,32 @@
 /**
- * How much of Robinhood Chain testnet's real tokens the demo accounts hold: USDG (the cash leg), WETH and Robinhood's
- * stock tokens (TSLA, AMZN, AMD, PLTR, NFLX), so you know whether the issuer must claim some from Robinhood's faucet
- * or Paxos' faucet (or wrap ETH) before issuing.
+ * How much of each note chain's real tokens the demo accounts hold, with their ETH for gas: on Robinhood Chain testnet
+ * USDG (the cash leg), WETH and Robinhood's stock tokens (TSLA, AMZN, AMD, PLTR, NFLX); on Base Sepolia USDC (the cash
+ * leg) and WETH. So you know whether an account must claim from a faucet (or wrap ETH) before issuing, or lock stock
+ * tokens on Robinhood Chain for a Base note.
  * Read-only: it reads the public addresses from .keys/*.json (never the keys) and calls balanceOf.
+ * CHAINS=robinhood-testnet (or base-sepolia) limits it to one chain; RPC_ROBINHOOD_TESTNET / RPC_BASE_SEPOLIA override.
  *
  *   npx tsx scripts/stock-token-holdings.ts            # deployer (the demo issuer), keeper, demo investors
  *   npx tsx scripts/stock-token-holdings.ts 0xabc…     # the deployer plus any addresses (e.g. your own wallet)
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { createPublicClient, formatUnits, http, parseAbi, type Address } from 'viem';
-import { CASH_FAUCET, CHAIN_TOKENS, STOCK_TOKEN_FAUCETS } from '../packages/core/src';
+import {
+  CASH_FAUCETS,
+  CHAIN_TOKENS,
+  GAS_FAUCETS,
+  NOTE_CHAIN_LABELS,
+  NOTE_CHAINS,
+  STOCK_TOKEN_FAUCETS,
+  type NoteChain,
+} from '../packages/core/src';
 
-const RPC = process.env.RPC ?? 'https://rpc.testnet.chain.robinhood.com';
+const RPCS: Record<NoteChain, string> = {
+  'robinhood-testnet': process.env.RPC_ROBINHOOD_TESTNET ?? 'https://rpc.testnet.chain.robinhood.com',
+  'base-sepolia': process.env.RPC_BASE_SEPOLIA ?? 'https://base-sepolia-rpc.publicnode.com',
+};
+const chains = (process.env.CHAINS?.split(/[ ,]+/).filter(Boolean) ?? NOTE_CHAINS) as NoteChain[];
+for (const c of chains) if (!RPCS[c]) throw new Error(`CHAINS: ${NOTE_CHAINS.join(', ')}`);
 const erc20 = parseAbi(['function balanceOf(address) view returns (uint256)']);
 
 function addressOf(file: string): Address | null {
@@ -31,13 +46,18 @@ const named: Array<[string, Address]> = [
   ...args.map((a, i) => [`address ${i + 1}`, a as Address] as [string, Address]),
 ];
 
-const client = createPublicClient({ transport: http(RPC) });
-for (const [name, who] of named) {
-  const row: string[] = [];
-  for (const t of Object.values(CHAIN_TOKENS['robinhood-testnet'])) {
-    const bal = await client.readContract({ address: t.address, abi: erc20, functionName: 'balanceOf', args: [who] });
-    row.push(`${t.token} ${formatUnits(bal, t.decimals)}`);
+for (const chain of chains) {
+  const client = createPublicClient({ transport: http(RPCS[chain]) });
+  console.log(`== ${NOTE_CHAIN_LABELS[chain]}`);
+  for (const [name, who] of named) {
+    const row: string[] = [`ETH ${formatUnits(await client.getBalance({ address: who }), 18)}`];
+    for (const t of Object.values(CHAIN_TOKENS[chain])) {
+      const bal = await client.readContract({ address: t.address, abi: erc20, functionName: 'balanceOf', args: [who] });
+      row.push(`${t.token} ${formatUnits(bal, t.decimals)}`);
+    }
+    console.log(`${name.padEnd(10)} ${who}  ${row.join('  ')}`);
   }
-  console.log(`${name.padEnd(10)} ${who}  ${row.join('  ')}`);
+  console.log(
+    `   gas: ${GAS_FAUCETS[chain].join(', ')}  ·  cash: ${CASH_FAUCETS[chain]}${STOCK_TOKEN_FAUCETS[chain] ? `  ·  stock tokens: ${STOCK_TOKEN_FAUCETS[chain]}` : ''}`,
+  );
 }
-console.log(`Stock tokens: ${STOCK_TOKEN_FAUCETS['robinhood-testnet']}  ·  USDG: ${CASH_FAUCET}`);

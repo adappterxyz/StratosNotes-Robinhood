@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # The CRE keeper on the live testnets until the workflow is deployed to the DON: run notes-keeper-evm in
-# Chainlink's simulator every INTERVAL seconds with --broadcast, so its reports go on-chain through Robinhood Chain
-# testnet's MockKeystoneForwarder.
+# Chainlink's simulator every INTERVAL seconds with --broadcast, so its reports go on-chain through each note chain's
+# MockKeystoneForwarder (Robinhood Chain testnet and Base Sepolia, as config.staging.json lists them).
 #
 #   pm2 start scripts/keeper-loop.sh --name sn-rh-keeper --interpreter bash
 #
-# Needs the CRE CLI logged in (`cre whoami`) and the keeper key in .keys/keeper.json (funded with Robinhood Chain testnet ETH). The
+# Needs the CRE CLI logged in (`cre whoami`) and the keeper key in .keys/keeper.json (funded with ETH on Robinhood Chain testnet and on Base Sepolia). The
 # key is written to a temporary env file (mode 600) for each run and deleted right after; it is never printed.
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
