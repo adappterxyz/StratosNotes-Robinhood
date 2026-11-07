@@ -143,7 +143,7 @@ memory-safe saved about 1.1 KB.
 
 ## Token risk: the cash token can be paused or frozen
 
-Notes settle in **USDG** (Paxos' Global Dollar) on Robinhood Chain testnet,
+Notes on Robinhood Chain settle in **USDG** (Paxos' Global Dollar) on Robinhood Chain testnet,
 `0x7E955252E15c84f5768B83c41a71F9eba181802F`. Checked on 2026-10-24:
 
 - It behaves as a plain ERC-20 for the engine: `transfer` and `transferFrom` delivered
@@ -165,6 +165,19 @@ audited here. Pledged as collateral or held in a delivery reserve, they sit in t
 engine or a holder stalls withdrawals and deliveries of that token, and a seizure from the engine leaves it short of
 what its ledger owes in that token. The engine cannot prevent it; the haircut and the collateral ratio the issuer sets
 are the only buffer. Disclose it on the term sheet of any note that pledges or delivers a stock token.
+
+**USDC on Base carries the same risk.** Notes on Base Sepolia settle in Circle's testnet **USDC**
+(`0x036CbD53842c5426634e7929541eC2318f3dCF7e`, 6 decimals). Circle's FiatToken can be paused and can blacklist an
+address: a pause or a blacklisting of the engine, the escrow, the issuer or a holder stalls USDC subscriptions,
+funding, payouts and withdrawals exactly as above. WETH on Base (`0x4200…0006`, the OP Stack WETH9 predeploy) has no
+freeze authority.
+
+**Collateral locked on the other chain** (docs/CROSS-CHAIN.md) adds the vault and Chainlink CCIP to the trust set. A
+freeze of the vault's address, or a seizure from it, leaves the vault short of what its receipts count; the CRE keeper
+reports it (`[collateral shortfall]`) but does not yet lower the note's coverage. A release to a frozen recipient is
+recorded as unclaimed rather than reverting. The gateway and vault owners configure the peers and can withdraw a
+gateway's fee pool, never anyone's collateral. Messages take roughly 15–25 minutes each way, so collateral on the other
+chain cannot cure a margin call faster than that.
 
 ## Before mainnet
 

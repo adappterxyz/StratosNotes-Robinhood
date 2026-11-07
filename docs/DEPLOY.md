@@ -1,17 +1,20 @@
-# Deploy runbook: Robinhood Chain testnet, notes.markets
+# Deploy runbook: Robinhood Chain testnet and Base Sepolia, notes.markets
 
-> **Network: Robinhood Chain testnet (chain id 46630) only.** Every note is issued, collateralised, observed and paid
-> there. Chainlink runs through the CRE simulator (`cre workflow simulate --broadcast` against the chain's
-> MockKeystoneForwarder `0x0b93082D9b3C7C97fAcd250082899BAcf3af3885`), so there is no mainnet deployment: Robinhood
-> Chain mainnet waits on CRE write support there and an audit. Mainnets are only read, for Chainlink prices: crypto on
-> Ethereum, equities on Robinhood Chain mainnet (over CRE's HTTP capability).
+> **Networks: Robinhood Chain testnet (chain id 46630) and Base Sepolia (chain id 84532).** Each note is issued,
+> collateralised, observed and paid on its own chain; collateral can also stay locked on the other chain
+> (docs/CROSS-CHAIN.md). Chainlink runs through the CRE simulator (`cre workflow simulate --broadcast` against each
+> chain's MockKeystoneForwarder: `0x0b93082D9b3C7C97fAcd250082899BAcf3af3885` on Robinhood Chain testnet,
+> `0x82300bd7c3958625581cc2F77bC6464dcEcDF3e5` on Base Sepolia), so there is no mainnet deployment. Mainnets are only
+> read, for Chainlink prices: crypto on Ethereum, equities on Robinhood Chain mainnet (over CRE's HTTP capability).
 >
 > **Fresh deployment.** This build deploys a new FlowEngine (v4: ERC-20 note units, claimed payouts with receipts,
 > docs/ERC20-NOTES.md) and NotesLens on Robinhood Chain testnet. Until then `deployments/robinhood-testnet.json` is a
 > placeholder with no `engine`, and the generated configs (`deployments/server/*.json`,
 > `cre/notes-keeper-evm/config.staging.json`) list no chain. The earlier build's engines, notes and cross-chain pairs
 > are kept for reference only in `deployments/archive/arbitrum-build/` and are not served, indexed or kept running.
-> Cross-chain collateral is planned, not deployed (docs/CROSS-CHAIN.md): there is no `deployments/crosschain-testnet.json`.
+> **Base Sepolia and cross-chain collateral** are added by §2b: a FlowEngine and NotesLens on Base Sepolia
+> (`deployments/base-sepolia.json`) and one gateway–vault pair per direction (`deployments/crosschain/<home>.json`).
+> Sections 1–2 describe the Robinhood Chain deployment that is already live.
 
 Everything below runs from the repo root on the server. Keys live in `.keys/` (gitignored, mode 600) and are read
 from files by the scripts, never typed on a command line or printed.
@@ -61,6 +64,72 @@ PLTR, NFLX), no `crossChain` and no `legacyEngines`; `config.staging.json` lists
 `robinhood-testnet` and no `gateways` or `vaults`. Commit `deployments/robinhood-testnet.json` and the generated
 configs.
 
+## 2b. Base Sepolia and cross-chain collateral (both directions)
+
+Nothing here is broadcast until you run it. Rehearse each step on anvil forks first (`REHEARSAL=1`: forks of both
+chains, the deployer funded on the fork only, records written under `deployments/local/rehearsal/`).
+
+Funding, before step 1 (the deployer `0x298a…de0a` deploys and owns everything; fees are quoted at run time and the
+scripts refuse to start below their balance check):
+
+| Wallet | Base Sepolia | Robinhood Chain testnet | What it covers |
+|---|---|---|---|
+| Deployer | 0.01 ETH (needs ~0.0051: engine ~0.00007, gateway ~0.00002 + 0.005 fee pool, vault ~0.00001, wire ~0.00003; the gateway step checks for 0.007) | 0.01 ETH (needs ~0.0051: gateway ~0.00004 + 0.005 fee pool, vault ~0.00002, wire ~0.00002; Orbit L1 data gas adds a little) | Base engine + lens; each pair's gateway (with its release fee pool), vault and wire step |
+| Keeper (CRE simulator broadcaster) | 0.002 ETH (a report ≤ ~0.00002) | (as §1) | Engine reports and gateway flush reports on Base |
+| Issuer bot (per chain) | 0.001–0.002 ETH | (as §1) | Funding payments, receipt withdrawals and pushes, fallback flushes |
+| Issuer locking collateral | ~0.000054 ETH CCIP fee + ~330k gas per lock on Base | ~0.000050 ETH CCIP fee + ~340k gas per lock on Robinhood | One CCIP lock fee per lock, paid in native ETH on the asset chain |
+| Investors | < 0.00001 ETH per subscribe or claim, + USDC | (as §1) | Subscribing to Base notes |
+
+Measured on anvil forks on 2026-11-06 (gas prices then: Base Sepolia 0.006 gwei, Robinhood Chain testnet 0.01 gwei):
+engine deploy on Base 12.1M gas (6 tx); gateway 4.0M (2 tx) on either chain; vault 1.7M on Base (2 tokens) and 1.9M on
+Robinhood (6 tokens); wire 1.9M on Robinhood (2 receipts) and 5.6M on Base (6 receipts). CCIP fees on the real routers
+(fork test): a release from the Robinhood gateway ~0.0000495 ETH, from the Base gateway ~0.0000539 ETH; a 0.005 ETH fee
+pool pays ~90–100 releases (top up with `ROLE=fund`).
+
+Faucets: Base Sepolia ETH (https://faucets.chain.link/base-sepolia, https://www.alchemy.com/faucets/base-sepolia), USDC
+on Base Sepolia (Circle, https://faucet.circle.com; `0x036CbD53842c5426634e7929541eC2318f3dCF7e`), Robinhood's stock
+tokens and ETH on Robinhood Chain testnet (https://faucet.testnet.chain.robinhood.com).
+
+```bash
+# 0. Optional: the whole sequence on anvil forks of both chains
+REHEARSAL=1 CHAINS=base-sepolia bash scripts/deploy-testnets.sh
+REHEARSAL=1 HOME_CHAIN=robinhood-testnet ASSET_CHAIN=base-sepolia bash scripts/deploy-crosschain.sh
+REHEARSAL=1 HOME_CHAIN=base-sepolia ASSET_CHAIN=robinhood-testnet bash scripts/deploy-crosschain.sh
+
+# 1. Base Sepolia engine and lens (a chain already in deployments/ is skipped unless REDEPLOY=1)
+CHAINS=base-sepolia bash scripts/deploy-testnets.sh
+#   -> deployments/base-sepolia.json; regenerates config.staging.json and deployments/server/*.json
+
+# 2. Robinhood Chain note <- collateral on Base: gateway (+ fee pool) on Robinhood Chain, vault on Base allowing
+#    USDC and WETH, receipts USDC.base and WETH.base registered on Robinhood Chain
+HOME_CHAIN=robinhood-testnet ASSET_CHAIN=base-sepolia bash scripts/deploy-crosschain.sh
+#   -> deployments/crosschain/robinhood-testnet.json (validated), configs regenerated
+
+# 3. Base note <- collateral on Robinhood Chain: gateway (+ fee pool) on Base, vault on Robinhood Chain allowing
+#    USDG, WETH, TSLA, AMZN, AMD and PLTR, receipts *.rh registered on Base
+HOME_CHAIN=base-sepolia ASSET_CHAIN=robinhood-testnet bash scripts/deploy-crosschain.sh
+#   -> deployments/crosschain/base-sepolia.json (validated), configs regenerated
+```
+
+Check the outputs: `deployments/server/api.json` lists both chains, `base-sepolia` with stablecoin USDC and tokens
+USDC, WETH and the `.rh` receipts, `robinhood-testnet` with the `.base` receipts, and each with a `crossChain` entry
+(`role: home`, its gateway and the vault on the other chain); `config.staging.json` lists both engines (CRE chain names
+`robinhood-testnet` and `ethereum-testnet-sepolia-base-1`), two `gateways` and one `vaults` entry per receipt.
+Verify on-chain:
+
+```bash
+cast call <gateway> 'VERSION()(uint256)' --rpc-url <home rpc>                       # 2
+cast call <gateway> 'getForwarderAddress()(address)' --rpc-url <home rpc>           # = the home engine's forwarder
+cast call <gateway> 'releaseQueue()(uint256,uint256,uint256,uint256,uint256)' --rpc-url <home rpc>
+cast call <vault> 'homeGateway()(address)' --rpc-url <asset rpc>                    # = <gateway>
+```
+
+Commit `deployments/base-sepolia.json`, `deployments/crosschain/*.json` and the regenerated configs, then continue with
+§3 (the Worker; no D1 migration is needed for a second chain: every read-model table and the cron cursors are keyed by chain)
+and §4, adding the keeper's Base target (the staging config covers both chains) and a second issuer bot with
+`CHAIN_ID=84532` and Base's engine, lens and RPC (`https://base-sepolia-rpc.publicnode.com`; `https://sepolia.base.org` caps eth_getLogs at 200 blocks). The CRE workflow needs an RPC for
+`ethereum-testnet-sepolia-base-1` in `cre/project.yaml` (staging target).
+
 ## 3. Reset the D1 read model, then deploy the Worker
 
 The Worker (`web/wrangler.jsonc`: same name, routes and D1 database `notes-markets` as before) serves the API from D1
@@ -83,7 +152,7 @@ Secrets already set on the Worker carry over (`VERIFIER_KEY`, `SN_PROXY_SECRET`)
 the verifier key changed. Then verify:
 
 ```bash
-curl -s https://notes.markets/api/config            # one chain: robinhood-testnet, the new engine
+curl -s https://notes.markets/api/config            # robinhood-testnet (and base-sepolia once §2b ran), with their engines
 curl -s https://notes.markets/api/health            # its cursor moves toward the head within a few cron runs
 ```
 
@@ -121,6 +190,7 @@ docs/OVERVIEW.md, then `npm run deploy` again so the landing proof data picks th
   otherwise the outbox fills and nothing is sent (docs/NOTIFICATIONS.md).
 - **Limits per cron run** (services/edge/src/scheduled.ts): ≤ 800 D1 queries of the 1,000 allowed, ≤ 700 RPC calls
   of the 1,000 subrequests allowed (paid plan), 20 s of wall time. Each batch is at most 150 events and 25 notes,
-  cut at a block boundary. Robinhood Chain testnet is indexed with 120 confirmations and 20,000-block ranges.
+  cut at a block boundary. Robinhood Chain testnet is indexed with 120 confirmations and 20,000-block ranges; Base
+  Sepolia with its own settings in `scripts/server-config.ts`.
 - **History:** the earlier build ran Postgres + pm2 services and a Cloudflare Tunnel before moving to D1
   (2026-10-23); none of that is used now. The `api.notes.markets` DNS record, if still present, can be deleted.

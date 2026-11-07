@@ -1,6 +1,6 @@
 /**
  * The term sheet of a real note from /api/notes, shown only when it is a fair example to verify: issued on Robinhood
- * Chain testnet, settled in USDG, and on a real schedule (not a compressed demo of minutes or days). An open
+ * Chain testnet in USDG or on Base Sepolia in USDC, and on a real schedule (not a compressed demo of minutes or days). An open
  * book first, then a running note. Without one (or while the API is down) it shows the same rows as an illustrative
  * sheet with no numbers in it. The coupon is annualised the way
  * the app does it (app/src/lib/listing.ts): coupon per period times the periods in a year, where a compressed demo
@@ -35,8 +35,11 @@ type NoteView = {
   economics?: { ratio?: number; collateral?: Array<{ symbol: string; amount: number }> };
   cashToken?: string;
 };
-/** Paxos USDG on Robinhood Chain testnet: the only cash a showcased note may settle in. */
-const USDG_ROBINHOOD = '0x7e955252e15c84f5768b83c41a71f9eba181802f';
+/** The only cash a showcased note may settle in, per chain: Paxos USDG on Robinhood Chain testnet, Circle USDC on Base Sepolia. */
+const SHOWCASE_CASH: Record<string, { address: string; symbol: string }> = {
+  'robinhood-testnet': { address: '0x7e955252e15c84f5768b83c41a71f9eba181802f', symbol: 'USDG' },
+  'base-sepolia': { address: '0x036cbd53842c5426634e7929541ec2318f3dcf7e', symbol: 'USDC' },
+};
 type Chain = { key: string; explorer?: string; engine?: string };
 
 const STATUS: Record<string, string> = {
@@ -76,7 +79,9 @@ function term(sec: number, demo: boolean) {
   const m = Math.round(sec / MONTH);
   return m === 1 ? '1 month' : `${m} months`;
 }
-const cashName = (s: string) => (s === 'USD' ? 'USDG' : s.replace(/\.rh$/i, ''));
+/** A collateral line's token: the chain's dollar for USD; a receipt (TSLA.rh, USDC.base) as the token it locks. */
+const cashName = (s: string, chain: string) =>
+  s === 'USD' ? (SHOWCASE_CASH[chain]?.symbol ?? 'USDG') : s.replace(/\.[a-z]+$/, '');
 
 type Row = [string, string];
 
@@ -100,7 +105,7 @@ function rowsOf(v: NoteView, now: number): { rows: Row[]; next: string | null } 
     rows.push([
       'Collateral pledged',
       col
-        .map((c) => `${c.amount.toLocaleString('en-US', { maximumFractionDigits: 6 })} ${cashName(c.symbol)}`)
+        .map((c) => `${c.amount.toLocaleString('en-US', { maximumFractionDigits: 6 })} ${cashName(c.symbol, v.chain)}`)
         .join(' + ') + (ratio ? ` · ${Math.round(ratio * 100)}% ratio` : ''),
     ]);
   }
@@ -108,10 +113,10 @@ function rowsOf(v: NoteView, now: number): { rows: Row[]; next: string | null } 
   return { rows, next: nxt ? fmtDate(nxt) : null };
 }
 
-/** A note worth showing: on Robinhood Chain, in USDG, on a real schedule (at least a month to maturity). */
+/** A note worth showing: on Robinhood Chain in USDG or on Base in USDC, on a real schedule (at least a month to maturity). */
 const showcase = (n: NoteView) =>
-  n.chain === 'robinhood-testnet' &&
-  n.cashToken?.toLowerCase() === USDG_ROBINHOOD &&
+  !!SHOWCASE_CASH[n.chain] &&
+  n.cashToken?.toLowerCase() === SHOWCASE_CASH[n.chain].address &&
   !schedule(n).demo &&
   !!n.strikeDate &&
   !!n.obsDates?.length;

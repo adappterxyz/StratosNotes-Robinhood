@@ -155,8 +155,8 @@ export default function Landing() {
               <SideTabs side={side} onChange={setSide} />
               <p className="side-sub" aria-live="polite">
                 {side === 'Investors'
-                  ? 'Terms set before you buy, built for income, partial protection, exposure or a hedge. Paid in USDG; you can lose money.'
-                  : 'Raise USDG against collateral you lock, and pay each coupon when it falls due.'}
+                  ? 'Terms set before you buy, built for income, partial protection, exposure or a hedge. Paid in USDG or USDC; you can lose money.'
+                  : 'Raise USDG or USDC against collateral you lock, and pay each coupon when it falls due.'}
               </p>
             </div>
           </div>
@@ -205,12 +205,14 @@ export default function Landing() {
         <section id="robinhood">
           <div className="wrap">
             <div className="section-head" data-reveal>
-              <span className="eyebrow">Why Robinhood Chain</span>
-              <h2>Notes run where the stocks live.</h2>
+              <span className="eyebrow">Why Robinhood Chain and Base</span>
+              <h2>Notes run where the stocks live, and where the dollars are.</h2>
               <p>
-                Every note is issued, collateralised and paid on Robinhood Chain, next to Robinhood&apos;s tokenized
-                stocks. TSLA and AMZN can back a note and be delivered at maturity on the same chain, with no bridge.
-                Chainlink reads every observation and Chainlink CRE runs each payment step the issuer has funded.
+                A note is issued, paid and settled on one chain: Robinhood Chain, next to Robinhood&apos;s tokenized
+                stocks, or Base. Robinhood&apos;s TSLA and AMZN can back a note on Robinhood Chain and be delivered at
+                maturity there, or stay locked on Robinhood Chain and back a note on Base, carried by Chainlink CCIP
+                with no bridge and no wrapped token. Chainlink reads every observation and Chainlink CRE runs each
+                payment step the issuer has funded.
               </p>
             </div>
             <div className="cards3">
@@ -219,9 +221,10 @@ export default function Landing() {
                   <img src="/logos/robinhood-chain-dark.svg" alt="" height={24} />
                   Robinhood Chain
                 </div>
-                <span className="tag">Where notes run · testnet 46630</span>
+                <span className="tag">Where notes run · testnets 46630 and 84532</span>
                 <p>
-                  Issue, subscribe, observe and pay: every note&apos;s lifecycle, on stocks or crypto, settled in USDG.
+                  Issue, subscribe, observe and pay on Robinhood Chain testnet, settled in USDG, or on Base Sepolia,
+                  settled in USDC: the same engine and the same terms on either chain.
                 </p>
               </div>
               <div className="card" data-reveal>
@@ -229,10 +232,11 @@ export default function Landing() {
                   <img src="/logos/robinhood-chain-dark.svg" alt="" height={24} />
                   Stock tokens
                 </div>
-                <span className="tag">Collateral and delivery</span>
+                <span className="tag">Collateral across chains</span>
                 <p>
-                  Robinhood&apos;s TSLA, AMZN, AMD and PLTR, plus USDG and WETH: pledged as collateral into the note, or
-                  delivered to holders below the barrier.
+                  Robinhood&apos;s TSLA, AMZN, AMD and PLTR: pledged into a note on Robinhood Chain, or locked there to
+                  back a note on Base. USDC and WETH locked on Base can back a note on Robinhood Chain. Collateral
+                  recovers up to its value; messages take about 20 minutes each way.
                 </p>
               </div>
               <div className="card" data-reveal>
@@ -287,15 +291,17 @@ export default function Landing() {
           </div>
           <small className="by">
             <img src="/logos/stratos-mark.png" alt="" width={16} height={16} />
-            notes.markets by StratosLab · Built on Robinhood Chain and Chainlink
+            notes.markets by StratosLab · Built on Robinhood Chain, Base and Chainlink
           </small>
           <small className="disclaimer">
             notes.markets is software running on a test network: notes here use test tokens with no value. Nothing on
             this site is an offer to sell, a solicitation to buy, or a recommendation of any security, and nothing here
             is investment, legal or tax advice. Structured notes are complex: you can lose some or all of what you
             invest, payments depend on the issuer and on the collateral pledged, and examples and simulations do not
-            predict results. Any future offering will be subject to eligibility and jurisdiction rules. Robinhood Chain
-            and Chainlink are trademarks of their owners; notes.markets is not affiliated with or endorsed by them.
+            predict results. Any future offering will be subject to eligibility and jurisdiction rules. Tokens used as
+            cash or collateral (USDG, USDC, Robinhood&apos;s stock tokens) can be paused or frozen by their issuers. The
+            contracts are not audited. Robinhood Chain, Base and Chainlink are trademarks of their owners; notes.markets
+            is not affiliated with or endorsed by them.
           </small>
         </div>
       </footer>

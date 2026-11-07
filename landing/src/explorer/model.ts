@@ -29,7 +29,7 @@ export type Sym = keyof typeof FEEDS;
 export const CRYPTO: Sym[] = ['ETH', 'BTC', 'SOL'];
 export const STOCKS: Sym[] = ['TSLA', 'AMZN', 'AMD', 'PLTR', 'NVDA', 'AAPL', 'SPY'];
 
-/** What a physically settled note delivers: the real token on Robinhood Chain, where every note is issued (Robinhood's
+/** What a physically settled note delivers: the real token on Robinhood Chain, the chain the explorer models (Robinhood's
  * TSLA, AMZN, AMD, PLTR; WETH for ETH), or null: BTC, SOL and the other stocks settle in cash. */
 export const deliveredToken = (sym: string) => deliverableToken({ chain: HOME_CHAIN }, sym)?.token ?? null;
 /** Physical delivery needs a real token on Robinhood Chain for every underlying. */

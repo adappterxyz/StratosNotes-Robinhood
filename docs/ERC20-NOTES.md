@@ -251,7 +251,7 @@ each holder's storage cold, as it is in a real batch.)
 
 ## 9. v4 deployment on Robinhood Chain testnet
 
-This build deploys v4 fresh on Robinhood Chain testnet, the only note chain (docs/DEPLOY.md): no earlier engine is
+This build deploys v4 fresh on Robinhood Chain testnet and on Base Sepolia (docs/DEPLOY.md): no earlier engine is
 kept running next to it, so the legacy-engine path above has no entries today. (The earlier build ran v4 next to v3 on
 two testnets; its records are in `deployments/archive/arbitrum-build/`.)
 
