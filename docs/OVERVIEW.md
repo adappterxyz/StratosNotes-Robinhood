@@ -15,8 +15,8 @@ CRE fixes every price; the contract enforces every payment.
   **Security:** [SECURITY.md](SECURITY.md) · **Runbook:** [DEPLOY.md](DEPLOY.md)
 - **Collateral on the other chain**, both directions ([CROSS-CHAIN.md](CROSS-CHAIN.md)).
 - **Team:** Kwang, solo founder; involved in the MAS Project Guardian tokenized structured note pilot at Marketnode.
-- **Recognition:** Best Use of Chainlink CRE at TOKEN2049 (the earlier Solana build); top-five finalist in the
-  CoinMarketCap × Atlas challenge at BNB Hack Bangkok 2026 (stock tokens on BNB Chain, [ATLAS-CMC.md](ATLAS-CMC.md)).
+- **Recognition:** Best Use of Chainlink CRE at TOKEN2049 (the earlier Solana build); finalist at BNB Hack Bangkok 2026,
+  Binance's hackathon (stock tokens on BNB Chain, [ATLAS-CMC.md](ATLAS-CMC.md)).
 - **Earlier builds:** Solana, TOKEN2049, won Best Use of Chainlink CRE (https://sp.stratoslab.app); an earlier EVM build
   (notes on another chain, collateral locked on Robinhood Chain over Chainlink CCIP), whose records are kept in
   [archive/](archive/) and `deployments/archive/arbitrum-build/`.

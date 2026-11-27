@@ -201,7 +201,7 @@ export default function Stage({ side, onSide, onTry }: { side: Side; onSide: (s:
             <div className="built-on awards">
               <span className="built-label">Recognition</span>
               <span className="built-mark">Best Use of Chainlink CRE · TOKEN2049</span>
-              <span className="built-mark">Top 5 · CoinMarketCap × Atlas challenge · BNB Hack Bangkok</span>
+              <span className="built-mark">Finalist · BNB Hack Bangkok 2026</span>
             </div>
           </div>
           {!reduced && (

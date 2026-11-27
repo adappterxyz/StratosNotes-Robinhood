@@ -379,8 +379,8 @@ export default function Landing() {
             notes.markets by StratosLab · Built on Robinhood Chain, Base, BNB Chain and Chainlink
           </small>
           <small className="by">
-            Recognition: Best Use of Chainlink CRE at TOKEN2049 (an earlier build of this engine) · Top-five finalist,
-            CoinMarketCap × Atlas challenge, BNB Hack Bangkok 2026
+            Recognition: Best Use of Chainlink CRE at TOKEN2049 (an earlier build of this engine) · Finalist, BNB Hack
+            Bangkok 2026 (Binance's hackathon)
           </small>
           <small className="disclaimer">
             notes.markets is software running on a test network: notes here use test tokens with no value. Nothing on
