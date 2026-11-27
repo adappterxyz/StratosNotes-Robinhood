@@ -2147,6 +2147,16 @@ header.nav.open {
   min-height: 40px;
   font-size: 14.5px;
 }
+/* Awards: a second, quieter row under the partner marks. */
+.built-on.awards {
+  margin-top: 0;
+}
+.built-on.awards .built-mark {
+  min-height: 32px;
+  padding: 0 13px;
+  font-size: 13px;
+  font-weight: 500;
+}
 
 /* The eyebrow carries the payoff line from the mark: floor, participation, cap. */
 .eyebrow {

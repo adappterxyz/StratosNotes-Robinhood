@@ -198,6 +198,11 @@ export default function Stage({ side, onSide, onTry }: { side: Side; onSide: (s:
                 <img src="/logos/chainlink.svg" alt="Chainlink" height={20} />
               </span>
             </div>
+            <div className="built-on awards">
+              <span className="built-label">Recognition</span>
+              <span className="built-mark">Best Use of Chainlink CRE · TOKEN2049</span>
+              <span className="built-mark">Top 5 · CoinMarketCap × Atlas challenge · BNB Hack Bangkok</span>
+            </div>
           </div>
           {!reduced && (
             <span className="scroll-cue" aria-hidden="true">
