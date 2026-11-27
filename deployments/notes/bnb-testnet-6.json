@@ -1,0 +1,34 @@
+{
+  "chain": "bnb-testnet",
+  "pid": "6",
+  "name": "Demo Worst-of Phoenix on TSLAB, NVDAB, 15-min fixing, 5% disruption limit",
+  "definition": "0x4f90b1f42197ac58a6b29a3ab902bcb5cf129a219a50d70b0544adde3efa6977",
+  "engine": "0x37184A9D436B9e8F2225cAFd5474E60A5d18FDEb",
+  "fromBlock": "144921223",
+  "cash": "nmUSD",
+  "ratio": 1,
+  "issuer": {
+    "address": "0x298afB9424188C7eA7c01556D8CAE6ff4768de0a",
+    "label": "notes.markets demo issuer (temporary: deployer key)"
+  },
+  "strikeAt": 1795670050,
+  "obsAt": [
+    1795670650,
+    1795671250,
+    1795671850
+  ],
+  "lag": 150,
+  "grace": 200,
+  "pledge": 30,
+  "investors": [
+    {
+      "address": "0xAce907325A6331D1f996D6f8CfA23D353213aA02",
+      "units": 10
+    },
+    {
+      "address": "0x30D8527aa8024fe8C7E74B56425C1a214dBD36d5",
+      "units": 5
+    }
+  ],
+  "unsold": 15
+}

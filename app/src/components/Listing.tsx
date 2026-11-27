@@ -184,7 +184,7 @@ export function FullTerms({ o, cash, open = false }: { o: NoteView; cash: string
     [
       'Checks (observations)',
       String(p.observations),
-      'The dates Chainlink checks the price; the last one is the end (maturity).',
+      'The dates the price is checked; the last one is the end (maturity).',
     ],
   ];
   if (p.couponRatePct)

@@ -31,7 +31,13 @@ export function assetName(sym: string): string {
 type Kind = 'stock' | 'coin' | 'currency' | 'asset';
 const kindOf = (sym: string): Kind => {
   const c = catalogueFeed(sym)?.assetClass;
-  return c === 'Stocks' ? 'stock' : c === 'Crypto' ? 'coin' : c === 'Forex' ? 'currency' : 'asset';
+  return c === 'Stocks' || c === 'Stock tokens'
+    ? 'stock'
+    : c === 'Crypto'
+      ? 'coin'
+      : c === 'Forex'
+        ? 'currency'
+        : 'asset';
 };
 /** What a basket is made of: "stock" when every one is a stock, and so on. */
 export function basketKind(syms: string[]): Kind {

@@ -44,5 +44,6 @@
     "EMAIL_SENDING": "on",
     "EMAIL_FROM": "alerts@notes.markets"
   }
-  // Secrets: VERIFIER_KEY (signs the email attestations: the key in .keys/verifier.json), SN_PROXY_SECRET.
+  // Secrets: CMC_API_KEY and ATLAS_API_KEY (stock-token prices: back-test, liquidity, live signed prices),
+  // VERIFIER_KEY (signs the email attestations: the key in .keys/verifier.json), SN_PROXY_SECRET.
 }

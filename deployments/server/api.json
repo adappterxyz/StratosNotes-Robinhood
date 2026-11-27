@@ -1,6 +1,7 @@
 {
   "allowedOrigins": [
-    "https://notes.markets"
+    "https://notes.markets",
+    "https://bnb.notes.markets"
   ],
   "trustProxy": true,
   "ai": false,

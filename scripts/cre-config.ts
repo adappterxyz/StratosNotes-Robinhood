@@ -28,6 +28,8 @@ const TARGETS: Record<string, Array<{ file: string; chainSelectorName: string }>
     { file: 'deployments/base-sepolia.json', chainSelectorName: creNameOf('base-sepolia') },
     { file: 'deployments/bnb-testnet.json', chainSelectorName: creNameOf('bnb-testnet') },
   ],
+  // BNB Chain testnet alone (the hackathon keeper: scripts/keeper-loop.sh with TARGET=bnb-settings).
+  bnb: [{ file: 'deployments/bnb-testnet.json', chainSelectorName: creNameOf('bnb-testnet') }],
   'local-fork': [
     {
       file: process.argv[3] ?? 'deployments/local/robinhood-fork.json',
@@ -39,14 +41,17 @@ const TARGETS: Record<string, Array<{ file: string; chainSelectorName: string }>
 const target = process.argv[2];
 const chains = TARGETS[target];
 if (!chains) throw new Error(`target: ${Object.keys(TARGETS).join(' | ')}`);
+/** A live testnet target (not a local fork). */
+const live = target === 'staging' || target === 'bnb';
 const engineOf = (file: string) => {
   if (!existsSync(file)) return null;
   const d = JSON.parse(readFileSync(file, 'utf8')) as { engine?: string; lens?: string };
   return d.engine && d.lens ? { engine: d.engine, lens: d.lens } : null;
 };
 /** Valid cross-chain pairs, one per home chain, whose home is deployed (staging only). */
-function crossChain(): CrossChainDeployment[] {
-  if (target !== 'staging') return [];
+const crossChain = (): CrossChainDeployment[] => crossChainOf(target);
+function crossChainOf(t: string): CrossChainDeployment[] {
+  if (t !== 'staging') return [];
   const dir = 'deployments/crosschain';
   const files = [
     ...(existsSync(dir) ? readdirSync(dir) : [])
@@ -76,12 +81,16 @@ function gateways() {
   }
   return [];
 }
-const flushGateways = gateways();
+// The BNB-only keeper flushes BNB Chain's gateway and leaves the cross-chain vault checks to the three-chain keeper.
+const flushGateways =
+  target === 'bnb'
+    ? creGateways(crossChainOf('staging')).filter((g) => g.chainSelectorName === creNameOf('bnb-testnet'))
+    : gateways();
 const vaults = creVaults(XC);
 /** Earlier engines whose notes are still running (deployments/archive/<v>/<chain>.json): the keeper keeps
  * driving them to maturity after a redeploy. Staging only, and only when LEGACY=v<N>,... names them (none today). */
 const legacyEngines = (ch: { file: string; chainSelectorName: string }) =>
-  target !== 'staging'
+  !live
     ? []
     : (process.env.LEGACY ?? '')
         .split(',')
@@ -94,7 +103,7 @@ const config = {
   // A chain not deployed yet is left out of staging: the workflow refuses a zero address, and listing one would stop
   // every run. A local fork keeps its entry.
   chains: chains
-    .filter((ch) => target !== 'staging' || engineOf(ch.file))
+    .filter((ch) => !live || engineOf(ch.file))
     .flatMap((ch) => [ch, ...legacyEngines(ch)])
     .map((ch) => {
       const d = engineOf(ch.file) ?? { engine: ZERO, lens: ZERO };
@@ -109,7 +118,7 @@ const config = {
         scan: 200,
         maxProcesses: 50,
         // Public testnet RPCs don't serve recent historical state, so staging reads the engine at the latest block.
-        ...(target === 'staging' ? { stateBlock: 'latest' } : {}),
+        ...(live ? { stateBlock: 'latest' } : {}),
       };
     }),
   maxReportsPerRun: 5,
@@ -132,7 +141,7 @@ const config = {
     ]),
   ),
 };
-const out = `cre/notes-keeper-evm/config.${target === 'staging' ? 'staging' : 'local-fork'}.json`;
+const out = `cre/notes-keeper-evm/config.${live ? target : 'local-fork'}.json`;
 writeFileSync(out, JSON.stringify(config, null, 2) + '\n');
 console.log(
   `${out}: ${config.chains.map((c) => `${c.chainSelectorName} engine ${c.engine}`).join(', ') || 'no chain'}${flushGateways.map((g) => `; flush gateway ${g.gateway} on ${g.chainSelectorName}`).join('')}${vaults.length ? `; ${vaults.length} vault check(s)` : ''}`,

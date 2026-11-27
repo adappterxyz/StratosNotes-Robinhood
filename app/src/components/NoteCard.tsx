@@ -7,7 +7,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
-import { isNoteChain, NOTE_CHAIN_SHORT, type ProductParams } from '@sn/core';
+import { isAtlasFeed, isNoteChain, NOTE_CHAIN_SHORT, type ProductParams } from '@sn/core';
 import type { NoteView } from '@sn/sdk';
 import { listingOf, type Schedule } from '../lib/listing';
 import {
@@ -176,10 +176,11 @@ function feedLine(o: NoteView, marks: Mark[], now: number) {
     const left = Math.max(0, o.notional - o.sold);
     return `${Math.round(left).toLocaleString()} of ${Math.round(o.notional).toLocaleString()} units left`;
   }
-  if (!k) return o.strikeFixed ? 'Starting price fixed by Chainlink' : 'Waiting for the starting price';
+  const src = o.params?.underlyings?.some((u) => isAtlasFeed(u.feed)) ? 'Atlas' : 'Chainlink';
+  if (!k) return o.strikeFixed ? `Starting price fixed by ${src}` : 'Waiting for the starting price';
   const w = marks.find((m) => m.worst);
   const ago = Math.max(0, now - (o.obsDates[k - 1] ?? now));
-  return `Chainlink checked ${k} of ${o.obsDates.length}${w ? ` · ${w.sym} ${w.pct.toFixed(1)}% of start` : ''}${ago < 86400 * 3 && o.phase === 'live' ? ` · ${agoText(ago)}` : ''}`;
+  return `${src} checked ${k} of ${o.obsDates.length}${w ? ` · ${w.sym} ${w.pct.toFixed(1)}% of start` : ''}${ago < 86400 * 3 && o.phase === 'live' ? ` · ${agoText(ago)}` : ''}`;
 }
 function agoText(s: number) {
   if (s < 90) return 'just now';

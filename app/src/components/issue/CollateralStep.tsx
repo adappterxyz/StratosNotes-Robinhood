@@ -1,3 +1,4 @@
+import { CollateralMarket } from './CollateralMarket';
 import {
   cashTokenOf,
   chainLabel,
@@ -247,6 +248,15 @@ export function CollateralStep({
         </span>
       </div>
       {timingBad && <div className="notice warn">{timingBad}</div>}
+      <CollateralMarket
+        collateral={eco.collateral}
+        pledgeUsd={(c) => {
+          const hc = eco.collateral.find((x) => x.symbol === c)?.haircutPct || 100;
+          // What must be locked of this asset alone to cover the whole size at the ratio, after its haircut.
+          return (size * (eco.collateralRatioPct / 100)) / (hc / 100);
+        }}
+        onUse={(c, v) => set({ collateral: eco.collateral.map((x) => (x.symbol === c ? { ...x, haircutPct: v } : x)) })}
+      />
       <details className="adv">
         <summary>More options: haircuts, the default rule and how holders get paid</summary>
         <div className="adv-body form-grid">

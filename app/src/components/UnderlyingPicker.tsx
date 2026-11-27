@@ -7,7 +7,7 @@ import { useId, useMemo, useState } from 'react';
 import {
   ASSET_CLASSES,
   FEED_CATALOGUE,
-  FEED_CHAIN_LABELS,
+  feedSourceLabel,
   POPULAR_UNDERLYINGS,
   UNPRICED_STOCKS,
   type AssetClass,
@@ -15,9 +15,8 @@ import {
 } from '@sn/core';
 import { AssetIcon } from './AssetIcon';
 
-/** "Chainlink · Robinhood Chain". */
-export const feedSource = (f: Pick<CatalogueFeed, 'feedChain'>) =>
-  `Chainlink · ${FEED_CHAIN_LABELS[f.feedChain] ?? f.feedChain}`;
+/** "Chainlink · Robinhood Chain", "Atlas · BNB Chain". */
+export const feedSource = (f: Pick<CatalogueFeed, 'feed' | 'feedChain'>) => feedSourceLabel(f);
 
 /**
  * A default-style name ("12M Phoenix on ETH", "… on ETH, BTC") follows a change of underlyings; a name the issuer
@@ -29,6 +28,7 @@ export function renameForUnderlyings(name: string, from: string[], to: string[])
 }
 
 const CLASS_HINT: Record<AssetClass, string> = {
+  'Stock tokens': "Binance's bStocks on BNB Chain, priced by Atlas around the clock",
   Stocks: 'US stocks and ETFs',
   Crypto: 'crypto',
   Forex: 'currencies against the dollar',

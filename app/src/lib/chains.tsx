@@ -205,7 +205,8 @@ export function ChainsProvider({ config, children }: { config: AppConfig; childr
     ];
     const connectors = connectorsForWallets(groups, {
       appName: 'notes.markets',
-      appUrl: 'https://notes.markets',
+      // The page's own origin: a wallet warns of a domain mismatch when this differs from where the app is served.
+      appUrl: typeof window !== 'undefined' ? window.location.origin : 'https://notes.markets',
       projectId: WC_PROJECT_ID,
     });
     const wagmi = createConfig({

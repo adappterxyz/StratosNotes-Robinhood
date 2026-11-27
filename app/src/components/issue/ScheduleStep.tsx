@@ -5,6 +5,7 @@ import {
   DISRUPTION_LIMITS,
   DISRUPTION_MAX_POSTPONEMENTS,
   FIXING_WINDOWS,
+  isAtlasFeed,
   type ProductParams,
 } from '@sn/core';
 import type { ChainConfig } from '../../lib/api';
@@ -71,6 +72,9 @@ export function ScheduleStep({
   const canClose = canWindow && p.underlyings.every(canCloseFeed);
   const fixing: number | 'close' = !canWindow ? 0 : p.fixingAt === 'close' ? 'close' : (p.fixingWindowMin ?? 0);
   const windowMin = canWindow ? (p.fixingWindowMin ?? 0) : 0;
+  // Stock tokens: the history is CoinMarketCap's (Atlas keeps the latest price only).
+  const atlas = p.underlyings.length > 0 && p.underlyings.every((u) => isAtlasFeed(u.feed));
+  const history = atlas ? "CoinMarketCap's five-minute prices" : 'the Chainlink feed';
   return (
     <>
       <h2>Schedule</h2>
@@ -111,7 +115,7 @@ export function ScheduleStep({
           value={strikeIn}
           onPick={setStrikeIn}
         />
-        <span className="hint">Investors can buy until then; Chainlink fixes the starting prices at that moment.</span>
+        <span className="hint">Investors can buy until then; the starting prices are fixed at that moment.</span>
       </div>
 
       <div className="iw-field">
@@ -185,8 +189,8 @@ export function ScheduleStep({
           {!canWindow
             ? 'A median over the minutes before each check is not available for these underlyings.'
             : p.fixingAt === 'close'
-              ? `The book closes and every check falls at the US market close of a weekday. Each price is the median of the Chainlink feed over the ${windowMin} minutes before the close. The feed is the price of the stock token, which can differ slightly from the exchange's official closing price.`
-              : 'A median takes the price that held for most of the minutes before the check, from the Chainlink feed. A sudden spike or dip that reverses does not set the start price, a coupon or the barrier.'}
+              ? `The book closes and every check falls at the US market close of a weekday. Each price is the median of ${history} over the ${windowMin} minutes before the close. ${atlas ? 'It is the price of the stock token while the stock itself is trading, not a thin overnight or weekend price.' : "The feed is the price of the stock token, which can differ slightly from the exchange's official closing price."}`
+              : `A median takes the price that held for most of the minutes before the check, from ${history}. A sudden spike or dip that reverses does not set the start price, a coupon or the barrier.${atlas ? " Without a median, each price is Atlas's latest on BNB Chain. Either way it is written only when Atlas and CoinMarketCap agree within 3% (2% while the US stock market is closed)." : ''}`}
         </span>
         {scheduleBad && <div className="notice warn">{scheduleBad}</div>}
       </div>

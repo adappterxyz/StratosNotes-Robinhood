@@ -98,11 +98,11 @@ export function ProductStep({
           idPrefix="iw-und"
         />
         <span className="hint" data-underlying-sources>
-          Any Chainlink price: stocks, crypto, forex, commodities, each fixed on its own oracle.{' '}
+          Stock tokens priced by Atlas on BNB Chain, or any Chainlink price: stocks, crypto, forex, commodities.{' '}
           {p.underlyings
             .map((u) => {
               const f = catalogueFeed(u.symbol);
-              return `${u.symbol}/USD${f && f.name !== u.symbol ? ` (${f.name})` : ''} from ${f ? feedSource(f) : `Chainlink feed ${u.feed}`}`;
+              return `${u.symbol}/USD${f && f.name !== u.symbol ? ` (${f.name})` : ''} from ${f ? feedSource(f) : `feed ${u.feed}`}`;
             })
             .join('; ')}
           .

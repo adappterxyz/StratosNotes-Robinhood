@@ -333,3 +333,157 @@ describe('cron', () => {
     ).toBe('pending');
   });
 });
+
+describe('price history for the back-test (CoinMarketCap)', () => {
+  const quote = (ts: string, price: number) => ({ timestamp: ts, quote: { USD: { price } } });
+  const mk = (calls: string[], key: string | undefined = 'test-key') =>
+    createEdgeApp({
+      store: () => new Store(d1.db),
+      config,
+      ai: false,
+      now: () => NOW * 1000,
+      market: {
+        cmcApiKey: key,
+        fetch: (async (url: string, init?: { headers?: Record<string, string> }) => {
+          calls.push(`${url} ${init?.headers?.['X-CMC_PRO_API_KEY']}`);
+          return new Response(
+            JSON.stringify({
+              status: { error_code: 0 },
+              data: {
+                40214: { quotes: [quote('2026-06-12T00:00:00.000Z', 398.9), quote('2026-06-13T00:00:00.000Z', 401)] },
+                40215: { quotes: [quote('2026-06-12T00:00:00.000Z', 205.2)] },
+              },
+            }),
+          );
+        }) as unknown as typeof fetch,
+      },
+    });
+
+  it("serves the stock tokens' daily prices, asking CoinMarketCap once", async () => {
+    const calls: string[] = [];
+    const a = mk(calls);
+    const res = await a.request('/api/market/history?symbols=TSLAB,NVDAB');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('cache-control')).toBe('public, max-age=3600');
+    expect(await res.json()).toEqual({
+      source: 'CoinMarketCap',
+      interval: '1d',
+      series: {
+        TSLAB: [
+          [1781222400, 398.9],
+          [1781308800, 401],
+        ],
+        NVDAB: [[1781222400, 205.2]],
+      },
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toContain('/v3/cryptocurrency/quotes/historical?id=40214,40215&');
+    expect(calls[0]).toContain('interval=1d');
+    expect(calls[0].endsWith(' test-key')).toBe(true);
+    // Kept: a second visitor costs no CoinMarketCap credit.
+    expect((await a.request('/api/market/history?symbols=TSLAB')).status).toBe(200);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('refuses symbols notes cannot be written on, and says when no key is configured', async () => {
+    const calls: string[] = [];
+    expect((await mk(calls).request('/api/market/history?symbols=DOGE')).status).toBe(400);
+    expect((await mk(calls).request('/api/market/history')).status).toBe(400);
+    expect((await mk(calls, '').request('/api/market/history?symbols=TSLAB')).status).toBe(503);
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe('live prices (Atlas signed)', () => {
+  // A live reply of 2026-11-25, signed by Atlas's reporter key.
+  const payload = '0x000003a50013cfee8b7c08206fde00006b071410000003a60007b5d22393eb64b12600006b07140f02';
+  const signature =
+    '0xd044803627f1fe037aa96d5181bcc94ad73af682d5d263b845a3c8b29e2ddbd434345f719bba89096c6f27261fd7dde2e7bab0ab6dde1f72aecc36642b120ae61b';
+  const mk = (reply: object, calls: string[] = []) =>
+    createEdgeApp({
+      store: () => new Store(d1.db),
+      config,
+      ai: false,
+      now: () => NOW * 1000,
+      market: {
+        atlasApiKey: 'atlas-key',
+        fetch: (async (url: string, init?: { body?: string }) => {
+          calls.push(`${url} ${init?.body}`);
+          return new Response(JSON.stringify({ data: reply }));
+        }) as unknown as typeof fetch,
+      },
+    });
+
+  it('serves a price only after recovering Atlas as its signer', async () => {
+    const calls: string[] = [];
+    const a = mk(
+      { payload, signature, consensusScores: [{ feedId: '933', consensusScore: 0.9261, consensusStatus: 'HEALTHY' }] },
+      calls,
+    );
+    const res = await a.request('/api/market/atlas?symbols=TSLAB,NVDAB');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      source: 'Atlas',
+      signer: '0x59eD4701224fD9e2a85Ef2946c2ab828C1dDC600',
+      verified: true,
+      prices: {
+        TSLAB: { price: 365.471203, at: 1795626000, status: 'HEALTHY', score: 0.926 },
+        NVDAB: { price: 142.228781, at: 1795625999 },
+      },
+    });
+    expect(calls[0]).toContain('https://api.atlasoracle.io/report/v1/price/latest');
+    expect(calls[0]).toContain('"signed":true');
+  });
+
+  it('refuses a price somebody else signed, or a payload changed after signing', async () => {
+    // One digit of the TSLAB price changed: the signature now recovers to another address.
+    const forged = payload.replace('13cfee8b', '13cfee8c');
+    expect((await mk({ payload: forged, signature }).request('/api/market/atlas?symbols=TSLAB')).status).toBe(502);
+    expect((await mk({ payload }).request('/api/market/atlas?symbols=TSLAB')).status).toBe(502);
+    expect((await mk({ payload, signature }).request('/api/market/atlas?symbols=BTC')).status).toBe(400);
+  });
+});
+
+describe('stock-token DEX markets (CoinMarketCap DEX API)', () => {
+  it("serves a token's BNB Chain liquidity, asking CoinMarketCap for its mainnet address once", async () => {
+    const calls: string[] = [];
+    const a = createEdgeApp({
+      store: () => new Store(d1.db),
+      config,
+      ai: false,
+      now: () => NOW * 1000,
+      market: {
+        cmcApiKey: 'test-key',
+        fetch: (async (url: string) => {
+          calls.push(url);
+          return new Response(
+            JSON.stringify({
+              status: { error_code: '0' },
+              data: {
+                liqUsd: '1793494.6',
+                ph24h: '386.13',
+                pl24h: '357.94',
+                pt: '1795626336000',
+                sts: [{ tp: '24h', vu: '2221107.8' }],
+              },
+            }),
+          );
+        }) as unknown as typeof fetch,
+      },
+    });
+    const res = await a.request('/api/market/liquidity?symbols=TSLAB');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      source: 'CoinMarketCap DEX API (BNB Chain)',
+      markets: {
+        TSLAB: { liquidityUsd: 1793494.6, volume24hUsd: 2221107.8, low24h: 357.94, high24h: 386.13, at: 1795626336 },
+      },
+    });
+    expect(calls).toEqual([
+      'https://pro-api.coinmarketcap.com/v1/dex/token?platform=bsc&address=0x5b1910eaad6450e50f816082aa078c41f10c292f',
+    ]);
+    await a.request('/api/market/liquidity?symbols=TSLAB');
+    expect(calls).toHaveLength(1);
+    expect((await a.request('/api/market/liquidity?symbols=ETH')).status).toBe(400);
+  });
+});

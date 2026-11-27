@@ -33,8 +33,12 @@ export interface DirectoryEntry {
   };
 }
 
-export type AssetClass = 'Stocks' | 'Crypto' | 'Forex' | 'Commodities';
-export const ASSET_CLASSES: readonly AssetClass[] = ['Stocks', 'Crypto', 'Forex', 'Commodities'];
+/**
+ * 'Stock tokens': tokenized stocks priced as tokens by Atlas (atlas-feeds.ts), not by Chainlink's directory: listed
+ * first, never produced by these rules.
+ */
+export type AssetClass = 'Stock tokens' | 'Stocks' | 'Crypto' | 'Forex' | 'Commodities';
+export const ASSET_CLASSES: readonly AssetClass[] = ['Stock tokens', 'Stocks', 'Crypto', 'Forex', 'Commodities'];
 
 /** The directory networks a fixing can come from, by directory name, and their CRE chain-selector names. */
 export const DIRECTORY_NETWORKS = {
@@ -51,6 +55,7 @@ export type CatalogueChain = (typeof DIRECTORY_NETWORKS)[DirectoryNetwork];
  * Ethereum mainnet first (CRE EVM read).
  */
 export const SOURCE_PRIORITY: Record<AssetClass, readonly CatalogueChain[]> = {
+  'Stock tokens': [],
   Stocks: ['robinhood-mainnet', 'ethereum-mainnet-arbitrum-1', 'ethereum-mainnet'],
   Crypto: ['ethereum-mainnet', 'ethereum-mainnet-arbitrum-1', 'robinhood-mainnet'],
   Forex: ['ethereum-mainnet', 'ethereum-mainnet-arbitrum-1', 'robinhood-mainnet'],

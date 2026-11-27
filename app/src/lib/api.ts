@@ -2,6 +2,7 @@
  * The API client (services/api). The app reads every note, portfolio and template from here; it writes to
  * chains directly through the SDK (lib/chains.tsx).
  */
+import type { TokenMarket } from '@sn/core';
 import type { TemplateEntry, TemplateSummary, WorkflowDraft } from '@sn/core';
 import type { ChainInfo, NoteState, NoteView } from '@sn/sdk';
 
@@ -141,6 +142,24 @@ export const api = {
     call<{ id: string; bytes: `0x${string}` }>(`/api/definitions/${chain}/${id}`),
   portfolio: (address: string) =>
     call<{ positions: PortfolioItem[]; payouts?: PayoutItem[] }>(`/api/portfolio/${address}`),
+  /** Daily USD prices of stock tokens since they listed (CoinMarketCap, served and cached by the API). */
+  marketHistory: (symbols: string[]) =>
+    call<{ source: string; interval: string; series: Record<string, Array<[number, number]>> }>(
+      `/api/market/history?symbols=${symbols.map(encodeURIComponent).join(',')}`,
+    ),
+  /** Stock tokens' prices now: Atlas signed prices, the signature verified by the API. */
+  atlasPrices: (symbols: string[]) =>
+    call<{
+      source: string;
+      signer: string;
+      verified: boolean;
+      prices: Record<string, { price: number; at: number; status?: string; score?: number }>;
+    }>(`/api/market/atlas?symbols=${symbols.map(encodeURIComponent).join(',')}`),
+  /** Stock tokens' DEX markets on BNB Chain (CoinMarketCap DEX API): liquidity, 24-hour volume and range. */
+  marketLiquidity: (symbols: string[]) =>
+    call<{ source: string; markets: Record<string, TokenMarket> }>(
+      `/api/market/liquidity?symbols=${symbols.map(encodeURIComponent).join(',')}`,
+    ),
   templates: () => call<TemplateSummary[]>('/api/templates'),
   template: (definition: string) => call<TemplateEntry>(`/api/templates/${definition}`),
   saveTemplate: (entry: Omit<TemplateEntry, 'createdAt'>, signature: string) =>

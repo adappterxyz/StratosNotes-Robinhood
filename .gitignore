@@ -29,3 +29,4 @@ web/dist/
 landing/dist/
 landing/tsconfig.tsbuildinfo
 .keys
+.dev.vars

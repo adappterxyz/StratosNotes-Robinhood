@@ -386,8 +386,9 @@ export default function Landing() {
             predict results. Any future offering will be subject to eligibility and jurisdiction rules. Tokens used as
             cash or collateral (USDG, USDC, the stock tokens) can be paused or frozen by their issuers. The stock tokens
             on Base and BNB Chain testnets, and nmUSD, are notes.markets&apos; own test copies, not Coinbase&apos;s or
-            Binance&apos;s. The contracts are not audited. Robinhood Chain, Base, Coinbase, Binance, BNB Chain and
-            Chainlink are trademarks of their owners; notes.markets is not affiliated with or endorsed by them.
+            Binance&apos;s. The contracts are not audited. Robinhood Chain, Base, Coinbase, Binance, BNB Chain,
+            CoinMarketCap, Atlas and Chainlink are trademarks of their owners; notes.markets is not affiliated with or
+            endorsed by them.
           </small>
         </div>
       </footer>

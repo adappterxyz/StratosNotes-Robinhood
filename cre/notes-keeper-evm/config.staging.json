@@ -462,6 +462,10 @@
     "robinhood-mainnet": {
       "rpc": "https://rpc.mainnet.chain.robinhood.com",
       "lagBlocks": 600
+    },
+    "binance_smart_chain-mainnet": {
+      "rpc": "https://bsc-dataseed.bnbchain.org",
+      "lagBlocks": 20
     }
   }
 }

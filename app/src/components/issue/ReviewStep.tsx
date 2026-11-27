@@ -1,3 +1,4 @@
+import { Backtest } from '../Backtest';
 import { useState } from 'react';
 import { chainLabel, type CollateralSymbol, type economicsOf, type ProductParams } from '@sn/core';
 import { fmtMoney, lockedAsset } from '../../lib/format';
@@ -66,6 +67,7 @@ export function ReviewStep({
             <li className="good">{getLine(p, sym)}</li>
             <li className="risk">{riskLine(p, sym)}</li>
           </ul>
+          <Backtest p={p} schedule={schedule} cash={sym} />
         </section>
         <section className="iw-rev-col" aria-labelledby="rev-commit">
           <h3 id="rev-commit">What you commit to</h3>

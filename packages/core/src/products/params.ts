@@ -50,14 +50,35 @@ import {
   type BStockSymbol,
 } from './bnb-stocks';
 import { ASSET_CLASSES } from './feed-directory';
-import { HISTORY_FEED_CHAINS, HTTP_FEED_CHAINS } from '../feed-rpc';
+import { BSC_MAINNET_FEED_CHAIN, FEED_REF, HISTORY_FEED_CHAINS, HTTP_FEED_CHAINS, isAtlasFeed } from '../feed-rpc';
+import { SECOND_SOURCE_TOLERANCE_BPS, SECOND_SOURCE_TOLERANCE_CLOSED_BPS } from '../cmc';
 import { DISRUPTION_MAX_POSTPONEMENTS } from '../keeper';
 import { isRhStockTicker, refMultiplierField, rhMultiplierFeed } from './robinhood-tokens';
-import { FEED_CATALOGUE, type CatalogueFeed, type CatalogueSymbol } from './feeds-catalogue';
+import {
+  FEED_CATALOGUE as CHAINLINK_CATALOGUE,
+  type CatalogueFeed as ChainlinkFeed,
+  type CatalogueSymbol as ChainlinkSymbol,
+} from './feeds-catalogue';
+import { ATLAS_CATALOGUE, type AtlasSymbol } from './atlas-feeds';
 
 export type { AssetClass, CatalogueChain } from './feed-directory';
 export { ASSET_CLASSES } from './feed-directory';
-export { FEED_CATALOGUE, type CatalogueFeed, type CatalogueSymbol } from './feeds-catalogue';
+export * from './atlas-feeds';
+
+/** Every symbol a note can be fixed on: Chainlink's catalogue and the Atlas-priced stock tokens. */
+export type CatalogueSymbol = ChainlinkSymbol | AtlasSymbol;
+/** One price a note can be fixed on: a Chainlink feed of the generated catalogue, or an Atlas feed (atlas-feeds.ts). */
+export type CatalogueFeed = Omit<ChainlinkFeed, 'symbol' | 'feedChain' | 'feed'> & {
+  symbol: CatalogueSymbol;
+  /** An AggregatorV3 proxy, or a keyed Atlas Multi-Feed reference (feed-rpc.ts FEED_REF). */
+  feed: string;
+  feedChain: string;
+};
+/**
+ * Every price a note can be fixed on: the Atlas-priced stock tokens of BNB Chain first, then Chainlink's catalogue
+ * (generated: feeds-catalogue.ts).
+ */
+export const FEED_CATALOGUE: readonly CatalogueFeed[] = [...ATLAS_CATALOGUE, ...CHAINLINK_CATALOGUE];
 
 export type ProductType = 'fcn' | 'reverse-convertible' | 'phoenix' | 'snowball' | 'ppn';
 
@@ -640,12 +661,16 @@ export function deliverableToken(
   const chain = noteChainOf(p);
   const local = deliveryTokenFor(chain, symbol);
   if (!local) return undefined;
+  // A token that IS the underlying (TSLAB for an Atlas-priced TSLAB note) is paid at 1 / strike: its price is per
+  // token. Only a token that stands for a SHARE underlying (TSLAB or TSLAc for TSLA) is scaled by its multiplier.
   const feed =
-    local.b20 && isB20Symbol(local.token)
-      ? b20MultiplierFeed(local.token)
-      : local.bstock && isBStockSymbol(local.token)
-        ? bstockMultiplierFeed(local.token)
-        : null;
+    local.valuedAs === symbol
+      ? null
+      : local.b20 && isB20Symbol(local.token)
+        ? b20MultiplierFeed(local.token)
+        : local.bstock && isBStockSymbol(local.token)
+          ? bstockMultiplierFeed(local.token)
+          : null;
   return {
     token: local.token,
     decimals: local.decimals,
@@ -679,7 +704,6 @@ export function collateralTokenOf(
 export function collateralFeed(c: CollateralSymbol): FeedSpec | undefined {
   if (c === 'USD') return undefined;
   if (isB20Symbol(c)) return b20PriceFeed(c);
-  if (isBStockSymbol(c)) return FEEDS[BSTOCKS[c].ticker];
   return FEEDS[c];
 }
 
@@ -687,8 +711,8 @@ export function collateralFeed(c: CollateralSymbol): FeedSpec | undefined {
  * The multiplier a collateral key's price is scaled by: a bStock (TSLAB…) is worth its share's price (collateralFeed)
  * x its multiplier (its BStockMultiplierFeed). Undefined for every other key (priced by one feed).
  */
-export function collateralMultiplierFeed(c: CollateralSymbol): FeedSpec | undefined {
-  return isBStockSymbol(c) ? bstockMultiplierFeed(c) : undefined;
+export function collateralMultiplierFeed(_c: CollateralSymbol): FeedSpec | undefined {
+  return undefined;
 }
 
 /**
@@ -697,9 +721,8 @@ export function collateralMultiplierFeed(c: CollateralSymbol): FeedSpec | undefi
  * bStock is worth feed / this x its own multiplier. Undefined for every other key.
  */
 export function collateralRefMultiplierFeed(c: CollateralSymbol): FeedSpec | undefined {
-  if (!isBStockSymbol(c)) return undefined;
-  const ticker = BSTOCKS[c].ticker;
-  return isRhStockTicker(ticker) ? rhMultiplierFeed(ticker) : undefined;
+  void c;
+  return undefined;
 }
 
 /**
@@ -808,7 +831,6 @@ export const underlyingLabel = (p: ProductParams) =>
   p.underlyings.length > 1
     ? `worst of ${p.underlyings.map((u) => u.symbol).join(', ')}`
     : (p.underlyings[0]?.symbol ?? '');
-const EVM_ADDR = /^0x[0-9a-fA-F]{40}$/;
 
 /**
  * Whether a term sheet can be issued now: its terms hold together on its chain (validateTermSheet), with every token
@@ -876,13 +898,13 @@ export function validateTermSheet(p: ProductParams): string[] {
   for (const u of unds) {
     if (!/^[A-Z][A-Z0-9]{0,9}$/.test(u.symbol ?? ''))
       e.push(`'${u.symbol}' is not a ticker (capital letters and digits).`);
-    if (!EVM_ADDR.test(u.feed || '')) e.push(`The ${u.symbol} price feed must be a Chainlink feed address (0x…).`);
+    if (!FEED_REF.test(u.feed || '')) e.push(`The ${u.symbol} price feed must be a feed address (0x…).`);
     if (!(u.minPrice >= 0 && u.maxPrice > u.minPrice && Number.isFinite(u.maxPrice)))
       e.push(`${u.symbol}: price bounds need 0 <= min < max.`);
     else if (![u.minPrice, u.maxPrice].every((x) => /^\d+(\.\d{1,10})?$/.test(String(x))))
       e.push(`${u.symbol}: price bounds must be plain decimals with at most 10 decimal places.`);
     if (!(Number.isInteger(u.staleness) && u.staleness! > 0))
-      e.push(`${u.symbol}: set how old a Chainlink round may be (staleness, whole seconds).`);
+      e.push(`${u.symbol}: set how old a price may be (staleness, whole seconds).`);
     if (!FEED_CHAIN_LABELS[u.feedChain])
       e.push(
         `${u.symbol}: the keeper reads prices on ${Object.keys(FEED_CHAIN_LABELS).join(', ')}, not '${u.feedChain}'.`,
@@ -1185,10 +1207,15 @@ export function catalogueSummary(max = Infinity): string {
  * Where a feed chain's prices come from, for labels ("Chainlink · Robinhood Chain"). Base mainnet carries Chainlink's
  * per-token feeds of Coinbase's B20 stocks (collateral prices); Base Sepolia the stand-ins' multipliers (delivery).
  */
+/** Who publishes a feed and where: "Atlas · BNB Chain", "Chainlink · Ethereum". */
+export const feedSourceLabel = (f: { feed: string; feedChain: string }): string =>
+  `${isAtlasFeed(f.feed) ? 'Atlas' : 'Chainlink'} · ${FEED_CHAIN_LABELS[f.feedChain] ?? f.feedChain}`;
+
 export const FEED_CHAIN_LABELS: Record<string, string> = {
   'ethereum-mainnet': 'Ethereum',
   'ethereum-mainnet-arbitrum-1': 'Arbitrum One',
   'robinhood-mainnet': 'Robinhood Chain',
+  [BSC_MAINNET_FEED_CHAIN]: 'BNB Chain',
   [BASE_MAINNET_FEED_CHAIN]: 'Base',
   [BASE_SEPOLIA_FEED_CHAIN]: 'Base Sepolia',
   [BNB_TESTNET_FEED_CHAIN]: 'BNB Chain testnet',
@@ -1304,21 +1331,53 @@ export function usCloseOnOrAfter(tSec: number): number {
 }
 
 /** The fixing rule of these terms in plain words, or '' for the latest price. */
-export const fixingRuleText = (p: Pick<ProductParams, 'fixingWindowMin' | 'fixingAt' | 'disruptionPct'>): string => {
-  if (!p.fixingWindowMin) return '';
+export const fixingRuleText = (
+  p: Pick<ProductParams, 'fixingWindowMin' | 'fixingAt' | 'disruptionPct'> & { underlyings?: Underlying[] },
+): string => {
+  const unds = p.underlyings ?? [];
+  const atlas = unds.filter((u) => isAtlasFeed(u.feed));
+  // Stock tokens: Atlas's on-chain price, confirmed by CoinMarketCap; CoinMarketCap's history for a window.
+  const allAtlas = atlas.length > 0 && atlas.length === unds.length;
+  const second = atlas.length
+    ? `${
+        allAtlas
+          ? 'A'
+          : `For ${joinList(
+              atlas.map((u) => u.symbol),
+              'and',
+            )}, a`
+      } price is written only when Atlas (on BNB Chain) and CoinMarketCap agree within ${SECOND_SOURCE_TOLERANCE_BPS / 100}% (${SECOND_SOURCE_TOLERANCE_CLOSED_BPS / 100}% while the US stock market is closed); otherwise the check waits.`
+    : '';
+  if (!p.fixingWindowMin)
+    return atlas.length
+      ? `${
+          allAtlas
+            ? 'Each price'
+            : `The price of ${joinList(
+                atlas.map((u) => u.symbol),
+                'and',
+              )}`
+        } is Atlas's price of the token itself, published on BNB Chain around the clock. ${second}`
+      : '';
+  const source = allAtlas
+    ? "CoinMarketCap's five-minute prices"
+    : atlas.length
+      ? "the price history (the Chainlink feed, or CoinMarketCap's five-minute prices for stock tokens)"
+      : 'the Chainlink feed';
   const base =
     p.fixingAt === 'close'
-      ? `Each price is taken at the US market close (16:00 New York): the time-weighted median of the Chainlink feed over the ${p.fixingWindowMin} minutes before it, so a brief spike or dip does not set it.`
-      : `Each price is the time-weighted median of the Chainlink feed over the ${p.fixingWindowMin} minutes before the check, so a brief spike or dip does not set it.`;
-  return p.disruptionPct
+      ? `Each price is taken at the US market close (16:00 New York): the time-weighted median of ${source} over the ${p.fixingWindowMin} minutes before it, so a brief spike or dip does not set it.`
+      : `Each price is the time-weighted median of ${source} over the ${p.fixingWindowMin} minutes before the check, so a brief spike or dip does not set it.`;
+  const rule = p.disruptionPct
     ? `${base} If a price moved more than ${p.disruptionPct}% between its low and its high in those minutes, the check is postponed by ${p.fixingWindowMin} minutes, at most ${DISRUPTION_MAX_POSTPONEMENTS === 2 ? 'twice' : `${DISRUPTION_MAX_POSTPONEMENTS} times`}, then taken regardless.`
     : base;
+  return second ? `${rule} ${second}` : rule;
 };
 
 /**
  * What a reader of these terms should know about the stock tokens in them (docs/CORPORATE-ACTIONS.md), in plain
  * words: shown on the note's page, in the issue flow and on the support page. Empty when no stock is involved.
- *  - 'bstock': a bStock pledged (here or locked on BNB Chain) has no price feed of its own.
+ *  - 'bstock': a bStock pledged (here or locked on BNB Chain) is valued at Atlas's price of the token.
  *  - 'delivery': the note delivers another issuer's token than the one its price is of.
  *  - 'price': the underlying is a stock, i.e. Chainlink's price of Robinhood's token (splits and dividends in it).
  */
@@ -1328,7 +1387,7 @@ export function stockTokenNotes(p: ProductParams): Array<{ key: 'bstock' | 'deli
   if (economicsOf(p).collateral.some((c) => isBStockSymbol(c.symbol)))
     out.push({
       key: 'bstock',
-      text: "bStock collateral is valued from the stock's Chainlink price and the token's multiplier, not from the bStock's own market price. The two can differ, mostly when the US market is closed.",
+      text: "bStock collateral is valued at Atlas's price of the token itself (its own markets, around the clock), not at the stock's exchange price. The two can differ, mostly when the US market is closed.",
     });
   if (p.settlement === 'physical') {
     const tokens = stocks.flatMap((u) => {

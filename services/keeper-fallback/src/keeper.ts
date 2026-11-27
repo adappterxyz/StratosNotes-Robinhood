@@ -10,7 +10,24 @@
  * rule: `lagBlocks` below the head, since its public RPC does not keep the finalized block's state.
  */
 import {
+  ATLAS_API,
+  ATLAS_KEY_HEADER,
+  ATLAS_PRICE_PATH,
+  atlasQualityHolds,
+  atlasReading,
+  atlasSignedBody,
   checkRound,
+  CMC_API,
+  CMC_KEY_HEADER,
+  CMC_MAX_LOOKBACK,
+  CMC_STEP,
+  cmcHistoryPath,
+  cmcIdOfFeed,
+  decodeCmcHistory,
+  roundPoints,
+  secondSourceHold,
+  parseFeedRef,
+  readingToRound,
   corporateActionHold,
   feedToFixed,
   ROUND_CALLS_PER_REQUEST,
@@ -48,6 +65,12 @@ export interface FallbackConfig {
   maxReportsPerRun: number;
   gasLimit: bigint;
   feedRoutes?: FeedRoutes;
+  /** CoinMarketCap Pro API key: the second source of Atlas prices (never logged). Without it they wait. */
+  cmcApiKey?: string;
+  /** Atlas API key: its own quality reading of a feed is a control on its price (never logged). Without it, none. */
+  atlasApiKey?: string;
+  /** For tests: the fetch used for CoinMarketCap and Atlas. */
+  fetch?: typeof fetch;
   log: (line: string) => void;
 }
 
@@ -63,6 +86,26 @@ const roundAbi = [
       { name: 'startedAt', type: 'uint256' },
       { name: 'updatedAt', type: 'uint256' },
       { name: 'answeredInRound', type: 'uint80' },
+    ],
+  },
+] as const;
+
+/** Atlas Multi-Feed (docs.atlasoracle.io): one price of the registry, by 4-byte feed id. */
+const atlasAbi = [
+  {
+    type: 'function',
+    name: 'fetch',
+    stateMutability: 'view',
+    inputs: [{ name: 'feedId', type: 'bytes4' }],
+    outputs: [
+      {
+        type: 'tuple',
+        components: [
+          { name: 'price', type: 'uint80' },
+          { name: 'aggregatedTs', type: 'uint48' },
+          { name: 'onchainTs', type: 'uint48' },
+        ],
+      },
     ],
   },
 ] as const;
@@ -125,6 +168,63 @@ export async function readFeed(
   if (token) {
     const hold = corporateActionHold(await tokenState(token as Address), nowSec);
     if (hold) throw new Error(`${f.field}: ${hold}`);
+  }
+  const ref = parseFeedRef(f.feed);
+  if (ref.atlasId !== undefined) {
+    // An Atlas Multi-Feed price: the same reading as the CRE keeper decodes (atlasReading), the same staleness rule.
+    const snap = await client.readContract({
+      address: ref.address as Address,
+      abi: atlasAbi,
+      functionName: 'fetch',
+      args: [`0x${ref.atlasId.toString(16).padStart(8, '0')}`],
+      ...block,
+    });
+    const dec = await client.readContract({
+      address: ref.address as Address,
+      abi: feedAbi,
+      functionName: 'decimals',
+      ...block,
+    });
+    const r = readingToRound(atlasReading(snap.price, BigInt(snap.aggregatedTs), dec));
+    const price = checkRound(r.round, r.decimals, nowSec, f.staleness, cfg.finalityAllowanceSec);
+    // As the CRE keeper: CoinMarketCap must confirm an Atlas price (secondSourceHold), and its five-minute points
+    // are the history of a fixing window (Atlas keeps no past rounds).
+    const cmcId = cmcIdOfFeed(f);
+    if (cmcId === undefined) throw new Error(`${f.field}: no second source for this Atlas feed`);
+    if (!cfg.cmcApiKey) throw new Error(`${f.field}: CoinMarketCap: no API key (CMC_API_KEY or CMC_KEY_FILE)`);
+    const from = history ? nowSec - CMC_MAX_LOOKBACK : nowSec - 2 * CMC_STEP;
+    let body: string;
+    try {
+      const res = await (cfg.fetch ?? fetch)(CMC_API + cmcHistoryPath([cmcId], from, nowSec), {
+        headers: { [CMC_KEY_HEADER]: cfg.cmcApiKey, Accept: 'application/json' },
+        signal: AbortSignal.timeout(10_000),
+      });
+      body = await res.text();
+    } catch {
+      throw new Error(`${f.field}: CoinMarketCap: request failed`);
+    }
+    const h = decodeCmcHistory(body, [cmcId], r.decimals)[0];
+    if ('error' in h) throw new Error(`${f.field}: ${h.error}`);
+    const points = roundPoints(h.rounds);
+    const hold = secondSourceHold(r.round.answer, points, nowSec);
+    if (hold) throw new Error(`${f.field}: ${hold}`);
+    if (cfg.atlasApiKey) {
+      // As the CRE keeper: Atlas's own quality reading can hold the price; an unreachable one is skipped.
+      try {
+        const res = await (cfg.fetch ?? fetch)(ATLAS_API + ATLAS_PRICE_PATH, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', [ATLAS_KEY_HEADER]: cfg.atlasApiKey },
+          body: atlasSignedBody([ref.atlasId]),
+          signal: AbortSignal.timeout(10_000),
+        });
+        const quality = atlasQualityHolds(await res.text(), [ref.atlasId])[0];
+        if (quality) throw new Error(`${f.field}: ${quality}`);
+      } catch (e) {
+        if ((e as Error).message.startsWith(`${f.field}:`)) throw e;
+        cfg.log(`${f.field}: Atlas quality reading skipped`);
+      }
+    }
+    return history ? { points, decimals: r.decimals } : price;
   }
   const [roundId, answer, , updatedAt, answeredInRound] = await client.readContract({
     address: f.feed as Address,

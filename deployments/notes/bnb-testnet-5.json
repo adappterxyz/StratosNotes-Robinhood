@@ -1,0 +1,34 @@
+{
+  "chain": "bnb-testnet",
+  "pid": "5",
+  "name": "Demo Worst-of Phoenix on SPYB, QQQB, 15-min fixing",
+  "definition": "0x5d04b0cf069047795409313b1e1a8534e3d097f3589e34515e5d7bdbe3280d0a",
+  "engine": "0x37184A9D436B9e8F2225cAFd5474E60A5d18FDEb",
+  "fromBlock": "144828069",
+  "cash": "nmUSD",
+  "ratio": 1,
+  "issuer": {
+    "address": "0x298afB9424188C7eA7c01556D8CAE6ff4768de0a",
+    "label": "notes.markets demo issuer (temporary: deployer key)"
+  },
+  "strikeAt": 1795628160,
+  "obsAt": [
+    1795628760,
+    1795629360,
+    1795629960
+  ],
+  "lag": 150,
+  "grace": 200,
+  "pledge": 30,
+  "investors": [
+    {
+      "address": "0xAce907325A6331D1f996D6f8CfA23D353213aA02",
+      "units": 10
+    },
+    {
+      "address": "0x30D8527aa8024fe8C7E74B56425C1a214dBD36d5",
+      "units": 5
+    }
+  ],
+  "unsold": 15
+}

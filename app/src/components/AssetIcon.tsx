@@ -11,6 +11,7 @@
  * locked on the other chain (a token name with a chain suffix: TSLA.rh on Robinhood Chain, USDC.base on Base) carry
  * a small R or B tag.
  */
+import { BSTOCKS, isAtlasSymbol, isBStockSymbol } from '@sn/core';
 import {
   siAlibabadotcom,
   siAmd,
@@ -133,7 +134,10 @@ const REMOTE_TAG: Record<string, string> = { rh: 'R', base: 'B' };
 
 export function AssetIcon({ sym, size = 18, title }: { sym: string; size?: number; title?: string }) {
   const { base, test, remote } = parseAsset(sym);
-  const mark = MARKS[base];
+  // A bStock (TSLAB) wears its company's mark (TSLA).
+  const mark =
+    MARKS[base] ??
+    (isBStockSymbol(base) ? MARKS[BSTOCKS[base].ticker] : isAtlasSymbol(base) ? MARKS[base.slice(0, -1)] : undefined);
   const label =
     title ??
     `${mark?.title ?? base}${test ? ' (retired test dollar)' : ''}${remote ? ` (locked on ${lockedOn(sym)})` : ''}`;

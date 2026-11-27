@@ -4,6 +4,7 @@
  *
  *   NOTE=crypto STRIKE_IN=900 OBS_EVERY=300 npx tsx scripts/seed-note.ts
  *   NOTE=equity npx tsx scripts/seed-note.ts
+ *   CHAIN=bnb-testnet NOTE=bstock FIXING_WINDOW=15 DISRUPTION=5 ...  (stock tokens: Atlas price, CoinMarketCap history)
  *   NOTE=equity FIXING_WINDOW=15 npx tsx scripts/seed-note.ts   (wick-resistant fixing: a 15-minute median)
  *   NOTE=crypto FIXING_WINDOW=15 DISRUPTION=10 LAG=1900 ...     (and the disruption rule: LAG must cover 2 windows)
  *
@@ -127,20 +128,38 @@ async function send(a: typeof deployer, req: Record<string, unknown>) {
 }
 
 const base: ProductParams =
-  process.env.NOTE === 'equity'
+  process.env.NOTE === 'etf'
     ? {
+        // BNB Chain: the index ETF tokens (S&P 500 and Nasdaq-100), fixed on Atlas, confirmed by CoinMarketCap.
         ...EXAMPLE_PRODUCTS.phoenix,
-        name: 'Demo Worst-of Phoenix on TSLA, NVDA',
-        underlyings: [FEEDS.TSLA, FEEDS.NVDA],
+        name: 'Demo Worst-of Phoenix on SPYB, QQQB',
+        underlyings: [FEEDS.SPYB, FEEDS.QQQB],
         observations: 3,
         settlement: 'cash',
       }
-    : {
-        ...EXAMPLE_PRODUCTS.phoenix,
-        name: 'Demo Worst-of Phoenix on ETH, BTC',
-        underlyings: [FEEDS.ETH, FEEDS.BTC],
-        observations: 3,
-      };
+    : process.env.NOTE === 'bstock'
+      ? {
+          // BNB Chain: a worst-of phoenix on Binance's stock tokens, fixed on Atlas, confirmed by CoinMarketCap.
+          ...EXAMPLE_PRODUCTS.phoenix,
+          name: 'Demo Worst-of Phoenix on TSLAB, NVDAB',
+          underlyings: [FEEDS.TSLAB, FEEDS.NVDAB],
+          observations: 3,
+          settlement: 'cash',
+        }
+      : process.env.NOTE === 'equity'
+        ? {
+            ...EXAMPLE_PRODUCTS.phoenix,
+            name: 'Demo Worst-of Phoenix on TSLA, NVDA',
+            underlyings: [FEEDS.TSLA, FEEDS.NVDA],
+            observations: 3,
+            settlement: 'cash',
+          }
+        : {
+            ...EXAMPLE_PRODUCTS.phoenix,
+            name: 'Demo Worst-of Phoenix on ETH, BTC',
+            underlyings: [FEEDS.ETH, FEEDS.BTC],
+            observations: 3,
+          };
 // FIXING_WINDOW=15|30|60: every price is the time-weighted median of the feed over that many minutes (stocks only).
 const fixingWindowMin = Number(process.env.FIXING_WINDOW ?? 0);
 if (fixingWindowMin) {
@@ -256,6 +275,9 @@ const every = Number(process.env.OBS_EVERY ?? 300);
 const obsAt = Array.from({ length: product.observations }, (_, k) => strikeAt + every * (k + 1));
 const lag = Number(process.env.LAG ?? Math.floor(every / 4)),
   grace = Number(process.env.GRACE ?? Math.floor(every / 3));
+// The note's own approval rule (instantiate.ts): each period settles before the next observation. Checked here,
+// before anything is sent: a start that then fails its approval leaves an empty note behind.
+if (lag + grace > every) throw new Error(`LAG + GRACE (${lag + grace}s) must not exceed OBS_EVERY (${every}s)`);
 if (usdg) {
   const need = BigInt(pledge + subs.reduce((a, b) => a + b, 0)) * 10n ** 6n;
   const have = await client.readContract({

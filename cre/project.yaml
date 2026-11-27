@@ -52,3 +52,14 @@ staging-settings:
       url: https://arbitrum-one-rpc.publicnode.com
     - chain-name: ethereum-mainnet-base-1
       url: https://base-rpc.publicnode.com
+
+# BNB Chain testnet alone: notes on Binance's stock tokens, fixed on Atlas (BNB Chain mainnet, read over the HTTP
+# capability) and confirmed by CoinMarketCap. Config: scripts/cre-config.ts bnb.
+bnb-settings:
+  rpcs:
+    - chain-name: binance_smart_chain-testnet
+      url: https://bsc-testnet-rpc.publicnode.com
+    - chain-name: ethereum-mainnet
+      url: https://ethereum-rpc.publicnode.com
+    - chain-name: ethereum-mainnet-arbitrum-1
+      url: https://arbitrum-one-rpc.publicnode.com

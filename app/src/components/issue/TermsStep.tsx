@@ -152,7 +152,7 @@ export function TermsStep({
           }
           min={1}
           max={12}
-          hint="Chainlink checks the price on each date; the last check ends the note."
+          hint="The price is checked on each date; the last check ends the note."
         />
       </div>
       {(use.couponBarrier || use.autocall) && (

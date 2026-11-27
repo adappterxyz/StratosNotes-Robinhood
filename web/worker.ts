@@ -54,6 +54,10 @@ interface Env {
   EMAIL_SENDER?: string;
   /** Public origin for links in emails (default https://notes.markets). */
   SITE_URL?: string;
+  /** CoinMarketCap Pro API key (/api/market/history: the back-test's daily prices). Secret. */
+  CMC_API_KEY?: string;
+  /** Atlas API key (/api/market/atlas: signed live prices). Secret. */
+  ATLAS_API_KEY?: string;
   /** Shared secret for /internal/email. */
   EMAIL_RELAY_SECRET?: string;
 }
@@ -154,6 +158,7 @@ function edgeApp(env: Env) {
     ai: !!env.AI,
     readLimit: env.READ_LIMIT,
     faucetKey: env.FAUCET_KEY as `0x${string}` | undefined,
+    market: { cmcApiKey: env.CMC_API_KEY, atlasApiKey: env.ATLAS_API_KEY },
     alerts: {
       sender: senderOf(env) ?? unconfigured,
       verifierKey: verifierOf(env),

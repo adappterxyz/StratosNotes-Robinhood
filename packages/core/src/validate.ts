@@ -5,6 +5,7 @@
  */
 import { compile, CompileError } from './compile';
 import { parseExpr, parsePred } from './expr';
+import { FEED_REF } from './feed-rpc';
 import { checkNotify } from './notify';
 import type { AssetOperation, Issue, IrNode, WorkflowIR } from './types';
 
@@ -106,8 +107,8 @@ export function validate(ir: WorkflowIR): { errors: Issue[]; warnings: Issue[] }
           `${label(n)}: '${f.name}' comes from a price feed, which only an automatic (service) step can capture.`,
           n.id,
         );
-      if (f.oracle && !/^0x[0-9a-fA-F]{40}$/.test(f.oracle.feed))
-        err('ORACLE_FEED', `${label(n)}: '${f.name}' needs a Chainlink feed address.`, n.id);
+      if (f.oracle && !FEED_REF.test(f.oracle.feed))
+        err('ORACLE_FEED', `${label(n)}: '${f.name}' needs a price feed address.`, n.id);
       if (f.formula && f.formula !== '__carried__') {
         const r = parseExpr(f.formula);
         if (!r.ok) err('BAD_FORMULA', `${label(n)}: formula for '${f.name}': ${r.error}`, n.id);

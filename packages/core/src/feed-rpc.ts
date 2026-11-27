@@ -12,6 +12,30 @@
 
 export type FeedBlockTag = 'finalized' | 'safe' | 'latest';
 
+/** CRE chain-selector name of BNB Chain mainnet. */
+export const BSC_MAINNET_FEED_CHAIN = 'binance_smart_chain-mainnet';
+
+/**
+ * A feed reference is a Chainlink-style AggregatorV3 address, or a KEYED feed `0x<address>#<id>`: one price of an
+ * Atlas Multi-Feed contract (docs.atlasoracle.io: a registry of many prices keyed by a 4-byte feed id, read with
+ * fetch(bytes4)). The id is Atlas's feed number (atlasoracle.io/feeds/<id>).
+ */
+export const FEED_REF = /^0x[0-9a-fA-F]{40}(#[0-9]{1,9})?$/;
+export const keyedFeed = (address: string, id: number): string => `${address}#${id}`;
+/** The contract of a feed reference, and its Atlas feed id when it is a keyed one. */
+export function parseFeedRef(feed: string): { address: string; atlasId?: number } {
+  const [address, id] = feed.split('#');
+  return id === undefined ? { address } : { address, atlasId: Number(id) };
+}
+/** Whether a feed reference is an Atlas Multi-Feed price. */
+export const isAtlasFeed = (feed: string): boolean => feed.includes('#');
+
+/** Atlas Multi-Feed fetch(bytes4): (uint80 price, uint48 aggregatedTs, uint48 onchainTs). */
+export const SELECTOR_ATLAS_FETCH = '0x7ffc4b97';
+/** Calldata of fetch(bytes4 id): the id left-aligned in its word, as the ABI encodes bytesN. */
+export const atlasFetchData = (id: number): string =>
+  SELECTOR_ATLAS_FETCH + id.toString(16).padStart(8, '0') + '0'.repeat(56);
+
 /**
  * How a feed chain is read: at a block tag, or (lagBlocks) at a block pinned `lagBlocks` below the head. Pinning
  * is what makes the DON's readings identical: the nodes first agree on the head (median), then all read the same
@@ -31,6 +55,9 @@ export interface FeedReadAt {
  */
 export const HTTP_FEED_CHAINS: Record<string, { rpc: string; chainId: number } & FeedReadAt> = {
   'robinhood-mainnet': { rpc: 'https://rpc.mainnet.chain.robinhood.com', chainId: 4663, lagBlocks: 600 },
+  // BNB Chain mainnet: Atlas's price feeds of Binance's bStocks (products/atlas-feeds.ts). ~0.75 s blocks; the
+  // public RPC serves state well past 20 blocks (~15 s) below the head (checked 2026-11-25).
+  [BSC_MAINNET_FEED_CHAIN]: { rpc: 'https://bsc-dataseed.bnbchain.org', chainId: 56, lagBlocks: 20 },
 };
 
 /**
@@ -105,10 +132,14 @@ export function feedBatchBody(
 ): string {
   const base = 2 * feeds.length;
   return JSON.stringify([
-    ...feeds.flatMap((to, i) => [
-      { jsonrpc: '2.0', id: 2 * i, method: 'eth_call', params: [{ to, data: SELECTOR_LATEST_ROUND }, blockTag] },
-      { jsonrpc: '2.0', id: 2 * i + 1, method: 'eth_call', params: [{ to, data: SELECTOR_DECIMALS }, blockTag] },
-    ]),
+    ...feeds.flatMap((feed, i) => {
+      const { address: to, atlasId } = parseFeedRef(feed);
+      const data = atlasId === undefined ? SELECTOR_LATEST_ROUND : atlasFetchData(atlasId);
+      return [
+        { jsonrpc: '2.0', id: 2 * i, method: 'eth_call', params: [{ to, data }, blockTag] },
+        { jsonrpc: '2.0', id: 2 * i + 1, method: 'eth_call', params: [{ to, data: SELECTOR_DECIMALS }, blockTag] },
+      ];
+    }),
     // Stock tokens (Robinhood's, ERC-8056): ids base + 4j + k, k in TOKEN_SELECTORS order.
     ...tokens.flatMap((to, j) =>
       TOKEN_SELECTORS.map((data, k) => ({
@@ -203,13 +234,15 @@ export function decodeFeedBatch(body: string, feeds: readonly string[]): FeedRea
     }
     return r.result;
   };
-  return feeds.map((_, i) => {
-    const round = hexOf(2 * i, 5);
+  return feeds.map((feed, i) => {
+    const atlas = isAtlasFeed(feed);
+    const round = hexOf(2 * i, atlas ? 3 : 5);
     if (typeof round !== 'string') return round;
     const dec = hexOf(2 * i + 1, 1);
     if (typeof dec !== 'string') return dec;
     const decimals = word(dec, 0);
     if (decimals > 36n) return { error: `feed RPC: implausible decimals ${decimals}` };
+    if (atlas) return atlasReading(word(round, 0), word(round, 1), Number(decimals));
     return {
       roundId: word(round, 0).toString(),
       answer: signed(word(round, 1)).toString(),
@@ -218,6 +251,17 @@ export function decodeFeedBatch(body: string, feeds: readonly string[]): FeedRea
       decimals: Number(decimals),
     };
   });
+}
+
+/**
+ * An Atlas Multi-Feed snapshot as a reading. Atlas keeps the latest price only (no rounds): the round id is the
+ * time the price was aggregated off-chain, which is also the time its staleness is measured from (the on-chain
+ * write follows it by a second or two). An id Atlas does not publish reads as an empty snapshot.
+ */
+export function atlasReading(price: bigint, aggregatedTs: bigint, decimals: number): FeedReading {
+  if (price === 0n || aggregatedTs === 0n) return { error: 'Atlas feed: empty snapshot (unknown feed id?)' };
+  const at = aggregatedTs.toString();
+  return { roundId: at, answer: price.toString(), updatedAt: at, answeredInRound: at, decimals };
 }
 
 /** getRoundData(uint80). */

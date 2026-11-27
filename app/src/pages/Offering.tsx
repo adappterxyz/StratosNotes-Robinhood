@@ -4,6 +4,8 @@
  * and "play the note". (c) Details in tabs: full terms, collateral and payments, holders, how the workflow runs and
  * the contract. Phone first: no wide tables in the first two layers.
  */
+import { LivePrices } from '../components/LivePrices';
+import { Backtest } from '../components/Backtest';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { isAddress } from 'viem';
@@ -11,7 +13,8 @@ import { AlertTriangle, ArrowLeft, CheckCircle2, Radio, ShieldCheck, WalletCards
 import {
   dec,
   defToBpmn,
-  FEED_CHAIN_LABELS,
+  feedSourceLabel,
+  isAtlasFeed,
   instantiateProduct,
   isNoteChain,
   NOTE_CHAIN_SHORT,
@@ -110,7 +113,7 @@ export default function OfferingPage() {
       toast({
         tone: 'party',
         title: 'Repaid early',
-        body: `Chainlink's check came in above the early-repayment line: holders get their money back with ${fmtMoney(paid, 4)} ${sym0} per unit in all.`,
+        body: `The check came in above the early-repayment line: holders get their money back with ${fmtMoney(paid, 4)} ${sym0} per unit in all.`,
       });
     else if (paid > was.paid + 1e-9)
       toast({
@@ -340,6 +343,18 @@ export default function OfferingPage() {
                 </p>
               )}
               {o.hasTerms &&
+                !o.outcome &&
+                o.params.underlyings.length > 0 &&
+                o.params.underlyings.every((u) => isAtlasFeed(u.feed)) && (
+                  <LivePrices
+                    unds={o.params.underlyings.map((u) => ({
+                      symbol: u.symbol,
+                      strike: o.unds.find((x) => x.symbol === u.symbol)?.strike ?? null,
+                    }))}
+                  />
+                )}
+              {o.hasTerms && <Backtest p={o.params} schedule={sched} cash={sym} />}
+              {o.hasTerms &&
                 stockTokenNotes(o.params).map((n) => (
                   <p key={n.key} className="xs muted" data-stock-note={n.key}>
                     {n.text}
@@ -351,7 +366,7 @@ export default function OfferingPage() {
                 past={finished}
                 note={
                   o.phase === 'book'
-                    ? 'The lines are set against the starting price, which Chainlink fixes when the book closes.'
+                    ? `The lines are set against the starting price, which ${o.params.underlyings?.some((u) => isAtlasFeed(u.feed)) ? 'Atlas' : 'Chainlink'} fixes when the book closes.`
                     : undefined
                 }
               />
@@ -390,7 +405,7 @@ export default function OfferingPage() {
             </div>
             {agent && (
               <div>
-                <dt>Prices from</dt>
+                <dt>Prices delivered by</dt>
                 <dd
                   data-agent={o.reports.last ?? ''}
                   title="Who submitted this note's price reports: Chainlink CRE through its forwarder, or the fallback keeper where CRE cannot write"
@@ -752,8 +767,8 @@ export default function OfferingPage() {
                       <span className="row gap-6">
                         <AssetIcon sym={u.symbol} size={18} />
                         <b>{u.symbol}/USD</b>
-                        <span className="xs dim" title={`Chainlink feed on ${u.feedChain}: ${u.feed}`}>
-                          Chainlink · {FEED_CHAIN_LABELS[u.feedChain] ?? u.feedChain}
+                        <span className="xs dim" title={`Price feed on ${u.feedChain}: ${u.feed}`}>
+                          {feedSourceLabel(u)}
                         </span>
                       </span>
                       <span className="num small">
@@ -920,7 +935,7 @@ function Timeline({ o, sym, now }: { o: NoteView; sym: string; now: number }) {
               : 'Not observed'
           : perf === undefined && o.phase === 'live' && k === o.perfs.length
             ? now >= t
-              ? 'Due: waiting for Chainlink'
+              ? `Due: waiting for ${o.params.underlyings?.some((u) => isAtlasFeed(u.feed)) ? 'Atlas and CoinMarketCap to agree' : 'Chainlink'}`
               : `In ${countdown(t, now)}`
             : undefined,
         pay,
@@ -931,7 +946,12 @@ function Timeline({ o, sym, now }: { o: NoteView; sym: string; now: number }) {
     <section className="card tl2" aria-labelledby="tl-h">
       <div className="spread">
         <h2 id="tl-h">Checks and payments</h2>
-        <span className="xs muted">Prices checked by Chainlink · times in your time zone</span>
+        <span className="xs muted">
+          {o.params.underlyings?.some((u) => isAtlasFeed(u.feed))
+            ? 'Prices from Atlas, confirmed by CoinMarketCap'
+            : 'Prices checked by Chainlink'}{' '}
+          · times in your time zone
+        </span>
       </div>
       <ol className="tl2-list">
         {rows.map((r) => (

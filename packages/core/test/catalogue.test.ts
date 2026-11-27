@@ -20,6 +20,9 @@ import {
   FEED_CHAIN_LABELS,
   FEEDS,
   HTTP_FEED_CHAINS,
+  BSC_MAINNET_FEED_CHAIN,
+  FEED_REF,
+  isAtlasFeed,
   instantiateProduct,
   POPULAR_UNDERLYINGS,
   SEED_TEMPLATES,
@@ -159,7 +162,15 @@ describe('the generated catalogue', () => {
     for (const s of ['EUR', 'JPY', 'GBP', 'XAU', 'XAG', 'DOGE', 'LINK', 'QQQ']) expect(syms).toContain(s);
     for (const f of FEED_CATALOGUE) {
       expect(TICKER.test(f.symbol), f.symbol).toBe(true);
-      expect(f.feed, f.symbol).toMatch(/^0x[0-9a-fA-F]{40}$/);
+      expect(f.feed, f.symbol).toMatch(FEED_REF);
+      // Atlas-priced stock tokens: the token's own 24/7 price on BNB Chain, never a Chainlink directory feed.
+      if (f.assetClass === 'Stock tokens') {
+        expect(isAtlasFeed(f.feed), f.symbol).toBe(true);
+        expect(f.feedChain, f.symbol).toBe(BSC_MAINNET_FEED_CHAIN);
+        expect(f.staleness, f.symbol).toBeGreaterThanOrEqual(f.heartbeat);
+        continue;
+      }
+      expect(isAtlasFeed(f.feed), f.symbol).toBe(false);
       expect(FEED_CHAIN_LABELS[f.feedChain], f.symbol).toBeDefined();
       expect(f.staleness, f.symbol).toBeGreaterThanOrEqual(f.heartbeat);
       expect(f.minPrice, f.symbol).toBeGreaterThan(0);
@@ -259,7 +270,9 @@ describe('the generated catalogue', () => {
   });
 
   it('summarises the catalogue by class, popular symbols first', () => {
-    expect(catalogueSummary(3)).toMatch(/^Stocks: TSLA, NVDA, AAPL and \d+ more; Crypto: ETH, BTC, SOL and \d+ more;/);
+    expect(catalogueSummary(3)).toMatch(
+      /^Stock tokens: TSLAB, NVDAB, AAPLB and 11 more; Stocks: TSLA, NVDA, AAPL and \d+ more; Crypto: ETH, BTC, SOL and \d+ more;/,
+    );
     expect(catalogueSummary()).toContain('Forex: EUR');
     expect(catalogueSummary()).toContain('Commodities: XAU');
   });

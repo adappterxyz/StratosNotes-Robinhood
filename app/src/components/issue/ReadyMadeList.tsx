@@ -4,6 +4,7 @@
  * written for the other chain says what changes (a stock it cannot deliver there settles in cash; collateral it
  * cannot hold there is swapped). RecentList: the notes issued recently on that chain, to issue again.
  */
+import { neverIssued } from '../../lib/listing';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Workflow } from 'lucide-react';
@@ -150,7 +151,8 @@ export function RecentList({ chain, onPick }: { chain: string; onPick: (r: Ready
     const current = new Set(engines.split(','));
     recentReadyMade((n) => {
       const id = parseNoteId(n.id);
-      return !!id && current.has(`${id.chain}:${id.engine.toLowerCase()}`);
+      // A note that was started and never approved (a failed issue) is not something to issue again.
+      return !!id && current.has(`${id.chain}:${id.engine.toLowerCase()}`) && !neverIssued(n.view);
     }, 3)
       .then((x) => live && setRecent(x))
       .catch((e) => {

@@ -22,7 +22,7 @@ import { Hono, type Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
-import { createWalletClient, http, isAddress, verifyMessage, type Hex } from 'viem';
+import { createWalletClient, http, isAddress, keccak256, recoverAddress, verifyMessage, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { z } from 'zod';
 import {
@@ -32,6 +32,27 @@ import {
   templateMessage,
   templateOffered,
   type TemplateEntry,
+} from '@sn/core';
+import {
+  ATLAS_API,
+  ATLAS_SYMBOLS,
+  ATLAS_TOKENS,
+  isAtlasSymbol,
+  ATLAS_KEY_HEADER,
+  ATLAS_PRICE_PATH,
+  ATLAS_SIGNER,
+  atlasSignedBody,
+  BSTOCK_SYMBOLS,
+  BSTOCKS,
+  cmcDexTokenPath,
+  decodeAtlasSigned,
+  decodeCmcDexToken,
+  type TokenMarket,
+  CMC_API,
+  CMC_KEY_HEADER,
+  cmcDailyPath,
+  decodeCmcDaily,
+  isBStockSymbol,
 } from '@sn/core';
 import { CHAINS, mockErc20Abi, noteView, parseNoteId, positionOf, type NoteState } from '@sn/sdk';
 import type { ApiConfig } from './config';
@@ -60,8 +81,13 @@ export interface EdgeAppDeps {
     devMailbox?: MockSender;
     nonceOf?: AlertsDeps['nonceOf'];
   };
+  /** CoinMarketCap Pro API (/api/market/history: the back-test's daily prices). The key never leaves the Worker. */
+  market?: { cmcApiKey?: string; atlasApiKey?: string; fetch?: typeof fetch };
   now?: () => number;
 }
+
+/** 2026-06-01: before Binance's stock tokens listed (June 2026). */
+const BSTOCKS_LISTED = 1_780_272_000;
 
 const err = (c: Context, status: 400 | 401 | 403 | 404 | 409 | 413 | 429 | 500 | 502 | 503, error: string) =>
   c.json({ error }, status);
@@ -535,6 +561,129 @@ export function createEdgeApp(deps: EdgeAppDeps) {
       ? [...new Set(rows.map((r) => r.chain))].map((ch) => ({ chain: ch, notes: null }))
       : [...byChain].map(([ch, set]) => ({ chain: ch, notes: set === null ? null : [...set] }));
     return c.json({ seq: latest, changes });
+  });
+
+  /**
+   * Daily USD prices of Binance's stock tokens since they listed, from CoinMarketCap's Pro API: what the issue
+   * wizard and a note's page replay the note's terms on (packages/core backtestNote). Only the tokens notes can be
+   * written on (ATLAS_BSTOCKS); answers are kept for six hours per isolate and cacheable for one, so the key's
+   * monthly credits are not a visitor's to spend.
+   */
+  const marketCache = new Map<string, { at: number; series: Array<[number, number]> }>();
+  app.get('/api/market/history', async (c) => {
+    const symbols = [...new Set((c.req.query('symbols') ?? '').split(',').filter(Boolean))];
+    if (!symbols.length || symbols.length > ATLAS_SYMBOLS.length || !symbols.every(isAtlasSymbol))
+      return err(c, 400, `symbols: one or more of ${ATLAS_SYMBOLS.join(', ')}.`);
+    const key = deps.market?.cmcApiKey;
+    if (!key) return err(c, 503, 'Price history is not configured on this server (CoinMarketCap key).');
+    const nowSec = Math.floor((deps.now?.() ?? Date.now()) / 1000);
+    const stale = symbols.filter((s) => !(nowSec - (marketCache.get(s)?.at ?? 0) < 6 * 3600));
+    if (stale.length) {
+      const ids = stale.map((s) => ATLAS_TOKENS[s].cmcId);
+      try {
+        const res = await (deps.market?.fetch ?? fetch)(CMC_API + cmcDailyPath(ids, BSTOCKS_LISTED, nowSec), {
+          headers: { [CMC_KEY_HEADER]: key, Accept: 'application/json' },
+        });
+        const got = decodeCmcDaily(await res.text(), ids);
+        stale.forEach((s, i) => marketCache.set(s, { at: nowSec, series: got[i] }));
+      } catch (e) {
+        console.error(`market history: ${(e as Error).message}`);
+        return err(c, 502, 'CoinMarketCap did not answer; try again in a minute.');
+      }
+    }
+    c.header('Cache-Control', 'public, max-age=3600');
+    return c.json({
+      source: 'CoinMarketCap',
+      interval: '1d',
+      series: Object.fromEntries(symbols.map((s) => [s, marketCache.get(s)!.series])),
+    });
+  });
+
+  /**
+   * Each stock token's market on BNB Chain's DEXes, from CoinMarketCap's DEX API (liquidity, 24-hour volume and
+   * range): what the issue flow sizes collateral against (packages/core liquidity.ts). Kept ten minutes.
+   */
+  const dexCache = new Map<string, { at: number; market: TokenMarket }>();
+  app.get('/api/market/liquidity', async (c) => {
+    const symbols = [...new Set((c.req.query('symbols') ?? '').split(',').filter(Boolean))];
+    if (!symbols.length || symbols.length > BSTOCK_SYMBOLS.length || !symbols.every(isBStockSymbol))
+      return err(c, 400, `symbols: one or more of ${BSTOCK_SYMBOLS.join(', ')}.`);
+    const key = deps.market?.cmcApiKey;
+    if (!key) return err(c, 503, 'Market data is not configured on this server (CoinMarketCap key).');
+    const nowSec = Math.floor((deps.now?.() ?? Date.now()) / 1000);
+    try {
+      for (const s of symbols) {
+        if (nowSec - (dexCache.get(s)?.at ?? 0) < 600) continue;
+        const res = await (deps.market?.fetch ?? fetch)(CMC_API + cmcDexTokenPath(BSTOCKS[s].mainnetToken), {
+          headers: { [CMC_KEY_HEADER]: key, Accept: 'application/json' },
+        });
+        dexCache.set(s, { at: nowSec, market: decodeCmcDexToken(await res.text()) });
+      }
+    } catch (e) {
+      console.error(`market liquidity: ${(e as Error).message}`);
+      return err(c, 502, 'CoinMarketCap did not answer; try again in a minute.');
+    }
+    c.header('Cache-Control', 'public, max-age=300');
+    return c.json({
+      source: 'CoinMarketCap DEX API (BNB Chain)',
+      markets: Object.fromEntries(symbols.map((s) => [s, dexCache.get(s)!.market])),
+    });
+  });
+
+  /**
+   * The price NOW of Binance's stock tokens, from Atlas's signed price API (packages/core atlas-signed.ts). The
+   * Worker recovers the signer of every reply and serves it only when Atlas's reporter key signed it: a note's page
+   * shows where the price stands against the note's lines between checks. Kept 15 seconds.
+   */
+  let atlasCache: { at: number; prices: Map<string, { price: number; at: number; status?: string; score?: number }> } =
+    {
+      at: 0,
+      prices: new Map(),
+    };
+  app.get('/api/market/atlas', async (c) => {
+    const symbols = [...new Set((c.req.query('symbols') ?? '').split(',').filter(Boolean))];
+    if (!symbols.length || symbols.length > ATLAS_SYMBOLS.length || !symbols.every(isAtlasSymbol))
+      return err(c, 400, `symbols: one or more of ${ATLAS_SYMBOLS.join(', ')}.`);
+    const key = deps.market?.atlasApiKey;
+    if (!key) return err(c, 503, 'Live prices are not configured on this server (Atlas key).');
+    const now = Math.floor((deps.now?.() ?? Date.now()) / 1000);
+    if (now - atlasCache.at >= 15 || !symbols.every((s) => atlasCache.prices.has(s))) {
+      try {
+        // All seven in one request: one cache entry serves every page.
+        const res = await (deps.market?.fetch ?? fetch)(ATLAS_API + ATLAS_PRICE_PATH, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', [ATLAS_KEY_HEADER]: key },
+          body: atlasSignedBody(ATLAS_SYMBOLS.map((s) => ATLAS_TOKENS[s].atlasId)),
+        });
+        const report = decodeAtlasSigned(await res.text());
+        const signer = await recoverAddress({ hash: keccak256(report.payload), signature: report.signature });
+        if (signer.toLowerCase() !== ATLAS_SIGNER.toLowerCase()) throw new Error(`signed by ${signer}, not Atlas`);
+        const prices = new Map<string, { price: number; at: number; status?: string; score?: number }>();
+        for (const s of ATLAS_SYMBOLS) {
+          const p = report.prices.find((x) => x.feedId === ATLAS_TOKENS[s].atlasId);
+          if (p)
+            prices.set(s, {
+              price: Number(p.answer / 10n ** 12n) / 1e6,
+              at: p.at,
+              ...(p.status ? { status: p.status } : {}),
+              ...(p.score !== undefined ? { score: Math.round(p.score * 1000) / 1000 } : {}),
+            });
+        }
+        atlasCache = { at: now, prices };
+      } catch (e) {
+        console.error(`atlas prices: ${(e as Error).message}`);
+        return err(c, 502, 'Atlas did not answer with a signed price; try again shortly.');
+      }
+    }
+    c.header('Cache-Control', 'public, max-age=15');
+    return c.json({
+      source: 'Atlas',
+      signer: ATLAS_SIGNER,
+      verified: true,
+      prices: Object.fromEntries(
+        symbols.flatMap((s) => (atlasCache.prices.has(s) ? [[s, atlasCache.prices.get(s)]] : [])),
+      ),
+    });
   });
 
   app.get('/api/stream', (c) => err(c, 404, 'Live updates moved to /api/updates (polling); reload the app.'));

@@ -1,0 +1,37 @@
+{
+  "schedule": "*/30 * * * * *",
+  "chains": [
+    {
+      "chainSelectorName": "binance_smart_chain-testnet",
+      "engine": "0x37184A9D436B9e8F2225cAFd5474E60A5d18FDEb",
+      "lens": "0xF486dfaa1111Dd20B931b304Ec7d0B967463a086",
+      "gasLimit": "8000000",
+      "fromPid": 1,
+      "scan": 200,
+      "maxProcesses": 50,
+      "stateBlock": "latest"
+    }
+  ],
+  "maxReportsPerRun": 5,
+  "gateways": [
+    {
+      "chainSelectorName": "binance_smart_chain-testnet",
+      "gateway": "0x63424c1df913a64db697e780c5293e95194489b1",
+      "maxItems": 10,
+      "baseGas": "250000",
+      "gasPerItem": "300000",
+      "stateBlock": "latest"
+    }
+  ],
+  "finalityAllowanceSec": 1800,
+  "httpFeedChains": {
+    "robinhood-mainnet": {
+      "rpc": "https://rpc.mainnet.chain.robinhood.com",
+      "lagBlocks": 600
+    },
+    "binance_smart_chain-mainnet": {
+      "rpc": "https://bsc-dataseed.bnbchain.org",
+      "lagBlocks": 20
+    }
+  }
+}
