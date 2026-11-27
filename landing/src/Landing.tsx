@@ -380,8 +380,8 @@ export default function Landing() {
           </small>
           <small className="by">
             Recognition: Best Use of Chainlink CRE at the TOKEN2049 Origins hackathon (an earlier build of this engine)
-            · Finalist and prize winner in the CoinMarketCap × Atlas track, BNB Hack Bangkok 2026 (Binance&apos;s
-            hackathon)
+            · Top 5 at BNB Hack Bangkok 2026 (Binance&apos;s hackathon), and prize winner in its CoinMarketCap × Atlas
+            track
           </small>
           <small className="disclaimer">
             notes.markets is software running on a test network: notes here use test tokens with no value. Nothing on
