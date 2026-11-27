@@ -54,7 +54,7 @@ forwarder, every price bounds-checked. Not audited yet.
 > Notes: The moat is the engine: a new product or underlying is data, not a new contract. The audit is the first use
 > of the round.
 
-**7 · Traction.** Built, live on testnet, run end to end. TOKEN2049: Best Use of Chainlink CRE (earlier Solana build). BNB Hack Bangkok 2026 (Binance's hackathon): finalist
+**7 · Traction.** Built, live on testnet, run end to end. TOKEN2049 Origins hackathon: Best Use of Chainlink CRE (earlier Solana build). BNB Hack Bangkok 2026 (Binance's hackathon): finalist
 · 24 Oct 2026: TSLA note paid in full on the earlier build (strike $372.07 fixed by Chainlink CRE, collateral
 released) · Robinhood Chain only, engine `0xCba17Fe4…D4eE` · demo notes ran their schedule to a missed payment and
 defaulted on-chain, as designed · 141 underlyings, the readable workflow and AI issuance. App live at notes.markets;
@@ -85,7 +85,7 @@ on-time funding rate, CRE report success.
 
 **12 · Team and ask.** Raising a USD 500k pre-seed. Kwang, solo founder: involved in the MAS Project Guardian
 tokenized structured note pilot at Marketnode; built this product and the earlier build that won Best Use of
-Chainlink CRE at TOKEN2049; Canton Network validator from the Canton accelerator. Use of funds: independent audit,
+Chainlink CRE at the TOKEN2049 Origins hackathon; Canton Network validator from the Canton accelerator. Use of funds: independent audit,
 mainnet launch, in-house issuance to bootstrap liquidity.
 
 ## Likely questions
@@ -154,7 +154,7 @@ Not yet. The audit is the first use of the pre-seed.
 
 **Who is the team?**
 Kwang, solo founder. Involved in the MAS Project Guardian tokenized structured note pilot at Marketnode. The
-earlier Solana build of this engine won Best Use of Chainlink CRE at TOKEN2049.
+earlier Solana build of this engine won Best Use of Chainlink CRE at the TOKEN2049 Origins hackathon.
 
 **Why mention Canton?**
 Kwang runs a Canton Network validator, from the Canton accelerator. Our workflow engine already compiles notes to Daml
