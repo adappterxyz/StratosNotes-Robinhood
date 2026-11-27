@@ -32,7 +32,8 @@ on Robinhood Chain); the Base engine and the two gateway–vault pairs are deplo
 **Stock tokens on BNB Chain:** notes on fourteen of Binance's stock tokens are priced by Atlas (its on-chain feed
 on BNB Chain) and written only when CoinMarketCap's price agrees; CoinMarketCap also supplies the fixing medians, the
 back-test and the liquidity advice for collateral ([docs/ATLAS-CMC.md](docs/ATLAS-CMC.md)). Built at BNB Hack Bangkok
-2026, Binance's hackathon, where notes.markets was a finalist (the submission:
+2026, Binance's hackathon, where notes.markets was a finalist and a prize winner in the CoinMarketCap × Atlas track
+(the submission:
 https://github.com/adappterxyz/StratosNotes-BNB).
 
 - Site: https://notes.markets · App: https://notes.markets/app

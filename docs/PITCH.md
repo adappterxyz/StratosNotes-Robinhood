@@ -54,7 +54,7 @@ forwarder, every price bounds-checked. Not audited yet.
 > Notes: The moat is the engine: a new product or underlying is data, not a new contract. The audit is the first use
 > of the round.
 
-**7 · Traction.** Built, live on testnet, run end to end. TOKEN2049 Origins hackathon: Best Use of Chainlink CRE (earlier Solana build). BNB Hack Bangkok 2026 (Binance's hackathon): finalist
+**7 · Traction.** Built, live on testnet, run end to end. TOKEN2049 Origins hackathon: Best Use of Chainlink CRE (earlier Solana build). BNB Hack Bangkok 2026 (Binance's hackathon): finalist, and prize winner in the CoinMarketCap × Atlas track
 · 24 Oct 2026: TSLA note paid in full on the earlier build (strike $372.07 fixed by Chainlink CRE, collateral
 released) · Robinhood Chain only, engine `0xCba17Fe4…D4eE` · demo notes ran their schedule to a missed payment and
 defaulted on-chain, as designed · 141 underlyings, the readable workflow and AI issuance. App live at notes.markets;
