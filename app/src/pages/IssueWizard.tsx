@@ -58,7 +58,6 @@ import {
 } from '../lib/readymade';
 import { heldOnChoices, issueChains, useChains } from '../lib/chains';
 import { fmtDate } from '../lib/format';
-import { isBnbSite } from '../lib/site';
 import { CustomReview } from '../components/issue/CustomReview';
 
 const start = exampleOf;
@@ -80,10 +79,7 @@ export default function IssueWizard() {
   // and USDG pledged into the note, a minutes-apart schedule): the presenter only clicks Continue and signs.
   const demoTsla = kind === 'reverse-convertible' && search.get('demo') === 'tsla';
   // The network picked first (on the entry page, or carried along from step to step).
-  // On the BNB Chain build (bnb.notes.markets) BNB Chain is offered first.
-  const issuable = isBnbSite
-    ? [...issueChains(config)].sort((a, b) => Number(b.key === 'bnb-testnet') - Number(a.key === 'bnb-testnet'))
-    : issueChains(config);
+  const issuable = issueChains(config);
   const askedChain = search.get('chain');
   // Any chain this deployment serves can be picked, also one that is not a note chain by name (a local fork is
   // served as "local"): only the terms' move below needs a named note chain.

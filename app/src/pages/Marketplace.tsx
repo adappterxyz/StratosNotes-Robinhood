@@ -12,7 +12,6 @@ import { cashSymbol, chainName, engineOf, issueChains, useChains } from '../lib/
 import { listingOf, neverIssued } from '../lib/listing';
 import { useNotes, useNow } from '../lib/live';
 import { statusOf } from '../lib/story';
-import { isBnbSite } from '../lib/site';
 import { NoteCard } from '../components/NoteCard';
 import { PlayNote } from '../components/PlayNote';
 
@@ -41,12 +40,8 @@ export default function Marketplace() {
   const [sort, setSort] = useState<Sort>('status');
   const [q, setQ] = useState('');
   // Which network's notes: all, or one (each chain the deployment serves).
-  // On the BNB Chain build (bnb.notes.markets) BNB Chain comes first and is the network shown first.
-  const nets = isBnbSite
-    ? [...issueChains(config)].sort((a, b) => Number(b.key === 'bnb-testnet') - Number(a.key === 'bnb-testnet'))
-    : issueChains(config);
-  const hasBnb = isBnbSite && nets.some((c) => c.key === 'bnb-testnet');
-  const [net, setNet] = useState<string>(hasBnb ? 'bnb-testnet' : 'all');
+  const nets = issueChains(config);
+  const [net, setNet] = useState<string>('all');
   const multi = nets.length > 1;
   const { notes, error } = useNotes({ status: 'all', q: q.trim() || undefined });
   // Each note's own cash token (older demo notes settle in tUSD), falling back to the chain's stablecoin.
@@ -132,9 +127,9 @@ export default function Marketplace() {
         <div>
           <h1>Notes</h1>
           <p>
-            {hasBnb
-              ? `Earn from how Binance's stock tokens move, with the rules set before you buy. On BNB Chain, Atlas sets every price and CoinMarketCap must confirm it before a payment is made on-chain. Notes on other networks, priced by Chainlink, are listed too.`
-              : `Earn from how stocks and crypto move, with the rules set before you buy. Pay in ${cashWords}; the prices are checked on each date (by Chainlink, or by Atlas and CoinMarketCap for Binance's stock tokens) and every payment is made on-chain.`}
+            Earn from how stocks and crypto move, with the rules set before you buy. Pay in {cashWords}; the prices are
+            checked on each date (by Chainlink, or by Atlas and CoinMarketCap for Binance&apos;s stock tokens) and every
+            payment is made on-chain.
           </p>
         </div>
         <Link to="/issue" className="btn primary lg">

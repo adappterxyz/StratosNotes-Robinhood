@@ -224,6 +224,13 @@ export default {
       to.hostname = 'notes.markets';
       return Response.redirect(to.toString(), 301);
     }
+    // The BNB Hack Bangkok build lived at bnb.notes.markets; its work is in this site now. Links from the
+    // submission keep working: same path, here.
+    if (host === 'bnb.notes.markets') {
+      const to = new URL(req.url);
+      to.hostname = 'notes.markets';
+      return Response.redirect(to.toString(), 302);
+    }
     const url = new URL(req.url);
     if (url.pathname === '/internal/email' && req.method === 'POST') return relayEmail(req, env);
     if (url.pathname.startsWith('/internal/')) return json({ error: 'Not found' }, 404);

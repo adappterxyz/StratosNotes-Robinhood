@@ -17,7 +17,9 @@
     { "pattern": "notes.markets", "custom_domain": true },
     { "pattern": "www.notes.markets", "custom_domain": true },
     // The earlier domain: redirected to notes.markets (worker.ts) so shared links keep working.
-    { "pattern": "notes.stratoslab.app", "custom_domain": true }
+    { "pattern": "notes.stratoslab.app", "custom_domain": true },
+    // The retired hackathon site: redirected to notes.markets (worker.ts).
+    { "pattern": "bnb.notes.markets", "custom_domain": true }
   ],
   "workers_dev": false,
   "preview_urls": false,
